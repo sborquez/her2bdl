@@ -1,0 +1,36 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+bleach = "*"
+urllib3 = "*"
+jinja2 = "*"
+requests = "*"
+twine = "*"
+numpy = "*"
+scipy = "*"
+seaborn = "*"
+jupyter = "*"
+pandas = "*"
+h5py = "*" 
+scikit-learn = "*"
+scikit-image = "*" 
+tensorflow = "2.*"
+tensorflow-probability  = "*"
+tensorboard = "*"
+nose = "*"
+wandb = "*"
+tqdm = "*"
+
+[dev-packages]
+"flake8" = "*"
+pytest = "*"
+ipython = "*"
+mypy = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
+
+[requires]
+python_version = "3.7"

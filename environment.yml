@@ -1,0 +1,21 @@
+name: yastai
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - h5py
+  - pandas
+  - tensorflow-probability
+  - seaborn
+  - tensorflow-gpu
+  - matplotlib
+  - scipy
+  - numpy
+  - jupyter
+  - scikit-learn
+  - scikit-image
+  - pip:
+    - nose
+    - tqdm
+    - wandb
+prefix: .\.env

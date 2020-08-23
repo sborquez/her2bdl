@@ -100,3 +100,26 @@ TODO
 
 TODO
 
+Requiere PyPi and TestPyPi accounts
+
+[doc](https://packaging.python.org/tutorials/packaging-projects/)
+
+```
+conda activate ./.env
+python setup.py sdist bdist_wheel
+twine check ./*
+```
+
+#### Test PyPi
+
+
+```
+twine upload --repository testpypi dist/*
+```
+
+
+#### Upload in PyPi
+
+```
+twine upload dist/*
+```

@@ -15,6 +15,7 @@ dependencies:
   - scikit-learn
   - scikit-image
   - pip:
+    - twine
     - nose
     - tqdm
     - wandb

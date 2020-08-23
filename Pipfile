@@ -23,6 +23,7 @@ tensorboard = "*"
 nose = "*"
 wandb = "*"
 tqdm = "*"
+twine = "*"
 
 [dev-packages]
 "flake8" = "*"

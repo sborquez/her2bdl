@@ -27,13 +27,21 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     url=about['__url__'],
-    packages=[ai_name],
+    packages=[ai_name, 'api'],
     include_package_data=True,
-    python_requires=">=3.8.*",
-    install_requires=['numpy'],
+    python_requires=">=3.7.*",
+    install_requires=[
+        'numpy', 'pandas', 'scikit-learn', 'scipy', 'tqdm',
+        'h5py', 'matplotlib', 'jupyter', 'nose', 'wandb',
+        'tensorflow>=2.1.0', 'tensorflow-probability'
+    ],
     license=about['__license__'],
     zip_safe=False,
-    entry_points={},
+    entry_points={
+        "console_scripts": [
+            f'predict={ai_name}.api.cli.predict:predict'
+        ]
+    },
     classifiers=[
         'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'

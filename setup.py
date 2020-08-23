@@ -4,7 +4,7 @@ import os
 from setuptools import setup
 
 # Package folder name (check also classifiers and keyworks below)
-ai_name = 'AI'
+ai_name = 'her2bdl'
 
 # get key package details from <ai_name>/__version__.py
 about = {}  # type: ignore
@@ -44,9 +44,13 @@ setup(
     },
     classifiers=[
         'Programming Language :: Python :: 3.8',
-        'Topic :: Scientific/Engineering :: Artificial Intelligence'
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
         # Add here more topics
+        'Topic :: Scientific/Engineering :: Image Processing',
+        'Topic :: Scientific/Engineering :: Image Recognition',
+        'Topic :: Scientific/Engineering :: Medical Science Apps.'
+
     ],
     # Add new keyworks
-    keywords=''
+    keywords='bayesian deep learning her2 scoring uncertainty'
 )

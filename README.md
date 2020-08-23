@@ -1,8 +1,6 @@
-# YastAI
+# her2bdl
 
-Yet Another Session for Training Artificial Intelligence
-
-This is a framework for easy development of new AI Research Projects.
+Bayesian Deep Learning for HER2 tissue image classification.
 
 ## Features
 
@@ -22,24 +20,6 @@ This is a framework for easy development of new AI Research Projects.
  This is a guide to understand the zen of this repository. 
 
 ### This repository structure
-
-There are 5 folder for develop  you new project:
-
-#### AI/
-
-`AI` folder is your AI project package,  for more details check `AI/README.md`
-
-If you want to rename the `IA` folder with your project name, you must also edit theses files:
-
-* `setup.py`: replace `ia_name` variable in __line 7__.
-* `__version__.py` inside `AI` folder.
-* Maybe you want to edit the conda envirment file `yastai.yml`.
-* Replace `from AI import *` in every script in `train/`.
-* Replace `from AI import *` in every nootebook in `notebooks/`.
-* Replace `from AI import *` in every nootebook in `tests/`.
-* Replace AI from files in `docs/`.
-* ~~HPC train scripts maybe~~
-* ~~conda environment maybe~~
 
 #### train/
 

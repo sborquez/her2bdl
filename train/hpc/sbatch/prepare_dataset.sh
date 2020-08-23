@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p <partition name>
-#SBATCH -J yastai_dataset
-#SBATCH --mail-user=yastaidata@gmail.com
+#SBATCH -J her2bdl_dataset
+#SBATCH --mail-user=sebastian.borquez.g@gmail.com
 #SBATCH --mail-type=ALL
 #SBATCH -o output_dataset_%j.log
 #SBATCH -e error_dataset_%j.log
@@ -10,7 +10,7 @@
 cd $SLURM_SUBMIT_DIR
 source /opt/software/anaconda3/2019.03/setup.sh
 # ----------------Variables--------------------------
-project=~/YastAI
+project=~~/her2bdl
 # ----------------Comands--------------------------
 
 source activate "$project/.envs"

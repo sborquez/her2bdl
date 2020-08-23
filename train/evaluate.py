@@ -2,7 +2,7 @@ import sys
 #FIX: this. re structuring the project
 sys.path.insert(1, '..')
 
-from AI import *
+from her2bdl import *
 
 import logging
 import time

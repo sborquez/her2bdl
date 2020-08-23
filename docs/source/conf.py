@@ -21,7 +21,7 @@ from AI.__version__ import __version__
 
 # -- Project information -----------------------------------------------------
 
-project = 'YastAI'
+project = 'Her2BDL'
 copyright = '2020, Sebastián Bórquez G,'
 author = 'Sebastián Bórquez G'
 
@@ -108,7 +108,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'yastai'
+htmlhelp_basename = 'her2bdl'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -135,7 +135,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'yastai.tex', 'YastAI Documentation',
+    (master_doc, 'her2bdl.tex', 'Her2BDL Documentation',
      'Sebastián Bórquez G.', 'manual'),
 ]
 
@@ -145,7 +145,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'yastai', 'YastAI Documentation',
+    (master_doc, 'her2bdl', 'Her2BDL Documentation',
      [author], 1)
 ]
 
@@ -156,8 +156,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'yastai', 'YastAI Documentation',
-     author, 'yastai', 'Yet Another Session for Training Artificial Intelligence.',
+    (master_doc, 'her2bdl', 'Her2BDL Documentation',
+     author, 'her2bdl', 'Bayesian Deep Learning for HER2 tissue image classification.',
      'Miscellaneous'),
 ]
 

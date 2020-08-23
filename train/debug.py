@@ -2,7 +2,7 @@ import sys
 
 # AI project name
 sys.path.insert(1, '..')
-from AI import *
+from her2bdl import *
 
 import tensorflow as tf
 from tensorflow import keras

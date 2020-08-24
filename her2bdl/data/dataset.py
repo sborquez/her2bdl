@@ -68,11 +68,11 @@ def split_dataset(dataset, validation_ratio=0.1, test_ratio=None, seed=None):
     ==========
     dataset : `pd.DataFramer`
         Original dataset.
-    validation_ratio : float 
+    validation_ratio : `float`
         Portion of images for validation dataset. (default=0.1)
-    test_ratio : float 
-        Portion of images for test dataset. (default=None)
-    strict : bool
+    test_ratio : `float` or `None`
+        Portion of images for test dataset. (default=`None`)
+    seed : `int`or `None`
         Split by images
     Returns
     =======

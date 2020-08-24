@@ -25,6 +25,7 @@ nose = "*"
 wandb = "*"
 tqdm = "*"
 twine = "*"
+openslide-python = "*"
 
 [dev-packages]
 "flake8" = "*"

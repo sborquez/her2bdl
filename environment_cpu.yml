@@ -21,4 +21,5 @@ dependencies:
     - nose
     - tqdm
     - wandb
+    - openslide-python
 prefix: .\.env

@@ -1,14 +1,20 @@
 # Week 1 
-[x] sbatch
-[x] "Clean" AI package 
-[x] Create enviroment
-[x] Folder Structure
-[x] Install Environment
+- [x] sbatch
+- [x] "Clean" AI package 
+- [x] Create enviroment
+- [x] Folder Structure
+- [x] Install Environment
 
 # Week 2
-[ ] Load data
-[ ] Exploratory Data Analysis
-[ ] Generators
+- [x] Gerate Datasets
+- [ ] Load data
+- [ ] Temporal hardcode ROI Selection
+- [ ] Exploratory Data Analysis (notebook)
+- [ ] Generators
+
+# Week 3
+- [ ] Unit Tests
+- [ ] ROI Selection
 
 # Doc
-[ ] Her2BDL README
+- [ ] Her2BDL README

@@ -9,6 +9,10 @@ import logging
 
 
 def prepare_dataset(...):
+    # 1. Get Dataset from source
+    # 2. Filter relevant info
+    # 3. Split train/validation/test
+    # 4. Save
     pass
 
 if __name__ == "__main__":

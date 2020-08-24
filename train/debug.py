@@ -31,10 +31,7 @@ def check_gpus():
         #logging.info("Tensorflow is not built with CUDA")
         print("Tensorflow is not built with CUDA")
 
-def profiling(model_path):
-    raise NotImplementedError
-
-def save_plot_model(model_path):
+def profiling(experimentr):
     raise NotImplementedError
 
 if __name__ == "__main__":

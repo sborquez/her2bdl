@@ -58,7 +58,7 @@ def get_dataset(source):
     dataset = pd.merge(ground_truth_data, images_data, on='CaseNo')
     return dataset
 
-def split_dataset(dataset, validation_ratio=0.1, test_ratio=None, seed=Nonesa):
+def split_dataset(dataset, validation_ratio=0.1, test_ratio=None, seed=None):
     """Split dataset in train and validation sets (test optional) 
     using events and a given ratio. 
 

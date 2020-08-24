@@ -6,6 +6,7 @@ dependencies:
   - pip
   - h5py
   - pandas
+  - xlrd
   - tensorflow-probability
   - seaborn
   - tensorflow=*=mkl*

@@ -1,12 +1,14 @@
-# Alpha 
+# Week 1 
 [x] sbatch
 [x] "Clean" AI package 
 [x] Create enviroment
 [x] Folder Structure
+[x] Install Environment
 
-# Example 
-[ ] A simple keras image classificator) 
-[ ] Experiments config files and tutorial
+# Week 2
+[ ] Load data
+[ ] Exploratory Data Analysis
+[ ] Generators
 
 # Doc
-[ ] YastAI README
+[ ] Her2BDL README

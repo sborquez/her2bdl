@@ -13,6 +13,7 @@ from matplotlib.colors import LogNorm
 import seaborn as sns
 
 __all__ = [
+    'display_model_training_history'
 ]
 
 """
@@ -20,9 +21,9 @@ Training Metrics
 ================
 """
 
-def plot_model_training_history(history, training_time, model_name, epochs, save_to=None):
+def display_model_training_history(history, training_time, model_name, epochs, save_to=None):
     """
-    Generate plot for training and validation Loss from a models history.
+    Generate display for training and validation Loss from a models history.
     """
     fig = plt.figure(figsize=(12,6))
     epochs = [i for i in range(1, epochs+1)]

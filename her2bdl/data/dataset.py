@@ -22,7 +22,7 @@ __all__ = [
 ]
 
 
-def get_dataset(source):
+def get_dataset(source, include_ground_truth=True):
     """
     Get dataset from source.
     
@@ -38,11 +38,6 @@ def get_dataset(source):
     `pd.DataFrame`
         Dataset .
     """
-    ground_truth_file = join(source, GROUND_TRUTH_FILE)
-    ground_truth_data = pd.read_excel(ground_truth_file, skiprows=[0], usecols=[1,2])\
-        .dropna()\
-        .astype(int)
-                        
     images_folders = [ split(img)[0] for img in glob(join(source, '*/')) ]
     images_data = []
     for image_folder in images_folders:
@@ -54,8 +49,15 @@ def get_dataset(source):
             'image_he': IMAGE_FILES[1].format(CaseNo=case_number)
         })
     images_data = pd.DataFrame(images_data)
-
-    dataset = pd.merge(ground_truth_data, images_data, on='CaseNo')
+    if include_ground_truth:
+        ground_truth_file = join(source, GROUND_TRUTH_FILE)
+        ground_truth_data = pd.read_excel(ground_truth_file, skiprows=[0], usecols=[1,2])\
+            .dropna()\
+            .astype(int)
+        dataset = pd.merge(ground_truth_data, images_data, on='CaseNo')
+    else:
+        images_data[TARGETS] = None
+        dataset = images_data
     return dataset
 
 def split_dataset(dataset, validation_ratio=0.1, test_ratio=None, seed=None):
@@ -156,22 +158,26 @@ Utils Functions
 ===============
 """
 
-def describe_dataset(dataset):
+def describe_dataset(dataset, include_targets=True):
     """
     Perform simple description of the dataset.
 
     Parameters
     ==========
-    dataset : `for example pd.DataFrame`
+    dataset : `pd.DataFrame`
         Dataset.
+    include_targets: `bool`
+        Include include_targets in description.
     """
     size = len(dataset)
     size_by_class = dataset[TARGETS[0]].value_counts()
     print('Dataset Info:')
     print(f'  size: {size}')
-    print(f'  by class:')
-    for score, size in size_by_class.items():
-        print(f'    Score {score}: {size}')
+    print(f'  columns: {dataset.columns}' )
+    if include_targets:
+        print(f'  by class:')
+        for score, size in size_by_class.items():
+            print(f'    Score {score}: {size}')
 
 def aggregate_dataset(dataset, replace_source=None):
     """

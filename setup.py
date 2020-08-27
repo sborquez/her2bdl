@@ -27,7 +27,7 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     url=about['__url__'],
-    packages=[ai_name, 'api'],
+    packages=[ai_name, 'deploy'],
     include_package_data=True,
     python_requires=">=3.7.*",
     install_requires=[
@@ -39,7 +39,7 @@ setup(
     zip_safe=False,
     entry_points={
         "console_scripts": [
-            f'predict={ai_name}.api.cli.predict:predict'
+            f'predict={ai_name}.deploy.cli.predict:predict'
         ]
     },
     classifiers=[

@@ -15,9 +15,7 @@ Bayesian Deep Learning for HER2 tissue image classification.
 - [ ] Singularity container.
 - [ ] Easy experiment reproducibility.
 
-## How to start a new project/research
-
- This is a guide to understand the zen of this repository. 
+## Her2BDL Package
 
 ### This repository structure
 
@@ -46,60 +44,49 @@ Here a tutorial for [nose](https://pythontesting.net/framework/nose/nose-introdu
 
 More details in `tests/README.md`.
 
-#### api/
+#### deploy/
 
 Different options for consume a trained model.
 
-More details in `api/README.md`.
+More details in `deploy/README.md`.
 
 
-### environments
+### Environments
 
-TODO
+
+Check anaconda documentation [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file).
+
+#### Create environment
+
+* `environment.yml`: for GPU support
+* `environment_cpu.yml`: for CPU only support
+
+```
+conda env create -f environment.yml --name her2bdl
+```
 
 
 #### Load environment
 
-Check anaconda documentation [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file).
-
-* `environment.yml`
 ```
-conda env create -f environment.yml --prefix ./.env
-```
-
-#### Crete/Update environments
-
-TODO
-Manually add packages to `enviroment.yml` and `Pipfile`.
-
-### Documentation
-
-TODO
-
-### Publish in PyPi
-
-TODO
-
-Requiere PyPi and TestPyPi accounts
-
-[doc](https://packaging.python.org/tutorials/packaging-projects/)
-
-```
-conda activate ./.env
-python setup.py sdist bdist_wheel
-twine check ./*
-```
-
-#### Test PyPi
-
-
-```
-twine upload --repository testpypi dist/*
+conda activate her2bdl
 ```
 
 
-#### Upload in PyPi
 
-```
-twine upload dist/*
-```
+## Documentation
+
+...
+
+
+## Referencias
+
+### Papers
+- 
+
+### Web
+
+- YastAI Template: [https://github.com/yast-ia/YastAI](https://github.com/yast-ia/YastAI)
+- WSL Preprocessing: [https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/](https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/)
+- Weight and Bias: [https://www.wandb.com/](https://www.wandb.com/)
+

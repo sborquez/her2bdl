@@ -11,8 +11,83 @@ import numpy as np
 
 
 __all__ = [
-    #'DataGenerator'
+    'Sampler'
 ]
+
+class Sampler:
+    """
+    Sampler
+
+    Get patches from a WSI.
+    """
+    def __init__(self, patch_level, patch_size, patch_rotation_range=None, patch_zoom_range=None):
+        # patch level
+        self.patch_level = patch_level
+        # patch size at given level
+        self.patch_size = patch_size 
+        # range for rotate patch (rotation invariant)
+        self.patch_rotation_rage = patch_rotation_range # None means no apply rotation
+        # range for zoom patch (scale invariant)
+        self.patch_zoom_range = patch_zoom_range        # None means no apply zoom
+
+    def get_from_size(self, wsi, probability_map, size, n=1):
+        """
+        Sampling n patches from WSI weighted by probability_map.    
+        
+        Parameters
+        ==========
+        wsi : `openslide.OpenSlide`
+            Opened WSI.
+        probability_map : `np.ndarray`
+            Sampling weighted by this probability map for each pixel with this size.
+        size : `tuple(int, int)`
+            Size of thumbnail.
+        n : `int`
+            Number of samples. (default=1) 
+        Returns
+        =======
+        `np.ndarray`
+            Samples patches.
+        """
+        assert probability_map.shape[:2] == size, "size aren`t equal" 
+        src = wsi.get_thumbnail(size)
+        src_downsample = wsi.dimensions[0]/src.dimensions[0]
+        dst_downsample = wsi.level_downsample[self.patch_level]
+
+        channels = 0
+        canvas = np.empty((n, self.patch_size[0], self.patch_size[1]))
+        raise NotImplementedError
+
+
+    def get_from_level(self, wsi, probability_map, level, n=1):
+        """
+        Sampling n patches from WSI weighted by probability_map.    
+        
+        Parameters
+        ==========
+        wsi : `openslide.OpenSlide`
+            Opened WSI.
+        probability_map : `np.ndarray`
+            Sampling weighted by this probability map for each pixel at this level.
+        level : `int
+            Use level size for thumbnail.
+        n : `int`
+            Number of samples. (default=1) 
+        Returns
+        =======
+        `np.ndarray`
+            Samples patches.
+        """
+        size = wsi.level_dimensions[level]
+        return self.get_from_size(wsi, probability_map, size, n=n)
+ 
+    def set_patch_level(self, patch_level):
+        'set output patch level.'
+        self.patch_level = patch_level
+
+    def set_patch_size(self, patch_size):
+        'set output patch size.'
+        self.patch_size = patch_size
 
 class DataGenerator(keras.utils.Sequence):
     """
@@ -21,16 +96,19 @@ class DataGenerator(keras.utils.Sequence):
     For load dataset on the fly.
     """
 
-    def __init__(self, dataset, 
-                 batch_size,
+    def __init__(self, dataset, batch_size,
                  preprocess_input_pipes={},
                  preprocess_output_pipes={},
+                 sampler_parameters={},
                  shuffle=False
                  ):
 
         # Dataset
         self.dataset = dataset
     
+        # Sampler
+        self.sampler = Sampler(**sampler_parameters)
+
         # Input Normalization and stardarization 
         self.preprocess_input_pipes = preprocess_input_pipes
 

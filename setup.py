@@ -32,7 +32,7 @@ setup(
     python_requires=">=3.7.*",
     install_requires=[
         'numpy', 'pandas', 'xlrd', 'scikit-learn', 'scipy', 'tqdm', 'openslide-python'
-        'h5py', 'matplotlib', 'jupyter', 'nose', 'wandb',
+        'h5py', 'matplotlib', 'jupyter', 'nose', 'wandb', 'opencv-python',
         'tensorflow>=2.1.0', 'tensorflow-probability'
     ],
     license=about['__license__'],

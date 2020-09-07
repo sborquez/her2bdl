@@ -22,4 +22,5 @@ dependencies:
     - tqdm
     - wandb
     - openslide-python
+    - opencv-python
 prefix: .\.env

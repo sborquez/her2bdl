@@ -7,9 +7,9 @@
 
 # Week 2
 - [x] Gerate Datasets
-- [ ] Load data
-- [ ] Temporal hardcode ROI Selection
-- [ ] Exploratory Data Analysis (notebook)
+- [x] Load data
+- [x] Exploratory Data Analysis (notebook)
+- [x] Temporal hardcode ROI Selection
 - [ ] Generators
 
 # Week 3

@@ -22,6 +22,14 @@ from PIL import Image, ImageDraw, ImageFont
 PRINT_WSI_INFO = False
 ADDITIONAL_NP_STATS = False
 
+def pyramidal_scaler(list_of_values, src_size, dst_size, output_type="tuple"):
+    scaler = (dst_size[0]/src_size[0])
+    if output_type == "tuple":
+      mapper = map(lambda x: int(x*scaler), list_of_values)
+      list_of_values =  tuple(mapper)
+    else:
+      pass
+    return list_of_values
 
 def pil_to_np_rgb(pil_img):
   """

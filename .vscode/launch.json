@@ -22,8 +22,8 @@
       "cwd": "${workspaceFolder}/train",
       "args": [
         "-i", "E:/datasets/medical/warwick/train",
-        "-g", "-r", 
-        "-o", "./datasets",
+        "-g", "-m", "-r", 
+        "-o", "${workspaceFolder}/train/datasets",
         "-s","0.15",
         "-S","0.15",
         "--seed", "42"

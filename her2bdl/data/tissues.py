@@ -23,8 +23,10 @@ from skimage.filters.rank import entropy
 from skimage.segmentation import clear_border
 from skimage.measure import label, regionprops
 from skimage.morphology import opening, closing
+from skimage.transform import resize
 import openslide
 from .wsi import (
+    pyramidal_scaler,
     pil_to_np_rgb,
     filter_rgb_to_hsv, filter_hsv_to_h,
     filter_rgb_to_hed, filter_hed_to_hematoxylin, filter_hed_to_dab,
@@ -37,7 +39,10 @@ from .wsi import (
 from .constants import *
 
 __all__ = [
-    'select_roi_manual', 'save_objects' 
+    'select_roi_manual', 
+    'save_segmentation',
+    'save_objects', 'load_objects',
+    'fit_sampling_map', 'save_sampling_map'
 ]
 
 
@@ -47,14 +52,30 @@ Tissue Segmentation
 --------------------
 """
 
-def apply_tissues_segmentation(slide, level=None, size=None):
+def apply_tissues_segmentation(slide_or_image_rgb, level=None, size=None):
     """
     Compute foreground and background mask by apply threshold otsu.
 
+    Parameters
+    ==========
+    slide_or_image_rgb : `openslide.OpenSlide` or `np.darray`
+        Opened WSI.
+    size : tuple(`int`, `int`)
+        Thumbnail max size.
+    level : `int`
+        Thumbnail level.
+    Returns
+    =======
+    `tuple` of `np.ndarray(uint8)`
+        segmentions
     """
-    assert (level is None) != (size is None), "Select level or size"
-    size = slide.level_dimensions[level] if level is not None else size
-    image = pil_to_np_rgb(slide.get_thumbnail(size))
+    if isinstance(slide_or_image_rgb, np.ndarray):
+        size = slide_or_image_rgb.shape[:2][::-1]
+        image = slide_or_image_rgb
+    else:
+        assert (level is None) != (size is None), "Select level or size"
+        size = slide_or_image_rgb.level_dimensions[level] if level is not None else size
+        image = pil_to_np_rgb(slide_or_image_rgb.get_thumbnail(size))
     segmentation_stack = []
 
     # Greed threshold
@@ -97,12 +118,12 @@ def apply_tissues_segmentation(slide, level=None, size=None):
     return segmentation
 
 
-def apply_labeled_segmentation(slide, level=None, size=None):
+def apply_labeled_segmentation(slide_or_image, level=None, size=None):
     """
     Select ROIs from WSI using a GUI.
     Parameters
     ==========
-    slide : `openslide.OpenSlide`
+    slide_or_image : `openslide.OpenSlide` or `np.darray`
         Opened WSI.
     size : tuple(`int`, `int`)
         Thumbnail max size.
@@ -114,26 +135,28 @@ def apply_labeled_segmentation(slide, level=None, size=None):
         segmentions
     """
     assert (level is None) != (size is None), "Select level or size"
-    size = slide.level_dimensions[level] if level is not None else size
-    segmentation = apply_tissues_segmentation(slide, size=size)
+    if isinstance(slide_or_image, np.ndarray):
+        size = slide_or_image.shape[:2][::-1]
+        image = slide_or_image
+    else:
+        size = slide_or_image.level_dimensions[level] if level is not None else size
+        image = np.array(slide_or_image.get_thumbnail(size))
+    segmentation = apply_tissues_segmentation(slide_or_image, size=size)
     label_image = label(segmentation)
-    image = np.array(slide.get_thumbnail(size))
     labels_to_rgb = label2rgb(label_image, image=image, bg_label=0)
     return segmentation, label_image, labels_to_rgb
 
-def get_selector_callback(guess, manually):
-    def mouse_click_callback(event,x,y,flags,param):
-        if event == cv2.EVENT_LBUTTONDBLCLK:
-            for i, (selected, _, _, centroid, _) in enumerate(guess):
-                if np.linalg.norm(np.array([y, x]) - np.array(centroid)) > 15: continue
-                guess[i][0] = not selected
-            for i, (selected, _, _, centroid, _) in enumerate(manually):
-                if np.linalg.norm(np.array([y, x]) - np.array(centroid)) > 15: continue
-                manually[i][0] = not selected
-    return mouse_click_callback
-                    
+def save_segmentation(case_no, labeled_segmentation, output):
+    # Paths
+    segmentation_folder = path.join(output, "segmentation")
+    segmentation_path = path.join(segmentation_folder, f"{case_no}.npy")
 
-def select_roi_manual(slide,  level=None, size=None, include_guess=True):
+    os.makedirs(segmentation_folder, exist_ok=True)
+    np.save(segmentation_path, labeled_segmentation)
+
+    return segmentation_path
+
+def select_roi_manual(slide,  level=None, size=None, include_guess=True, display=None):
     """
     Select ROIs from WSI using a GUI.
     Parameters
@@ -146,6 +169,8 @@ def select_roi_manual(slide,  level=None, size=None, include_guess=True):
         Thumbnail level.
     include_guess : `bool`
         Include ROIs guesses by thresholding
+    display : `GUI` or `None`
+        User interface api.
     Returns
     =======
     `list`, `np.ndarray(int)` 
@@ -161,78 +186,101 @@ def select_roi_manual(slide,  level=None, size=None, include_guess=True):
         segmentation, labeled_segmentation, labels_to_rgb = apply_labeled_segmentation(slide, level=level)
         for region in regionprops(labeled_segmentation):
             # take regions with large enough areas
-            if region.area > WSI_MIN_REGION_AREA: ROIs_guess.append([True, True, region.label, region.centroid, region.bbox])
-        cv2.imshow("Segmentation", segmentation)
-        cv2.imshow("Label Segmentation rgb", labels_to_rgb)
+            if region.area > WSI_MIN_REGION_AREA: 
+                selected = True
+                is_guess = True
+                ROIs_guess.append([selected, is_guess, region.label, region.centroid, region.bbox])
     new_label = len(ROIs_guess)
     ROIs_manually = []
-    capturing = True
-    while capturing:
-        canvas = image.copy()
-        # Select from guesses
-        for selected, is_guess, label, centroid, guess_box in ROIs_guess:
-            min_row, min_col, max_row, max_col =  guess_box
-            if selected:
-                cv2.rectangle(canvas, (min_col, min_row), (max_col, max_row), (80, 200, 0), 3)
-                cv2.circle(canvas, tuple(map(int, centroid))[::-1], 6, (180, 80, 50), 12)
-            else:
-                cv2.rectangle(canvas, (min_col, min_row), (max_col, max_row), (90, 90, 90), 3)
-                cv2.circle(canvas, tuple(map(int, centroid))[::-1], 12,  (180, 80, 50), 6)
-        # Select mannualy
-        for selected, is_guess, label, centroid, box in ROIs_manually:
-            min_row, min_col, max_row, max_col =  box
-            if selected:
-                cv2.rectangle(canvas, (min_col, min_row), (max_col, max_row), (80, 200, 0), 3)
-                cv2.circle(canvas, tuple(map(int, centroid))[::-1], 6, (180, 80, 50), 12)
-            else:
-                cv2.rectangle(canvas, (min_col, min_row), (max_col, max_row), (90, 90, 90), 3)
-                cv2.circle(canvas, tuple(map(int, centroid))[::-1], 12,  (180, 80, 50), 6)
-        # Show results
-        windowName="Press 'space' to CONTINUE - Press'a' to add new ROI"
-        cv2.imshow(windowName, canvas)
-        cv2.setMouseCallback(windowName, get_selector_callback(ROIs_guess, ROIs_manually))
+    
+    if display is not None:
+        if include_guess:
+            display.imshow("Label Segmentation rgb", labels_to_rgb)
+            display.imshow("Segmentation", segmentation)
+        ROIs = display.interactive_roi_selection("ROI Selector", image, ROIs_manually, ROIs_guess)
+        if include_guess:
+            display.close_canvas(["Label Segmentation rgb", "Segmentation"])
+        display.close_canvas("ROI Selector")
+    else:
+        ROIs = ROIs_guess
 
-        key = cv2.waitKey(2)
-        # Manually select
-        if key == ord('a'):
-            roi = cv2.selectROI(windowName, canvas, showCrosshair=True, fromCenter=False)
-            box = roi[1], roi[0],  roi[1]+roi[3], roi[0]+roi[2]
-            centroid = (box[0] + box[2])/2., (box[1] + box[3])/2.
-            ROIs_manually.append([True, False, new_label, centroid, box])
-            new_label += 1
-        elif key == 32: # space
-            cv2.destroyAllWindows()
-            capturing = False
-    ROIs = ROIs_guess + ROIs_manually
     return ROIs, labeled_segmentation
 
-def save_objects(slide, case_no, image_ihc, objects, labeled_segmentation, output, level=None, size=None, mode="a"):
-    assert (level is None) != (size is None), "Select level or size"
-    size = slide.level_dimensions[level] if level is not None else size
-    # Paths
-    objects_filepath = path.join(output, f"objects_{image_ihc}.csv")
-    segmentation_folder = path.join(output, "segmentation")
-    segmentation_filepath = path.join(segmentation_folder, f"{case_no}.npy")
-    
-    # Save segmentatio file
-    if mode == "w": 
-        shutil.rmtree(segmentation_folder)
-    os.makedirs(segmentation_folder, exist_ok=True)
-    np.save(segmentation_filepath, labeled_segmentation)
+def save_objects(objects, image_ihc, output):
+    objects_path = path.join(output, f"objects_{image_ihc}.csv")
+    objects.to_csv(objects_path, index=False)
+    return objects_path
 
-    # Save Objects file
-    if (not path.exists(objects_filepath)) or (mode == "w"):
-        with open(objects_filepath, "w") as file:
-            file.write(f"CaseNo,level,width,height,selected,is_guess,label,centroid_row,centroid_col,min_row,min_col,max_row,max_col\n")
-    with open(objects_filepath, "a") as file:
-        for obj in objects:
-            selected, is_guess, label, centroid, box = obj
-            centroid_row,centroid_col = centroid
-            min_row, min_col, max_row, max_col =  box
-            file.write(f"{case_no},{level},{size[0]},{size[1]},{selected},{is_guess},{label},{centroid_row},{centroid_col},{min_row},{min_col},{max_row},{max_col}\n")
-    
-def load_objects(objects_filepath, filter_selected=True):
-    objects = pd.read_csv(objects_filepath)
+def load_objects(objects_path, filter_selected=True):
+    objects = pd.read_csv(objects_path)
     if filter_selected:
         return objects[objects["selected"]]
     return objects
+
+"""
+Tissue Sampling
+--------------------
+"""
+
+def fit_sampling_map(slide, object, level=None, size=None, mode='uniform', display=None):
+    assert (level is None) != (size is None), "Select level or size"
+    size = slide.level_dimensions[level] if level is not None else size
+
+    # ROI
+    src_box = object["min_row"], object["min_col"], object["max_row"], object["max_col"]
+    
+    # Open source image
+    src_size, src_level = (object["segmentation_width"], object["segmentation_height"]), object["segmentation_level"]
+    src_image = cv2.cvtColor(np.array(slide.get_thumbnail(src_size)),  cv2.COLOR_RGB2BGR)
+    
+    # Source segmentation 
+    min_row, min_col, max_row, max_col = src_box
+    src_segmentation = np.load(object["segmentation_path"])
+    src_roi_segmentation = src_segmentation[min_row:max_row, min_col:max_col]
+    src_roi_segmentation[src_roi_segmentation != object["label"]] = 0
+    if not object["is_guess"]: src_roi_segmentation[:,:] = 1
+    src_roi_segmentation = src_roi_segmentation.astype(bool)
+
+    # Source ROI
+    src_roi = src_image[min_row:max_row, min_col:max_col]
+
+    # Output sampling map
+    dst_size, dst_level = size, level
+    dst_box = pyramidal_scaler(src_box, src_size, dst_size, output_type="tuple")
+    sampling_map_shape = int(max_row - min_row), int(max_col - min_col)
+
+    # refine segmentation
+    # dst_roi = np.array(slide.get_thumbnail(dst_size)) #rgb
+    # min_row, min_col, max_row, max_col = dst_box
+    # dst_roi = dst_roi[min_row:max_row, min_col:max_col]
+    # dst_roi_segmentation = apply_tissues_segmentation(dst_roi, level=None, size=None)
+    
+    if mode == "uniform":
+        min_row, min_col, max_row, max_col = dst_box
+        dst_roi_segmentation = resize(src_roi_segmentation, ((max_row - min_row), (max_col - min_col)), order=0, preserve_range=True)
+        sampling_map = dst_roi_segmentation / np.sum(dst_roi_segmentation > 0)
+        
+    if display is not None:
+        # Include images to display
+        dst_roi = cv2.cvtColor(np.array(slide.get_thumbnail(dst_size)),  cv2.COLOR_RGB2BGR) #TODO use get_region
+        dst_roi = dst_roi[min_row:max_row, min_col:max_col]
+        dst_roi[sampling_map == 0] = 0
+        display.imshow("Src ROI", src_roi)
+        display.imshow("Src Segmentation", 255*(src_roi_segmentation.astype('uint8')))
+        display.imshow("Dst ROI", dst_roi)
+        display.imshow("Dst Sampling map", (255*(sampling_map/sampling_map.max())).astype("uint8"))
+        display.wait()
+        display.close_canvas(canvas_names=["Src ROI", "Src Segmentation", "Dst ROI", "Dst Sampling map"])
+
+    return sampling_map
+    
+def save_sampling_map(case_no, label, sampling_map, output):
+    # Paths
+    sampling_maps_folder = path.join(output, "sampling_maps")
+    sampling_map_filepath = path.join(sampling_maps_folder, f"{case_no}_{label}.npy")
+    
+    # Save segmentatio file
+    os.makedirs(sampling_maps_folder, exist_ok=True)
+    np.save(sampling_map_filepath, sampling_map)
+
+    return sampling_map_filepath

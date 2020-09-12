@@ -133,12 +133,14 @@ def load_dataset(dataset_filepath):
     dataset = pd.read_csv(dataset_filepath)
     return dataset
 
-def save_dataset(dataset, output_folder, dataset_name):
+def save_dataset(dataset, objects, output_folder, dataset_name):
     """Save Dataset.
     Parameters
     ----------
-    dataset : `pd.Dataframe`
+    dataset : `pd.DataFrame`
         Dataset.
+    objects : `pd.DataFrame` 
+        Selected objects.
     output_folder : `str`
         Folder containing saved file.
     dataset_name : `str`
@@ -150,7 +152,9 @@ def save_dataset(dataset, output_folder, dataset_name):
     """
     filename = f"{dataset_name}.csv"
     filepath = join(output_folder, filename)
-    dataset.to_csv(filepath, index=False)
+
+    dataset_with_objects = pd.merge(dataset, objects.drop(columns=["source"]), on="CaseNo", validate="1:m")
+    dataset_with_objects.to_csv(filepath, index=False)
     return filepath
 
 """

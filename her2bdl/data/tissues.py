@@ -26,7 +26,7 @@ from skimage.morphology import opening, closing
 from skimage.transform import resize
 import openslide
 from .wsi import (
-    pyramidal_scaler,
+    size_scaler,
     pil_to_np_rgb,
     filter_rgb_to_hsv, filter_hsv_to_h,
     filter_rgb_to_hed, filter_hed_to_hematoxylin, filter_hed_to_dab,
@@ -246,7 +246,7 @@ def fit_sampling_map(slide, object, level=None, size=None, mode='uniform', displ
 
     # Output sampling map
     dst_size, dst_level = size, level
-    dst_box = pyramidal_scaler(src_box, src_size, dst_size, output_type="tuple")
+    dst_box = size_scaler(src_box, src_size, dst_size, output_type="tuple")
     sampling_map_shape = int(max_row - min_row), int(max_col - min_col)
 
     # refine segmentation

@@ -183,7 +183,7 @@ def describe_dataset(dataset, include_targets=True):
         for score, size in size_by_class.items():
             print(f'    Score {score}: {size}')
 
-def aggregate_dataset(dataset, replace_source=None):
+def aggregate_dataset(dataset, replace_source=None, filter_selected=True):
     """
     Perform simple aggegation to dataset.
 
@@ -198,6 +198,9 @@ def aggregate_dataset(dataset, replace_source=None):
     `pd.DataFrame`
         Dataset with aggregate information.
     """
+    #TODO: Add option to replace parent folder of sampling maps, segmentation and slide paths.
     if replace_source is not None:
         dataset.source = replace_source
+    if filter_selected:
+       return dataset[dataset.selected == True] 
     return dataset

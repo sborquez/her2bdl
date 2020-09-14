@@ -16,20 +16,35 @@
 
 import datetime
 import numpy as np
+from numpy.lib.stride_tricks import as_strided
+from skimage.util.shape import view_as_windows
 from PIL import Image, ImageDraw, ImageFont
 
 # If True, display additional NumPy array stats (min, max, mean, is_binary).
 PRINT_WSI_INFO = False
 ADDITIONAL_NP_STATS = False
 
-def pyramidal_scaler(list_of_values, src_size, dst_size, output_type="tuple"):
-    scaler = (dst_size[0]/src_size[0])
-    if output_type == "tuple":
-      mapper = map(lambda x: int(x*scaler), list_of_values)
-      list_of_values =  tuple(mapper)
-    else:
-      pass
-    return list_of_values
+def strided_convolution(image, weight, stride):
+  windows = view_as_windows(image, weight.shape, step=stride)
+  return np.tensordot(windows, weight, axes=((2, 3), (0, 1)))
+
+def size_scaler(list_of_values, src_size, dst_size, output_type="tuple"):
+  scaler = (dst_size[0]/src_size[0])
+  if output_type == "tuple":
+    mapper = map(lambda x: int(x*scaler), list_of_values)
+    list_of_values =  tuple(mapper)
+  else:
+    pass
+  return list_of_values
+
+def level_scaler(list_of_values, src_level, dst_level, output_type="tuple"):
+  scaler = 2.0**int(src_level - dst_level)
+  mapper = np.array(list_of_values)*scaler
+  if output_type == "tuple":
+    list_of_values = tuple(mapper.astype(int))
+  else:
+    list_of_values = mapper.astype(int)
+  return list_of_values
 
 def pil_to_np_rgb(pil_img):
   """

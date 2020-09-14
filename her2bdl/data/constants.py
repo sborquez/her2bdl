@@ -14,6 +14,10 @@ IMAGE_FILES = ("{CaseNo:02d}_Her2.ndpi", "{CaseNo:02d}_HE.ndpi")
 # Input
 INPUTS  = ['image_her2']
 INPUT  = INPUTS[0] # if it is sigle input
+# Patch
+PATCH_SIZE = (256, 256)
+PATCH_LEVEL = 1
+PATCH_RELEVANT_RATIO = 0.8 # foreground pixels/background pixels
 
 # Target
 TARGETS = ['HeR2 SCORE']
@@ -23,6 +27,12 @@ TARGET_LABELS = {
     1: '1+',
     2: '2+',
     3: '3+',
+}
+TARGET_TO_ONEHOT = {
+    0: (1, 0, 0, 0),
+    1: (0, 1, 0, 0),
+    2: (0, 0, 1, 0),
+    3: (0, 0, 0, 1)
 }
 TARGET = TARGETS[0] # if it is single target
 

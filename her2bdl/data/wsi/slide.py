@@ -157,7 +157,7 @@ def close_slide(slide):
       `bool` WSI successfully close.
     """
     try:
-        wsi.close()
+        slide.close()
     except Exception:
         return False
     else:

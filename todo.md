@@ -10,11 +10,17 @@
 - [x] Load data
 - [x] Exploratory Data Analysis (notebook)
 - [x] Temporal hardcode ROI Selection
-- [ ] Generators
+- [x] Generators
 
 # Week 3
-- [ ] Unit Tests
-- [ ] ROI Selection
+- [x] ROI Selection
 
-# Doc
+# Week 4
+- [x] SimpleModel
+- [x] Classifier model (EfficentNet)
+- [ ] Training Script
+- [ ] Weight and Bias
+
+# Extras
+- [ ] Unit Tests
 - [ ] Her2BDL README

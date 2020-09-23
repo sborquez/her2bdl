@@ -1,9 +1,0 @@
-CaseNo,HeR2 SCORE,source,image_her2,image_he
-24,1,E:/datasets/medical/warwick/train,24_Her2.ndpi,24_HE.ndpi
-1,0,E:/datasets/medical/warwick/train,01_Her2.ndpi,01_HE.ndpi
-39,0,E:/datasets/medical/warwick/train,39_Her2.ndpi,39_HE.ndpi
-15,1,E:/datasets/medical/warwick/train,15_Her2.ndpi,15_HE.ndpi
-6,2,E:/datasets/medical/warwick/train,06_Her2.ndpi,06_HE.ndpi
-55,2,E:/datasets/medical/warwick/train,55_Her2.ndpi,55_HE.ndpi
-38,3,E:/datasets/medical/warwick/train,38_Her2.ndpi,38_HE.ndpi
-35,3,E:/datasets/medical/warwick/train,35_Her2.ndpi,35_HE.ndpi

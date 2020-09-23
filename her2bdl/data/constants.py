@@ -5,7 +5,8 @@ Data and dataset constants
 Collections of variables for datasets and data processing.
 """
 
-DEBUG=False
+DEBUG = False
+SEED = 42
 
 # Dataset columns roles
 GROUND_TRUTH_FILE = 'groundTruth.xlsx'
@@ -16,7 +17,7 @@ INPUTS  = ['image_her2']
 INPUT  = INPUTS[0] # if it is sigle input
 # Patch
 PATCH_SIZE = (256, 256)
-PATCH_LEVEL = 1
+PATCH_LEVEL = 2
 PATCH_RELEVANT_RATIO = 0.8 # foreground pixels/background pixels
 
 # Target

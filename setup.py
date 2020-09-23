@@ -16,6 +16,10 @@ with open(os.path.join(here, ai_name, '__version__.py')) as f:
 with open('README.md', 'r') as f:
     readme = f.read()
 
+# load the README file and use it as the long_description for PyPI
+with open('LICENSE', 'r') as f:
+    license = f.read()
+
 # package configuration - for reference see:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#id9
 setup(
@@ -27,20 +31,22 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     url=about['__url__'],
-    packages=[ai_name, 'deploy'],
+    packages=[ai_name], #, 'deploy'], TODO: Add deploy
     include_package_data=True,
     python_requires=">=3.7.*",
     install_requires=[
-        'numpy', 'pandas', 'xlrd', 'scikit-learn', 'scipy', 'tqdm', 'openslide-python'
-        'h5py', 'matplotlib', 'jupyter', 'nose', 'wandb', 'opencv-python',
-        'tensorflow>=2.1.0', 'tensorflow-probability'
+        'numpy', 'pandas', 'xlrd', 'scipy', 'tqdm', 'h5py', 'matplotlib', 
+        'scikit-learn', 'tensorflow>=2.3.0', 'tensorflow-probability',
+        'openslide-python', 'opencv-python', 'scikit-image',
+        'nose','jupyter', 'wandb'
     ],
-    license=about['__license__'],
+    license=license, #about['__license__'],
     zip_safe=False,
     entry_points={
-        "console_scripts": [
-            f'predict={ai_name}.deploy.cli.predict:predict'
-        ]
+        # TODO: Add deploy
+        #"console_scripts": [
+        #    f'predict={ai_name}.deploy.cli.predict:predict'
+        #]
     },
     classifiers=[
         'Programming Language :: Python :: 3.8',

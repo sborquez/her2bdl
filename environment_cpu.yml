@@ -7,9 +7,7 @@ dependencies:
   - h5py
   - pandas
   - xlrd
-  - tensorflow-probability
   - seaborn
-  - tensorflow=*=mkl*
   - matplotlib
   - scipy
   - numpy
@@ -23,4 +21,5 @@ dependencies:
     - wandb
     - opencv-python
     - openslide-python
-prefix: .\.env
+    - tensorflow-cpu==2.3.0
+    - tensorflow-probability

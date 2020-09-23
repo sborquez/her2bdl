@@ -5,7 +5,7 @@ Data generator to feed models
 This modele define generator (keras.Sequential) to feed differents
 models, with their defined input format.
 """
-
+import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import pandas as pd
@@ -19,14 +19,36 @@ __all__ = [
     'MCPatchGenerator'
 ]
 
+def get_tf_Dataset(generator, output_shape=""):
+    """
+    Get tf.data.Dataset from generator.
+    """
+    def callable_iterator(generator):
+        for img_batch, targets_batch in generator:
+            yield img_batch, targets_batch
+    num_classes = generator.num_classes 
+    dataset = tf.data.Dataset.from_generator(
+        lambda: callable_iterator(generator),
+        output_types=(tf.float32, tf.float32), 
+        output_shapes=([None, *PATCH_SIZE, 3], [None, num_classes]))
+    return dataset
+
+def get_generators_from_directory(data_directory, validation_split=None):
+    if validation_split is not None:
+        train_genetaror = None
+        return train_genetaror
+    else:
+        train_genetaror = None
+        validation_genetaror = None
+        return train_genetaror, validation_genetaror
+
 class GridPatchGenerator(keras.utils.Sequence):
     """
     Grid patch generator
     """
 
     def __init__(self, dataset, batch_size, patch_level, patch_size, 
-                 patch_vertical_flip=False, patch_horizontal_flip=False, shuffle=True
-                 ):
+                 patch_vertical_flip=False, patch_horizontal_flip=False, shuffle=True, seed=SEED):
         # Generator parameters
         self.batch_size = batch_size
         self.patch_size = patch_size
@@ -78,6 +100,7 @@ class GridPatchGenerator(keras.utils.Sequence):
                 patches += new_patches
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
+        self.num_classes = self.dataset[TARGET].nunique()
         self.size = len(self.dataset)
         atexit.register(self.cleanup)
 
@@ -168,6 +191,7 @@ class MCPatchGenerator(GridPatchGenerator):
                 }, ignore_index=True)
 
         self.size = len(self.dataset)*self.samples_per_tissue
+        self.num_classes = self.dataset[TARGET].nunique()
         # How many pixels contain one pixel at sample level at patch level
         self.upsample_pixels_patch_level = level_scaler((1, 1), sampling_map_level, patch_level)
         self.upsample_pixels_level_0     = level_scaler((1, 1), patch_level, 0)

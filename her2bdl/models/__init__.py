@@ -55,10 +55,12 @@ OPTIMIZERS = {
 Models and Ensemblers
 ==========
 """
+from .model import *
 
 MODELS = {
+    "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
+    "EfficentNetMCDropout": EfficentNetMCDropout
 }
-
 ENSEMBLERS = {
 }
 

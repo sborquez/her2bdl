@@ -38,7 +38,7 @@ setup(
         'numpy', 'pandas', 'xlrd', 'scipy', 'tqdm', 'h5py', 'matplotlib', 
         'scikit-learn', 'tensorflow>=2.3.0', 'tensorflow-probability',
         'openslide-python', 'opencv-python', 'scikit-image',
-        'nose','jupyter', 'wandb'
+        'nose','jupyter', 'wandb', 'tensorflow-datasets'
     ],
     license=license, #about['__license__'],
     zip_safe=False,

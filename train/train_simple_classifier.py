@@ -19,18 +19,22 @@ from her2bdl import *
 #print(MODELS)
 SEED = 420
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 1
+VALIDATION_SPLIT=0.2
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 IMG_RESCALE = None
-IMAGE_FOLDER = "D:/sebas/Desktop/simple_images/classes"
+#IMAGE_FOLDER = "D:/sebas/Desktop/simple_images/classes"
+DATASET_TARGET = "simple"
 #MODEL = "SimpleClassifierMCDropout"
 MODEL = "EfficentNetMCDropout"
 INCLUDE_UNCERTAINTY_test = True
 
 input_shape = (IMG_WIDTH, IMG_HEIGHT, 3)
-data_dir = pathlib.Path(IMAGE_FOLDER)
-num_classes = len(list(data_dir.glob('*/')))
+#num_classes = len(list(data_dir.glob('*/')))
+num_classes = 10
+
+#data_dir = pathlib.Path(IMAGE_FOLDER)
 model_constructor = MODELS[MODEL]
 model_parameters = {
     "input_shape" : input_shape,
@@ -40,46 +44,23 @@ model_parameters = {
     #"weights": 'imagenet'
 }
 
-#STEPS_PER_EPOCH = np.ceil(image_count/BATCH_SIZE)
+# train_, val_ = get_generators_from_directory(
+#     IMAGE_FOLDER, input_shape, BATCH_SIZE, 
+#     rescale=IMG_RESCALE, 
+#     validation_split=VALIDATION_SPLIT
+# )
 
-# def preprocess(img):
-#     img = cv2.resize(img, dsize=(IMG_WIDTH, IMG_HEIGHT), interpolation=cv2.INTER_CUBIC)
-#     return img.astype(float) / 255.0
-
-image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
-                                              #horizontal_flip=True,
-                                              validation_split=0.2,
-                                              rescale=IMG_RESCALE)
-                                              #preprocessing_function=preprocess)
-
-train_generator = image_generator.flow_from_directory(
-    directory=str(data_dir),
-    batch_size=BATCH_SIZE,
-    shuffle=True,
-    #class_mode="categorical",
-    target_size=(IMG_HEIGHT, IMG_WIDTH),
-    subset='training'
+train_, val_ = get_generators_from_tf_Dataset(
+    DATASET_TARGET, input_shape, BATCH_SIZE, 
+    rescale=IMG_RESCALE, 
+    validation_split=VALIDATION_SPLIT
 )
 
-val_generator = image_generator.flow_from_directory(
-    directory=str(data_dir),
-    batch_size=BATCH_SIZE,
-    shuffle=True,
-    #class_mode="categorical",
-    target_size=(IMG_HEIGHT, IMG_WIDTH),
-    subset='validation'
-)
+#
+(train_dataset, steps_per_epoch) = train_
+(val_dataset, validation_steps)  = val_
 
-def callable_iterator(generator):
-    for img_batch, targets_batch in generator:
-        yield img_batch, targets_batch
 
-train_dataset = tf.data.Dataset.from_generator(lambda: callable_iterator(train_generator),
-                                            output_types=(tf.float32, tf.float32), output_shapes=([None, IMG_HEIGHT, IMG_WIDTH, 3],
-                                    [None, num_classes]))
-val_dataset = tf.data.Dataset.from_generator(lambda: callable_iterator(val_generator),
-                        output_types=(tf.float32, tf.float32), output_shapes=([None, IMG_HEIGHT, IMG_WIDTH, 3],
-                                    [None, num_classes]))
 #%%
 from PIL import Image
 for image, label in train_dataset.take(1):
@@ -97,24 +78,22 @@ model.compile(loss=tf.keras.losses.CategoricalCrossentropy(), optimizer='adam')
 model.summary()
 output = model.predict(image)
 print("Model output shape:", output.shape)
-
+#%%
 if INCLUDE_UNCERTAINTY_test:
     output_1 = model.predict(image)
     output_2 = model.predict(image)
     print("is stochastic:", np.any(output_1 != output_2))
 # %%
 history = model.fit(train_dataset, 
-    steps_per_epoch=len(train_generator),
+    steps_per_epoch=steps_per_epoch,
     validation_data=val_dataset, 
-    validation_steps=len(val_generator),
+    validation_steps=validation_steps,
     epochs=EPOCHS, 
     workers=1
 )
-
-#%%
 targets     = []
 predictions = []
-for image, label in val_dataset.take(len(val_generator)):
+for image, label in val_dataset.take(validation_steps):
     target = label.numpy().argmax(axis=-1)
     targets.append(target)
     pred = model.predict(image).argmax(axis=-1)

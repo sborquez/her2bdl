@@ -6,6 +6,7 @@ This modele define generator (keras.Sequential) to feed differents
 models, with their defined input format.
 """
 import tensorflow as tf
+import tensorflow_datasets as tfds
 from tensorflow import keras
 import numpy as np
 import pandas as pd
@@ -16,31 +17,105 @@ from .wsi import *
 
 __all__ = [
     'GridPatchGenerator',
-    'MCPatchGenerator'
+    'MCPatchGenerator',
+    'generator_to_tf_Dataset', 'get_generators_from_tf_Dataset', 'get_generators_from_directory'
 ]
 
-def get_tf_Dataset(generator, output_shape=""):
+def generator_to_tf_Dataset(generator, img_height, img_width):
     """
     Get tf.data.Dataset from generator.
     """
     def callable_iterator(generator):
         for img_batch, targets_batch in generator:
             yield img_batch, targets_batch
+
     num_classes = generator.num_classes 
+    output_shape = ([None, img_height, img_width, 3], [None, num_classes])
     dataset = tf.data.Dataset.from_generator(
         lambda: callable_iterator(generator),
         output_types=(tf.float32, tf.float32), 
-        output_shapes=([None, *PATCH_SIZE, 3], [None, num_classes]))
+        output_shapes=output_shape
+    )
     return dataset
 
-def get_generators_from_directory(data_directory, validation_split=None):
+def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, validation_split=None, rescale=None, data_dir=None):
+    """
+    Sources:
+        * simple: https://www.tensorflow.org/datasets/catalog/mnist
+        * binary: https://www.tensorflow.org/datasets/catalog/cats_vs_dogs
+        * multiclass: https://www.tensorflow.org/datasets/catalog/stanford_dogs
+    """
+    img_height, img_width = input_shape[:2]
+    def get_mapper(img_height, img_width, to_rgb, num_classes, rescale=None):
+        @tf.autograph.experimental.do_not_convert
+        def mapper(image, label):
+            image = tf.image.resize(image, (img_height, img_width))
+            if to_rgb:
+                image = tf.image.grayscale_to_rgb(image)
+            if rescale is not None:
+                image = image * rescale
+            if num_classes is not None:
+                label = tf.one_hot(label, num_classes)
+            return image, label
+        return mapper
+
+    assert (dataset_target in ["simple", "binary", "multiclass"]), "Invalid dataset_target."
+    if dataset_target == "simple":
+        to_rgb = True
+        num_classes = 10
+        dataset = 'mnist'
+    elif dataset_target == "binary":
+        to_rgb = False
+        num_classes = 2
+        dataset = "cats_vs_dogs"
+    elif dataset_target == "multiclass":
+        to_rgb = False
+        raise NotImplementedError, "find num_classes for dogs"
+        num_classes = None
+        dataset = "stanford_dogs"
+
     if validation_split is not None:
-        train_genetaror = None
-        return train_genetaror
+        train_ds, validation_ds = tfds.load(dataset, split=['train', 'test'], as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+        train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        steps_per_epoch = len(train_dataset)
+        val_dataset = validation_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        validation_steps = len(val_dataset)
+        return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
     else:
-        train_genetaror = None
-        validation_genetaror = None
-        return train_genetaror, validation_genetaror
+        ds = tfds.load(dataset, split='train', as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+        steps_per_epoch = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        steps_per_epoch = len(steps_per_epoch)
+        return (train_dataset, steps_per_epoch)
+
+def get_generators_from_directory(data_directory, input_shape, batch_size, rescale=None, validation_split=None):
+    image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
+        validation_split=validation_split, 
+        rescale=rescale
+    )
+
+    img_height, img_width = input_shape[:2]
+    train_generator = image_generator.flow_from_directory(
+        directory=str(data_directory),
+        batch_size=batch_size,
+        shuffle=True,
+        target_size=(img_height, img_width),
+        subset='training' if validation_split is not None else None
+    )
+    train_dataset = generator_to_tf_Dataset(train_generator, img_height, img_width)
+    steps_per_epoch = len(train_generator)
+    if validation_split is not None:
+        val_generator = image_generator.flow_from_directory(
+            directory=str(data_directory),
+            batch_size=batch_size,
+            shuffle=False,
+            target_size=(img_height, img_width),
+            subset='validation'
+        )
+        val_dataset  = generator_to_tf_Dataset(val_generator, img_height, img_width)
+        validation_steps = len(val_generator)
+        return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
+    else:
+        return (train_dataset, steps_per_epoch)
 
 class GridPatchGenerator(keras.utils.Sequence):
     """

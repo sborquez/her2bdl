@@ -8,12 +8,12 @@ Bayesian Deep Learning for HER2 tissue image classification.
 - [x] AI project structure.
 - [x] Tensorflow, Keras and Scikit-learn.
 - [x] HPC jobs manager.
-- [x] Pip Package.
+- [ ] Nose unit tests.
 - [ ] Weight and Bias easy setup.
 - [ ] Notebooks.
-- [ ] Nose unit tests.
 - [ ] Singularity container.
 - [ ] Easy experiment reproducibility.
+- [ ] Pip Package.
 
 ## Her2BDL Package
 
@@ -81,7 +81,12 @@ conda activate her2bdl
 
 ## Referencias
 
+### Dataset
+
+- HER2 challenge contest: [https://onlinelibrary.wiley.com/doi/10.1111/his.13333](https://onlinelibrary.wiley.com/doi/10.1111/his.13333)
+
 ### Papers
+
 - 
 
 ### Web
@@ -89,4 +94,7 @@ conda activate her2bdl
 - YastAI Template: [https://github.com/yast-ia/YastAI](https://github.com/yast-ia/YastAI)
 - WSL Preprocessing: [https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/](https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/)
 - Weight and Bias: [https://www.wandb.com/](https://www.wandb.com/)
+- Tensorflow: [https://www.tensorflow.org/](https://www.tensorflow.org/)
+- Tensorflow Probability: [https://www.tensorflow.org/probability](https://www.tensorflow.org/probability)
+- Tensorflow Datasets:[https://www.tensorflow.org/datasets](https://www.tensorflow.org/datasets?hl=es-419)
 

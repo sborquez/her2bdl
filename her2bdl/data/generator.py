@@ -70,19 +70,25 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, vali
         dataset = "cats_vs_dogs"
     elif dataset_target == "multiclass":
         to_rgb = False
-        raise NotImplementedError, "find num_classes for dogs"
+        raise NotImplementedError("find num_classes for dogs")
         num_classes = None
         dataset = "stanford_dogs"
 
+
     if validation_split is not None:
-        train_ds, validation_ds = tfds.load(dataset, split=['train', 'test'], as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+        if isinstance(validation_split, str):
+            split = [f'train[:{2*batch_size}]', f'test[:{2*batch_size}]']
+        else:
+            split = ['train', 'test']
+        train_ds, validation_ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
         train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(train_dataset)
         val_dataset = validation_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         validation_steps = len(val_dataset)
         return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
     else:
-        ds = tfds.load(dataset, split='train', as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+        split = f'train[:{2*batch_size}]' if dataset_target == "simple" else "train" 
+        ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
         steps_per_epoch = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(steps_per_epoch)
         return (train_dataset, steps_per_epoch)

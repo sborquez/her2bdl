@@ -102,7 +102,7 @@ targets = np.hstack(targets)
 predictions = np.hstack(predictions)
 cm = confusion_matrix(targets, predictions)
 
-evaluation = model.evaluate(val_dataset, steps=len(val_generator))
+evaluation = model.evaluate(val_dataset, steps=validation_steps)
 
 print("Confusion matrix")
 print(cm)

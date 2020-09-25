@@ -1,13 +1,13 @@
 # How to run tests
 
-Test all
+From projects root folder:
 
 ```bash
-./her2bdl$ nosetests --verbosity 2
+(her2bdl)$ nosetests --verbosity 2
 ```
 
 Test Module
 
 ```bash
-./her2bdl$ nosetests ./tests/models --verbosity 2
+(her2bdl)$ nosetests ./tests/models --verbosity 2
 ```

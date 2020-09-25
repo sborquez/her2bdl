@@ -24,3 +24,4 @@
 # Extras
 - [ ] Unit Tests
 - [ ] Her2BDL README
+- [ ] Pip install

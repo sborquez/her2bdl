@@ -1,0 +1,4 @@
+
+[submodule "deploy/web"]
+	path = deploy/web
+	url = git@github.com:sborquez/tensorflow-image-classification-flask-deployment.git

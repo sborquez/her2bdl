@@ -35,10 +35,10 @@ setup(
     include_package_data=True,
     python_requires=">=3.7.*",
     install_requires=[
-        'numpy', 'pandas', 'xlrd', 'scipy', 'tqdm', 'h5py', 'matplotlib', 
+        'numpy', 'pandas', 'xlrd', 'scipy', 'tqdm', 'h5py', 'matplotlib', 'plotly', 'pyyaml',
         'scikit-learn', 'tensorflow>=2.3.0', 'tensorflow-probability',
-        'openslide-python', 'opencv-python', 'scikit-image',
-        'nose','jupyter', 'wandb', 'tensorflow-datasets'
+        'openslide-python', 'opencv-python', 'scikit-image', 'flask', 'flask_cors', 'flask_wtf',
+        'nose','jupyter', 'wandb', 'tensorflow-datasets' 
     ],
     license=license, #about['__license__'],
     zip_safe=False,

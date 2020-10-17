@@ -130,5 +130,5 @@ dmypy.json
 
 interactive.py
 .vscode/
-test_data/
+.test_data/
 .noseids

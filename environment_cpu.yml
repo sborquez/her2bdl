@@ -14,6 +14,8 @@ dependencies:
   - jupyter
   - scikit-learn
   - scikit-image
+  - plotly
+  - pyyaml
   - pip:
     - twine
     - nose

@@ -8,11 +8,11 @@ Bayesian Deep Learning for HER2 tissue image classification.
 - [x] AI project structure.
 - [x] Tensorflow, Keras and Scikit-learn.
 - [x] HPC jobs manager.
-- [ ] Nose unit tests.
+- [x] Nose unit tests.
 - [ ] Weight and Bias easy setup.
+- [ ] Easy experiment reproducibility.
 - [ ] Notebooks.
 - [ ] Singularity container.
-- [ ] Easy experiment reproducibility.
 - [ ] Pip Package.
 
 ## Her2BDL Package

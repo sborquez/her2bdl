@@ -1,0 +1,66 @@
+experiment:
+  name: example_model
+  parent_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  run_id: null
+  seed: 1234
+model:
+  task: classification
+  architecture: SimpleClassifierMCDropout
+  checkpoint: null
+  parameters: 
+    mc_dropout_rate: 0.1
+  uncertainty:
+    sample_size: 100
+ensemble: 
+  method: null
+  parameters: null
+data:
+  img_height: 224
+  img_width: 224
+  img_channels: 3
+  classes: 10
+  datasets:
+    source_type: tf_Dataset
+    parameters:
+      target: simple
+training:
+  epochs: 1
+  batch_size: 32
+  validation_split: 0.2
+  loss:
+    function: CategoricalCrossentropy
+    parameters: null
+  optimizer:
+    name: adam
+    parameters:
+      learning_rate: 1e-4
+  callbacks:
+    enable_wand: true
+    experiment_tracker:
+      log_model_summary: true
+      log_dataset_description: true
+      log_training_loss_plot: true
+      log_training_loss: true
+      log_predictions_plot: false
+      log_predictions: false
+      log_uncertainty_plot: false
+      log_uncertainty: false
+      log_confusion_matrix: 
+    checkpoints:
+      filepath: null
+      save_best_only: false
+      save_weights_only: true
+      monitor: val_loss
+evaluate:
+  metrics: [accuracy]
+predict:
+  save_predictions: true
+  save_uncertainty: false
+plugins:
+  wandb:
+    project: Her2BDL
+    name:  example_model_test
+    notes: simple test for trainig a classifier.
+    tags: test
+    dir: null
+    apikey: WANDB_API_KEY

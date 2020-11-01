@@ -129,6 +129,5 @@ dmypy.json
 .pyre/
 
 interactive.py
-.vscode/
 .test_data/
 .noseids

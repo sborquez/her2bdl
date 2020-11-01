@@ -5,8 +5,10 @@ from tensorflow.keras import backend as K
 import numpy as np
 from her2bdl.data import get_generators_from_tf_Dataset
 from shutil import rmtree
+import pathlib
 
-NOSE_DATA_PATH = "./.test_data"
+# NOSE_DATA_PATH = "./.test_data"
+NOSE_DATA_PATH = pathlib.Path(__file__).parent.joinpath(".extras", "test_data").resolve()
 train_dataset, steps_per_epoch = (None, None)
 val_dataset, validation_steps  = (None, None)
 image, label = (None, None)
@@ -24,9 +26,12 @@ def setup_module():
     dataset_target = "simple"
     input_shape = (224, 224, 3)
     batch_size = 8
+    num_clasess = 10
+    label_mode = "categorical"
     train_, val_ = get_generators_from_tf_Dataset(
-        dataset_target, input_shape, batch_size, 
-        validation_split="sample", rescale=None, data_dir=NOSE_DATA_PATH)
+        dataset_target, input_shape, batch_size,
+        num_classes=num_clasess, label_mode=label_mode,
+        validation_split="sample", preprocessing= {"rescale": None}, data_dir=NOSE_DATA_PATH)
     (train_dataset, steps_per_epoch) = train_
     (val_dataset, validation_steps)  = val_
     for image, label in train_dataset.take(1).cache().repeat(): break

@@ -113,47 +113,47 @@ class ModelMCDropout(tf.keras.Model):
         assert not (x is None and y_predictions_samples is None),\
                 "Must have an input x or predictions_samples"
         
-    # def predictive_entropy(self, x=None, y_predictive_distribution=None, 
-    #                        sample_size=None, **kwargs):
-    #     """
-    #     Average amount of information contained in the predictive distribution:
-    #     Predictive entropy is a biases estimator. The bias of this estimator 
-    #     will decrease as $T$ (`sample_size`) increases.
-    #     .. math::
-    #     \hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))
-    #     Parameters
-    #     ----------
-    #     x : `np.ndarray`  (batch_size, *input_shape) or `None`
-    #         Batch of inputs. If is `None` use precalculated `y_predictive_distribution`.
-    #     y_predictive_distribution : `np.ndarray` (batch_size, classes) or `None`
-    #         Model's predictive distributions (normalized histogram). Ignore
-    #         if `x` is not `None`.
-    #     sample_size    : `int` or `None`
-    #         Number of fordward passes, also refers as `T`. If it is `None` 
-    #         use model`s sample size.
-    #     kwargs : 
-    #         keras.Model.predict kwargs.
-    #     Return
-    #     ------
-    #         ``np.ndarray` with length batch_size.
-    #             Return predictive entropy for a the batch.
-    #     """
-    #     assert not (x is None and y_predictive_distribution is None),\
-    #         "Must have an input x or a predictive distribution"
-    #     if x is not None:
-    #         sample_size = sample_size or self.sample_size
-    #         _, y_predictive_distribution, _ = self.predict_distribution(
-    #             x, 
-    #             return_y_pred=False, return_samples=False, 
-    #             sample_size=sample_size, verbose=0,
-    #             **kwargs
-    #         )
-    #     # Numerical Stability 
-    #     eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
-    #     y_log_predictive_distribution = np.log(eps + y_predictive_distribution)
-    #     # Predictive Entropy
-    #     H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
-    #     return H
+    def predictive_entropy(self, x=None, y_predictive_distribution=None, 
+                           sample_size=None, **kwargs):
+        """
+        Average amount of information contained in the predictive distribution:
+        Predictive entropy is a biases estimator. The bias of this estimator 
+        will decrease as $T$ (`sample_size`) increases.
+        .. math::
+        \hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))
+        Parameters
+        ----------
+        x : `np.ndarray`  (batch_size, *input_shape) or `None`
+            Batch of inputs. If is `None` use precalculated `y_predictive_distribution`.
+        y_predictive_distribution : `np.ndarray` (batch_size, classes) or `None`
+            Model's predictive distributions (normalized histogram). Ignore
+            if `x` is not `None`.
+        sample_size    : `int` or `None`
+            Number of fordward passes, also refers as `T`. If it is `None` 
+            use model`s sample size.
+        kwargs : 
+            keras.Model.predict kwargs.
+        Return
+        ------
+            ``np.ndarray` with length batch_size.
+                Return predictive entropy for a the batch.
+        """
+        assert not (x is None and y_predictive_distribution is None),\
+            "Must have an input x or a predictive distribution"
+        if x is not None:
+            sample_size = sample_size or self.sample_size
+            _, y_predictive_distribution, _ = self.predict_distribution(
+                x, 
+                return_y_pred=False, return_samples=False, 
+                sample_size=sample_size, verbose=0,
+                **kwargs
+            )
+        # Numerical Stability 
+        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
+        y_log_predictive_distribution = np.log(eps + y_predictive_distribution)
+        # Predictive Entropy
+        H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
+        return H
 
     def uncertainty(self, x=None, y_predictive_distribution=None, multual_information=None,
                     varition_ratio=None, predictive_entropy=None, **kwargs):

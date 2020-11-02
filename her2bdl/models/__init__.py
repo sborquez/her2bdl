@@ -6,7 +6,7 @@ Custom models, meta-models, layers and loss funtions.
 
 """
 
-
+import tensorflow as tf
 
 """
 Custom Loss
@@ -14,6 +14,7 @@ Custom Loss
 """
 from .loss import *
 LOSS = {
+    "CategoricalCrossentropy": tf.keras.losses.CategoricalCrossentropy
 }
 
 
@@ -32,7 +33,6 @@ Custom Objects
 """
 CUSTOM_OBJECTS = {
     # LOSSES
-    "loss": crossentropy_loss(), #dummy loss
     **LOSS,
     # LAYERS
     **LAYERS
@@ -61,8 +61,5 @@ MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
     "EfficentNetMCDropout": EfficentNetMCDropout
 }
-ENSEMBLERS = {
+AGGREGATION_METHODS = {
 }
-
-
-

@@ -38,7 +38,7 @@ num_classes = 10
 model_constructor = MODELS[MODEL]
 model_parameters = {
     "input_shape" : input_shape,
-    "classes": num_classes,
+    "num_classes": num_classes,
     "mc_dropout_rate": 0.2,
     #"base_model": "B0", 
     #"weights": 'imagenet'
@@ -52,7 +52,7 @@ model_parameters = {
 
 train_, val_ = get_generators_from_tf_Dataset(
     DATASET_TARGET, input_shape, BATCH_SIZE, 
-    rescale=IMG_RESCALE, 
+    preprocessing={'rescale' : IMG_RESCALE}, 
     validation_split=VALIDATION_SPLIT
 )
 

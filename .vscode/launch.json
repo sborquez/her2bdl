@@ -5,6 +5,25 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Train Simple Classifier",
+      "type": "python",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/train/",
+      "program": "train_model.py",
+      "args": ["-c", "experiments/config/simple_classifier.yaml"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+    "name": "Train Local",
+      "type": "python",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/train/",
+      "program": "train_model.py",
+      "args": ["-c", "experiments/config/simple_classifier.yaml", "--disable_wandb"],
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Interactive",
       "type": "python",
       "request": "launch",
@@ -21,12 +40,19 @@
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}/train",
       "args": [
-        "-i", "E:/datasets/medical/warwick/train",
-        "-g", "-m", "-r", 
-        "-o", "${workspaceFolder}/train/datasets",
-        "-s","0.15",
-        "-S","0.15",
-        "--seed", "42"
+        "-i",
+        "E:/datasets/medical/warwick/train",
+        "-g",
+        "-m",
+        "-r",
+        "-o",
+        "${workspaceFolder}/train/datasets",
+        "-s",
+        "0.15",
+        "-S",
+        "0.15",
+        "--seed",
+        "42"
       ]
     }
   ]

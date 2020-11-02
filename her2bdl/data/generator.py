@@ -16,9 +16,8 @@ from .constants import *
 from .wsi import *
 
 __all__ = [
-    'GridPatchGenerator',
-    'MCPatchGenerator',
-    'generator_to_tf_Dataset', 'get_generators_from_tf_Dataset', 'get_generators_from_directory'
+    'get_generator_from_wsi', 'GridPatchGenerator', 'MCPatchGenerator', 
+    'get_generators_from_tf_Dataset', 'get_generators_from_directory', 'generator_to_tf_Dataset'
 ]
 
 def generator_to_tf_Dataset(generator, img_height, img_width):
@@ -38,7 +37,9 @@ def generator_to_tf_Dataset(generator, img_height, img_width):
     )
     return dataset
 
-def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, validation_split=None, rescale=None, data_dir=None):
+def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, 
+                                   num_classes=None, label_mode="categorical", validation_split=None, 
+                                   preprocessing={}, data_dir=None):
     """
     Sources:
         * simple: https://www.tensorflow.org/datasets/catalog/mnist
@@ -46,7 +47,7 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, vali
         * multiclass: https://www.tensorflow.org/datasets/catalog/stanford_dogs
     """
     img_height, img_width = input_shape[:2]
-    def get_mapper(img_height, img_width, to_rgb, num_classes, rescale=None):
+    def get_mapper(img_height, img_width, to_rgb, num_classes, label_mode="categorical", rescale=None):
         @tf.autograph.experimental.do_not_convert
         def mapper(image, label):
             image = tf.image.resize(image, (img_height, img_width))
@@ -55,7 +56,10 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, vali
             if rescale is not None:
                 image = image * rescale
             if num_classes is not None:
-                label = tf.one_hot(label, num_classes)
+                if label_mode == "categorical":
+                    label = tf.one_hot(label, num_classes)
+                else:
+                    raise ValueError(f"Unkown label_mode: {label_mode}")
             return image, label
         return mapper
 
@@ -74,26 +78,31 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, vali
         num_classes = None
         dataset = "stanford_dogs"
 
+    # preprocessing
+    rescale = preprocessing.get("rescale", None)
 
+    # load and split datasets
     if validation_split is not None:
         if isinstance(validation_split, str):
-            split = [f'train[:{2*batch_size}]', f'test[:{2*batch_size}]']
-        else:
+            split = [f'train[:{2*batch_size}]', f'train[:{2*batch_size}]']
+        elif isinstance(validation_split, float):
+            #TODO: add split
             split = ['train', 'test']
         train_ds, validation_ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
-        train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(train_dataset)
-        val_dataset = validation_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        val_dataset = validation_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         validation_steps = len(val_dataset)
         return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
     else:
         split = f'train[:{2*batch_size}]' if dataset_target == "simple" else "train" 
         ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
-        steps_per_epoch = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        steps_per_epoch = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(steps_per_epoch)
         return (train_dataset, steps_per_epoch)
 
-def get_generators_from_directory(data_directory, input_shape, batch_size, rescale=None, validation_split=None):
+def get_generators_from_directory(data_directory, input_shape, batch_size, num_classes=None, label_mode="categorical", validation_split=None, preprocessing={}):
+    rescale = preprocessing.get("rescale", None)
     image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
         validation_split=validation_split, 
         rescale=rescale
@@ -102,6 +111,7 @@ def get_generators_from_directory(data_directory, input_shape, batch_size, resca
     img_height, img_width = input_shape[:2]
     train_generator = image_generator.flow_from_directory(
         directory=str(data_directory),
+        label_mode=label_mode,
         batch_size=batch_size,
         shuffle=True,
         target_size=(img_height, img_width),
@@ -112,6 +122,7 @@ def get_generators_from_directory(data_directory, input_shape, batch_size, resca
     if validation_split is not None:
         val_generator = image_generator.flow_from_directory(
             directory=str(data_directory),
+            label_mode=label_mode,
             batch_size=batch_size,
             shuffle=False,
             target_size=(img_height, img_width),
@@ -123,13 +134,17 @@ def get_generators_from_directory(data_directory, input_shape, batch_size, resca
     else:
         return (train_dataset, steps_per_epoch)
 
+def get_generator_from_wsi(patch_mode="grid"):
+    pass
+
 class GridPatchGenerator(keras.utils.Sequence):
     """
     Grid patch generator
     """
 
     def __init__(self, dataset, batch_size, patch_level, patch_size, 
-                 patch_vertical_flip=False, patch_horizontal_flip=False, shuffle=True, seed=SEED):
+                 patch_vertical_flip=False, patch_horizontal_flip=False, label_mode="categorical",
+                 shuffle=True):
         # Generator parameters
         self.batch_size = batch_size
         self.patch_size = patch_size
@@ -229,8 +244,8 @@ class MCPatchGenerator(GridPatchGenerator):
     """
 
     def __init__(self, dataset, batch_size, patch_level, patch_size, samples_per_tissue=500,
-                 patch_vertical_flip=False, patch_horizontal_flip=False, shuffle=True
-                 ):
+                 patch_vertical_flip=False, patch_horizontal_flip=False, label_mode="categorical",
+                 shuffle=True):
         # Take m samples from each tissue
         self.samples_per_tissue = samples_per_tissue
         super().__init__(dataset, batch_size, patch_level, patch_size, patch_vertical_flip, patch_horizontal_flip, shuffle)

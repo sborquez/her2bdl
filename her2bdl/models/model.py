@@ -56,7 +56,7 @@ class ModelMCDropout(tf.keras.Model):
         Parameters
         ----------
         x : `np.ndarray`  (batch_size, *input_shape)
-            Batch of inputs.
+            Batch of inputs, if is one input, automatically it's converted to a batch.
         return_y_pred : `bool`
             Return argmax y_predictive_distribution. If is `False`
             `y_pred` is `None`.
@@ -77,6 +77,8 @@ class ModelMCDropout(tf.keras.Model):
             pass samples, `np.ndarray`with shape: (batch_size, sample size, classes). 
             If `return_samples` is `False` return only predictive distribution.
         """
+        if x.ndim == 3: x = np.array([x])
+
         T = sample_size or self.sample_size
         deterministic_output = self.encoder.predict(x, verbose=verbose, **kwargs)
         # T stochastics forward passes 

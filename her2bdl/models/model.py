@@ -1,10 +1,14 @@
 """
-Custom Models
-=============
+Uncertainty Models
+==================
 
-Models for Image Classification
+Models for Image Classification with  predictive distributions and uncertainty measure.
+
+[1] GAL, Yarin. Uncertainty in deep learning. University of Cambridge, 2016, vol. 1, no 3.
+
 """
 #%%
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Input, Activation,
@@ -22,32 +26,139 @@ class ModelMCDropout(tf.keras.Model):
         # Model parameters
         self.mc_dropout_rate = 0.0 if mc_dropout_rate is None else mc_dropout_rate
         self.image_shape = input_shape
+        self.batch_dim  = 1 + len(self.image_shape) 
         self.num_classes = num_classes
         # Predictive distribution parameters
         self.sample_size = sample_size
+        self.encoder = None
+        self.classifier = None
+    
+    def call(self, inputs):
+        # Encode and extract features from input
+        z = self.encoder(inputs)
+        # Classify 
+        return self.classifier(z)
 
-    # def build_encoder_model(self):
-    #     raise NotImplementedError
+    @staticmethod
+    def build_encoder_model(input_shape, **kwargs):
+        raise NotImplementedError
 
-    # def build_classifier_model(self):
-    #     raise NotImplementedError
+    @staticmethod
+    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+        raise NotImplementedError
 
-    def predict_distribution(self, x):
-        pass
+    def predict_distribution(self, x, return_y_pred=True, return_samples=True, sample_size=None, verbose=0, **kwargs):
+        """
+        Calculate predictive distrution by T stochastic forward passes.
 
-    def multual_information(self, x=None, predictive_distribution=None):
-        assert not (x is None and predictive_distribution is None), "Must have an input x or a predictive distribution"
+        See [1] 3.3.1 Uncertainty in classification
 
-    def varition_ratio(self, x=None, predictive_distribution=None):
-        assert not (x is None and predictive_distribution is None), "Must have an input x or a predictive distribution"
+        Parameters
+        ----------
+        x : `np.ndarray`  (batch_size, *input_shape)
+            Batch of inputs.
+        return_y_pred : `bool`
+            Return argmax y_predictive_distribution. If is `False`
+            `y_pred` is `None`.
+        return_samples : `bool`
+            Return forward pass samples. (required by varition_ratio)
+            If is `False` `y_predictions_samples` is `None`.
+        sample_size    : `int` or `None`
+            Number of fordward passes, also refers as `T`. If it is `None` 
+            use model`s sample size.
+        kwargs : 
+            keras.Model.predict kwargs.
+
+        Return
+        ------
+            `list` of `np.ndarray` with length batch_size.
+                Return 3 arrays with the model's predictive 
+            distributions (normalized histogram), y class prediction and forward
+            pass samples, `np.ndarray`with shape: (batch_size, sample size, classes). 
+            If `return_samples` is `False` return only predictive distribution.
+        """
+        T = sample_size or self.sample_size
+        deterministic_output = self.encoder.predict(x, verbose=verbose, **kwargs)
+        # T stochastics forward passes 
+        y_predictions_samples = np.array([
+            self.classifier.predict(np.tile(z_i, (T, 1)), verbose=verbose, **kwargs)
+            for z_i in deterministic_output
+        ])
+        # predictive distribution
+        y_predictive_distribution = np.array([(1.0/T) * y_pred_T.sum(axis=0)  for y_pred_T in y_predictions_samples])
+
+        # class predictions
+        y_pred = None
+        if return_y_pred:
+            y_pred = y_predictive_distribution.argmax(axis=1)
+
+        if not return_samples:
+            y_predictions_samples = None
+
+        return y_predictive_distribution, y_pred, y_predictions_samples
+
+    def multual_information(self, x=None, y_predictive_distribution=None, sample_size=None, **kwargs):
+        assert not (x is None and y_predictive_distribution is None),\
+            "Must have an input x or a predictive distribution"
+        if x is not None:
+            sample_size = sample_size or self.sample_size
+            _, y_predictive_distribution, _ = self.predict_distribution(
+                x, 
+                return_y_pred=False, return_samples=False, 
+                sample_size=sample_size, verbose=0, 
+                **kwargs
+            )
+
+    def varition_ratio(self, x=None, y_predictions_samples=None, **kwargs):
+        assert not (x is None and y_predictions_samples is None),\
+                "Must have an input x or predictions_samples"
         
+    # def predictive_entropy(self, x=None, y_predictive_distribution=None, 
+    #                        sample_size=None, **kwargs):
+    #     """
+    #     Average amount of information contained in the predictive distribution:
+    #     Predictive entropy is a biases estimator. The bias of this estimator 
+    #     will decrease as $T$ (`sample_size`) increases.
+    #     .. math::
+    #     \hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))
+    #     Parameters
+    #     ----------
+    #     x : `np.ndarray`  (batch_size, *input_shape) or `None`
+    #         Batch of inputs. If is `None` use precalculated `y_predictive_distribution`.
+    #     y_predictive_distribution : `np.ndarray` (batch_size, classes) or `None`
+    #         Model's predictive distributions (normalized histogram). Ignore
+    #         if `x` is not `None`.
+    #     sample_size    : `int` or `None`
+    #         Number of fordward passes, also refers as `T`. If it is `None` 
+    #         use model`s sample size.
+    #     kwargs : 
+    #         keras.Model.predict kwargs.
+    #     Return
+    #     ------
+    #         ``np.ndarray` with length batch_size.
+    #             Return predictive entropy for a the batch.
+    #     """
+    #     assert not (x is None and y_predictive_distribution is None),\
+    #         "Must have an input x or a predictive distribution"
+    #     if x is not None:
+    #         sample_size = sample_size or self.sample_size
+    #         _, y_predictive_distribution, _ = self.predict_distribution(
+    #             x, 
+    #             return_y_pred=False, return_samples=False, 
+    #             sample_size=sample_size, verbose=0,
+    #             **kwargs
+    #         )
+    #     # Numerical Stability 
+    #     eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
+    #     y_log_predictive_distribution = np.log(eps + y_predictive_distribution)
+    #     # Predictive Entropy
+    #     H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
+    #     return H
 
-    def predictive_entropy(self, x=None, predictive_distribution=None):
-        assert not (x is None and predictive_distribution is None), "Must have an input x or a predictive distribution"
-        
-    def uncertainty(self, x=None, predictive_distribution=None, 
-                    multual_information=None, varition_ratio=None, predictive_entropy=None):
-        assert not (x is None and predictive_distribution is None), "Must have an input x or a predictive distribution"
+    def uncertainty(self, x=None, y_predictive_distribution=None, multual_information=None,
+                    varition_ratio=None, predictive_entropy=None, **kwargs):
+        assert not (x is None and y_predictive_distribution is None),\
+            "Must have an input x or a predictive distribution"
 
 
 class SimpleClassifierMCDropout(ModelMCDropout):
@@ -55,75 +166,64 @@ class SimpleClassifierMCDropout(ModelMCDropout):
     def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, varition_ratio=True, predictive_entropy=True):
         super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, varition_ratio, predictive_entropy)
         # Architecture
+        # Encoder
+        self.encoder = self.build_encoder_model(input_shape=input_shape)
+        latent_variables_shape = self.encoder.output.shape[1:]
+        self.classifier = self.build_classifier_model(
+            latent_variables_shape=latent_variables_shape,
+            mc_dropout_rate=self.mc_dropout_rate, 
+            num_classes=self.num_classes
+        )
+    
+    @staticmethod
+    def build_encoder_model(input_shape, **kwargs):
+        x = encoder_input = Input(shape=input_shape)
         ## initialize the layers in the first (CONV => RELU) * 2 => POOL
         ### layer set
-        self.conv1A = Conv2D(32, (3, 3), padding="same", name="block1_conv2d_a")
-        self.bn1A = BatchNormalization(name="block1_batchnorm_a")
-        self.act1A = Activation("relu", name="block1_relu_a")
-        self.conv1B = Conv2D(32, (3, 3), padding="same", name="block1_conv2d_b")
-        self.bn1B = BatchNormalization(name="block1_batchnorm_b")
-        self.act1B = Activation("relu", name="block1_relu_b")
-        self.pool1 = MaxPooling2D(pool_size=(2, 2), name="block1_maxpool")
+        x = Conv2D(32, (3, 3), padding="same", name="block1_conv2d_a")(x)
+        x = BatchNormalization(name="block1_batchnorm_a")(x)
+        x = Activation("relu", name="block1_relu_a")(x)
+        x = Conv2D(32, (3, 3), padding="same", name="block1_conv2d_b")(x)
+        x = BatchNormalization(name="block1_batchnorm_b")(x)
+        x = Activation("relu", name="block1_relu_b")(x)
+        x = MaxPooling2D(pool_size=(2, 2), name="block1_maxpool")(x)
         ## initialize the layers in the second (CONV => RELU) * 2 => POOL
         ### layer set
-        self.conv2A = Conv2D(32, (3, 3), padding="same", name="block2_conv2d_a")
-        self.bn2A = BatchNormalization(name="block2_batchnorm_a")
-        self.act2A = Activation("relu", name="block2_relu_a")
-        self.conv2B = Conv2D(32, (3, 3), padding="same", name="block2_conv2d_b")
-        self.bn2B = BatchNormalization(name="block2_batchnorm_b")
-        self.act2B = Activation("relu", name="block2_relu_b")
-        self.pool2 = MaxPooling2D(pool_size=(2, 2), name="block2_maxpool")
+        x = Conv2D(32, (3, 3), padding="same", name="block2_conv2d_a")(x)
+        x = BatchNormalization(name="block2_batchnorm_a")(x)
+        x = Activation("relu", name="block2_relu_a")(x)
+        x = Conv2D(32, (3, 3), padding="same", name="block2_conv2d_b")(x)
+        x = BatchNormalization(name="block2_batchnorm_b")(x)
+        x = Activation("relu", name="block2_relu_b")(x)
+        x = MaxPooling2D(pool_size=(2, 2), name="block2_maxpool")(x)
         ## initialize the layers in our fully-connected layer sets
         ### layer set
-        self.flatten = Flatten(name="head_flatten")
-        self.dense3 = Dense(512, name="head_dense_1")
-        self.bn3 = BatchNormalization(name="head_batchnorm_1")
-        self.act3 = Activation("relu", name="head_relu_1")
-        self.do3 = Dropout(self.mc_dropout_rate, name="head_mc_dropout_1")
-        ### layer set
-        self.dense4 = Dense(512, name="head_dense_2")
-        self.bn4 = BatchNormalization(name="head_batchnorm_2")
-        self.act4 = Activation("relu", name="head_relu_2")
-        self.do4 = Dropout(self.mc_dropout_rate, name="head_mc_dropout_2")
-        ## initialize the layers in the softmax classifier layer set
-        self.classifier = Dense(self.num_classes, activation="softmax", name="head_classifier")
+        x = Flatten(name="head_flatten")(x)
+        return tf.keras.Model(encoder_input, x, name="encoder")
 
-    def call(self, inputs):
-        # build the first (CONV => RELU) * 2 => POOL layer set
-        x = self.conv1A(inputs)
-        x = self.bn1A(x)
-        x = self.act1A(x)
-        x = self.conv1B(x)
-        x = self.bn1B(x)
-        x = self.act1B(x)
-        x = self.pool1(x)
-        x = self.conv2A(x)
-        x = self.bn2A(x)
-        x = self.act2A(x)
-        x = self.conv2B(x)
-        x = self.bn2B(x)
-        x = self.act2B(x)
-        x = self.pool2(x)
-        # build our FC layer set
-        x = self.flatten(x)
-        x = self.dense3(x)
-        x = self.bn3(x)
-        x = self.act3(x)
-        x = self.do3(x, training=True) # MC dropout
-        x = self.dense4(x)
-        x = self.bn4(x)
-        x = self.act4(x)
-        x = self.do4(x, training=True) # MC dropout
-        # build the softmax classifier
-        x = self.classifier(x)
-        # return the constructed model
-        return x
+    @staticmethod
+    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+        x = encoder_input = Input(shape=latent_variables_shape)
+        x = Dense(int(512/mc_dropout_rate), name="head_dense_1")(x)
+        x = BatchNormalization(name="head_batchnorm_1")(x)
+        x = Activation("relu", name="head_relu_1")(x)
+        x = Dropout(mc_dropout_rate, name="head_mc_dropout_1")(x, training=True) # MC dropout
+        ### layer set
+        x = Dense(int(512/mc_dropout_rate), name="head_dense_2")(x)
+        x = BatchNormalization(name="head_batchnorm_2")(x)
+        x = Activation("relu", name="head_relu_2")(x)
+        x = Dropout(mc_dropout_rate, name="head_mc_dropout_2")(x, training=True) # MC dropout
+        ## initialize the layers in the softmax classifier layer set
+        x = Dense(num_classes, activation="softmax", name="head_classifier")(x)
+        return tf.keras.Model(encoder_input, x, name="classifier")
+
 #%%
 from tensorflow.keras.applications import (
     EfficientNetB0, EfficientNetB1, EfficientNetB2, EfficientNetB3,
     EfficientNetB4,EfficientNetB5, EfficientNetB6, EfficientNetB7
 )
 class EfficentNetMCDropout(ModelMCDropout):
+    #TODO: update to encode/classifier 
     """
     EfficientNet MonteCarlo Dropout. 
     Keras EfficentNets models wrappers with extra dropout layers.

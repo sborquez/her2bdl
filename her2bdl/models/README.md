@@ -2,17 +2,53 @@
 
 ## Models
 
+### Bayesian Deep Learning
+
 ### Sub-Models
 
-### EfficientNet
+The base model is build by the composition of two models: `encoder` and `classifier`.
+The former, extract relevant features for a input image and generate the `latent_variables` vector. Is a **deterministic model**, i.e.  generate the same output for a given input.
 
-See more. [[2](#[2])]
+$$z = \mathbf{E}(x, \omega^{(e)})$$
+
+The latter, use `latent_variables` as input for classify into `K`classes. The `classifier` is a  **stochastic model**, i.e., each forward pass can generate different outputs with the same input.
+
+$$p(y| z, \omega^{(c)}_t) = \mathbf{C}(z, \omega^{(c)}_t)$$
+
+$$\hat{p}(y|z) \approx \frac{1}{T}\sum_t p(y=C_k| z, \omega_t^{(c)})$$
+
+$$\hat{y}_t = \argmax_{k} \hat{p}(y=C_k|z)$$
+
+Where $\hat{p}(y|z)$ is the _predictive distibution_ the subindice $t$ indicate that is different for each $T$ forward passes.
+
+The composition of theses models generate the Image Classifier Model $\mathbf{F}$:
+
+$$p(y|x, \hat{\omega}_t) = \mathbf{F}(x, \hat{\omega}_t) = \mathbf{C}(\mathbf{E}(x, \omega^{(e)}), \omega^{(c)}_t)$$
+
+$$\hat{p}(y|x) \approx \frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)$$
+
+$$\hat{y}_t = \argmax_{k} \hat{p}(y=C_k|x)$$
+
+Where $\hat{\omega}_t := \{\omega^{(e)}, \omega^{(c)}_t\}$. The model  $\mathbf{F}$ is summarized in the next figure:
+
+![Base Model F](https://github.com/sborquez/her2bdl/blob/uncertainty_models/models/images/assets/BaseModel.png?raw=true)
+
+### EfficientNet
+This approach can reuse any well-known image classification architecture as encoder model $\mathbf{E}$, and fine-tuning its parameters.
+
+For instance, this work use the `EfficientNet` as encoder model. See more. [[2](#[2])]
 
 ## Predictive Distribution
 
+
 ### Stochastics Forward Passes
 
-#### GPU Optimized T forward passes
+
+The estimation of the **predictive distribution**  $\hat{p}(y|x)$ requiere of multiples forward passes with the same input $x$,which can be expensive.
+
+Spliting the model in a *deterministic* and *stochastic* submodels, allows to reduce the time and resource required to compute the predictive distibution by reusing the deterministic latent variable $z$ and forward pass $\mathbf{E}(x)$ just once. 
+
+Since the number of parameters $\mathbf{C}$ usually is smaller than $\mathbf{E}$, $T$ copies of $z$ can be stored in just one batch, thus a multiples forward passes of $\mathbf{C}(z)$ can be computed by just one forward pass and a batch of size $T$. This runs faster due to the parallelization provided by the GPU.
 
 ## Metrics
 
@@ -41,6 +77,8 @@ Predictive entropy is a biases estimator. The bias of this estimator will decrea
 
 
 #### Mutual Information
+
+
 
 #### Varition Rate
 

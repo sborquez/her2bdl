@@ -107,6 +107,28 @@ class ModelMCDropout(tf.keras.Model):
         return y_predictive_distribution, y_pred, y_predictions_samples
 
     def multual_information(self, x=None, y_predictive_distribution=None, sample_size=None, **kwargs):
+        """
+        
+        .. math::
+        
+        
+        Parameters
+        ----------
+        x : `np.ndarray`  (batch_size, *input_shape) or `None`
+            Batch of inputs. If is `None` use precalculated `y_predictive_distribution`.
+        y_predictive_distribution : `np.ndarray` (batch_size, classes) or `None`
+            Model's predictive distributions (normalized histogram). Ignore
+            if `x` is not `None`.
+        sample_size    : `int` or `None`
+            Number of fordward passes, also refers as `T`. If it is `None` 
+            use model`s sample size.
+        kwargs : 
+            keras.Model.predict kwargs.
+        Return
+        ------
+            ``np.ndarray` with length batch_size.
+                Return mutual information for a the batch.
+        """
         assert not (x is None and y_predictive_distribution is None),\
             "Must have an input x or a predictive distribution"
         if x is not None:
@@ -117,6 +139,10 @@ class ModelMCDropout(tf.keras.Model):
                 sample_size=sample_size, verbose=0, 
                 **kwargs
             )
+        # Numerical Stability 
+        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
+        I = None
+        return I
 
     def varition_ratio(self, x=None, y_predictions_samples=None, **kwargs):
         assert not (x is None and y_predictions_samples is None),\
@@ -125,9 +151,9 @@ class ModelMCDropout(tf.keras.Model):
     def predictive_entropy(self, x=None, y_predictive_distribution=None, 
                            sample_size=None, **kwargs):
         """
-        Average amount of information contained in the predictive distribution:
-        Predictive entropy is a biases estimator. The bias of this estimator 
-        will decrease as $T$ (`sample_size`) increases.
+        Predictive Entropy is the average amount of information contained in 
+        the predictive distribution. Predictive entropy is a biases estimator.
+        The bias of this estimator will decrease as $T$ (`sample_size`) increases.
         .. math::
         \hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))
         Parameters

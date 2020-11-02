@@ -31,7 +31,7 @@ $$\hat{y}_t = \argmax_{k} \hat{p}(y=C_k|x)$$
 
 Where $\hat{\omega}_t := \{\omega^{(e)}, \omega^{(c)}_t\}$. The model  $\mathbf{F}$ is summarized in the next figure:
 
-![Base Model F](https://github.com/sborquez/her2bdl/blob/uncertainty_models/models/images/assets/BaseModel.png?raw=true)
+![Base Model F](https://raw.githubusercontent.com/sborquez/her2bdl/uncertainty_models/her2bdl/models/images/assets/BaseModel.png)
 
 ### EfficientNet
 This approach can reuse any well-known image classification architecture as encoder model $\mathbf{E}$, and fine-tuning its parameters.

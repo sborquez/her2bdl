@@ -25,7 +25,7 @@ def setup_module():
     # Prepare dataset
     dataset_target = "simple"
     input_shape = (224, 224, 3)
-    batch_size = 8
+    batch_size = 3
     num_clasess = 10
     label_mode = "categorical"
     train_, val_ = get_generators_from_tf_Dataset(
@@ -41,7 +41,7 @@ def teardown_module():
     global train_dataset, steps_per_epoch
     global val_dataset, validation_steps
     # Clean dataset
-    rmtree(NOSE_DATA_PATH)
+    #rmtree(NOSE_DATA_PATH)
     del train_dataset
     del val_dataset
 
@@ -58,8 +58,8 @@ def test_SimpleClassifier_output():
         model_constructor = SimpleClassifierMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
-            "classes": 10,
-            "mc_dropout_rate": 0.2,
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
         }
     )
     # Model Output shape
@@ -70,17 +70,17 @@ def test_SimpleClassifier_output():
     K.clear_session()
 
 
-def test_SimpleClassifier_uncertainty():
+def test_SimpleClassifier_stochastic():
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
-            "classes": 10,
+            "num_classes": 10,
             "mc_dropout_rate": 0.2,
         }
     )
-    # Model Uncertainty
+    # Model Stochastic
     global image
     output_1 = model.predict(image)
     output_2 = model.predict(image)
@@ -88,6 +88,20 @@ def test_SimpleClassifier_uncertainty():
     del model
     K.clear_session()
 
+# def test_SimpleClassifier_uncertainy():
+#     from her2bdl.models import SimpleClassifierMCDropout
+#     model = build_model(
+#         model_constructor = SimpleClassifierMCDropout, 
+#         model_parameters = {
+#             "input_shape" : (224, 224, 3),
+#             "num_classes": 10,
+#             "mc_dropout_rate": 0.5,
+#         }
+#     )
+#     # Model Uncertainty
+#     global image
+#     del model
+#     K.clear_session()
 
 def test_SimpleClassifier_fit():
     from her2bdl.models import SimpleClassifierMCDropout
@@ -95,7 +109,7 @@ def test_SimpleClassifier_fit():
         model_constructor = SimpleClassifierMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
-            "classes": 10,
+            "num_classes": 10,
             "mc_dropout_rate": 0.2,
         }
     )
@@ -113,17 +127,16 @@ def test_SimpleClassifier_fit():
     del model	
     K.clear_session()
 
-
 def test_EfficentNetMCDropout_output():
     from her2bdl.models import EfficentNetMCDropout
     model = build_model(
         model_constructor = EfficentNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
-            "classes": 10,
+            "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "weights": 'imagenet'
+            "efficent_net_weights": 'imagenet'
         }
     )    
     # Model Output shape
@@ -134,19 +147,19 @@ def test_EfficentNetMCDropout_output():
     K.clear_session()
 
 
-def test_EfficentNetMCDropout_uncertainty():
+def test_EfficentNetMCDropout_output():
     from her2bdl.models import EfficentNetMCDropout
     model = build_model(
         model_constructor = EfficentNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
-            "classes": 10,
+            "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "weights": 'imagenet'
+            "efficent_net_weights": 'imagenet'
         }
     )
-    # Model Uncertainty
+    # Model Stochastic
     global image
     output_1 = model.predict(image)
     output_2 = model.predict(image)
@@ -154,6 +167,22 @@ def test_EfficentNetMCDropout_uncertainty():
     del model
     K.clear_session()
 
+# def test_EfficentNetMCDropout_uncertainty():
+#     from her2bdl.models import EfficentNetMCDropout
+#     model = build_model(
+#         model_constructor = EfficentNetMCDropout, 
+#         model_parameters = {
+#             "input_shape" : (224, 224, 3),
+#             "num_classes": 10,
+#             "mc_dropout_rate": 0.2,
+#             "base_model": "B0", 
+#             "efficent_net_weights": 'imagenet'
+#         }
+#     )
+#     # Model Uncertainty
+#     global image
+#     del model
+#     K.clear_session()
 
 def test_EfficentNetMCDropout_fit():
     from her2bdl.models import EfficentNetMCDropout
@@ -161,10 +190,10 @@ def test_EfficentNetMCDropout_fit():
         model_constructor = EfficentNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
-            "classes": 10,
+            "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "weights": 'imagenet'
+            "efficent_net_weights": 'imagenet'
         }
     )
     # Fit Model

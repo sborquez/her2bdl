@@ -21,7 +21,9 @@ from tensorflow.keras.layers import (
 __all__ = ['SimpleClassifierMCDropout', 'EfficentNetMCDropout']
 
 class ModelMCDropout(tf.keras.Model):
-    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, varition_ratio=True, predictive_entropy=True):
+    def __init__(self, input_shape, num_classes, 
+                mc_dropout_rate=0.5, sample_size=500, multual_information=True,
+                varition_ratio=True, predictive_entropy=True):
         super(ModelMCDropout, self).__init__()
         # Model parameters
         self.mc_dropout_rate = 0.0 if mc_dropout_rate is None else mc_dropout_rate
@@ -32,6 +34,10 @@ class ModelMCDropout(tf.keras.Model):
         self.sample_size = sample_size
         self.encoder = None
         self.classifier = None
+        # Uncertainty measures
+        self.multual_information = multual_information
+        self.varition_ratio = varition_ratio
+        self.predictive_entropy = predictive_entropy
     
     def call(self, inputs):
         # Encode and extract features from input
@@ -78,6 +84,7 @@ class ModelMCDropout(tf.keras.Model):
             If `return_samples` is `False` return only predictive distribution.
         """
         if x.ndim == 3: x = np.array([x])
+        assert x.ndim != 4, "Invalid x dimensions."
 
         T = sample_size or self.sample_size
         deterministic_output = self.encoder.predict(x, verbose=verbose, **kwargs)
@@ -168,9 +175,11 @@ class SimpleClassifierMCDropout(ModelMCDropout):
     def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, varition_ratio=True, predictive_entropy=True):
         super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, varition_ratio, predictive_entropy)
         # Architecture
-        # Encoder
+        ## Encoder
         self.encoder = self.build_encoder_model(input_shape=input_shape)
+        ## Stochastic Latent Variables
         latent_variables_shape = self.encoder.output.shape[1:]
+        ## Classifier
         self.classifier = self.build_classifier_model(
             latent_variables_shape=latent_variables_shape,
             mc_dropout_rate=self.mc_dropout_rate, 
@@ -205,19 +214,28 @@ class SimpleClassifierMCDropout(ModelMCDropout):
 
     @staticmethod
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
-        x = encoder_input = Input(shape=latent_variables_shape)
-        x = Dense(int(512/mc_dropout_rate), name="head_dense_1")(x)
+        mc_dropout_rate = mc_dropout_rate or 0.0
+        x = clasifier_input = Input(shape=latent_variables_shape)
+        if mc_dropout_rate > 0:
+            x = Dense(int(512/mc_dropout_rate), name="head_dense_1")(x)
+        else:
+            x = Dense(512, name="head_dense_1")(x)
         x = BatchNormalization(name="head_batchnorm_1")(x)
         x = Activation("relu", name="head_relu_1")(x)
-        x = Dropout(mc_dropout_rate, name="head_mc_dropout_1")(x, training=True) # MC dropout
+        if mc_dropout_rate > 0:
+            x = Dropout(mc_dropout_rate, name="head_mc_dropout_1")(x, training=True) # MC dropout
         ### layer set
-        x = Dense(int(512/mc_dropout_rate), name="head_dense_2")(x)
+        if mc_dropout_rate > 0:
+            x = Dense(int(512/mc_dropout_rate), name="head_dense_2")(x)
+        else:
+            x = Dense(512, name="head_dense_2")(x)
         x = BatchNormalization(name="head_batchnorm_2")(x)
         x = Activation("relu", name="head_relu_2")(x)
-        x = Dropout(mc_dropout_rate, name="head_mc_dropout_2")(x, training=True) # MC dropout
+        if mc_dropout_rate > 0:
+            x = Dropout(mc_dropout_rate, name="head_mc_dropout_2")(x, training=True) # MC dropout
         ## initialize the layers in the softmax classifier layer set
         x = Dense(num_classes, activation="softmax", name="head_classifier")(x)
-        return tf.keras.Model(encoder_input, x, name="classifier")
+        return tf.keras.Model(clasifier_input, x, name="classifier")
 
 #%%
 from tensorflow.keras.applications import (
@@ -267,60 +285,68 @@ class EfficentNetMCDropout(ModelMCDropout):
         "B7": EfficientNetB7
     }
 
-    def __init__(self, input_shape, num_classes, base_model = "B0", mc_dropout_rate=0.5, efficent_net_weights='imagenet', 
-                sample_size=500, multual_information=True, varition_ratio=True, predictive_entropy=True):
-        super(EfficentNetMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, varition_ratio, predictive_entropy)
+    def __init__(self, input_shape, num_classes, 
+                base_model="B0", efficent_net_weights='imagenet',
+                mc_dropout_rate=0.5, sample_size=500, 
+                multual_information=True, varition_ratio=True, predictive_entropy=True):
+        super(EfficentNetMCDropout, self).__init__(
+            input_shape, num_classes, mc_dropout_rate, sample_size,
+            multual_information, varition_ratio, predictive_entropy
+        )
         assert input_shape[:2] == EfficentNetMCDropout.__base_models_resolutions[base_model], "Input shape not supported by EfficentNetMCDropout"
 
         # Architecture
-        #self.input_tensor = Input(shape=input_shape)
-        ## EfficentNet
-        efficentBX = EfficentNetMCDropout.__base_models[base_model]
-        self.efficentBX = efficentBX(
-            include_top=False, weights=efficent_net_weights)
-        ## initialize the layers in the softmax classifier layer set
-        ### layer set
-        self.flatten = Flatten(name="head_flatten")
-        self.dense1 = Dense(512, name="head_dense_1")
-        self.bn1 = BatchNormalization(name="head_batchnorm_1")
-        self.act1 = Activation("relu", name="head_relu_1")
-        if self.mc_dropout_rate > 0:
-            self.do1 = Dropout(self.mc_dropout_rate, name="head_mc_dropout_1")
-        ### layer set
-        self.dense2 = Dense(512, name="head_dense_2")
-        self.bn2 = BatchNormalization(name="head_batchnorm_2")
-        self.act2 = Activation("relu", name="head_relu_2")
-        if self.mc_dropout_rate > 0:
-            self.do2 = Dropout(self.mc_dropout_rate, name="head_mc_dropout_2")
-        ### classsifier
-        self.classifier = Dense(self.num_classes, activation="softmax", name="head_classifier")
+        ## Encoder - EfficentNet
+        self.encoder = self.build_encoder_model(
+            input_shape=input_shape, 
+            base_model=base_model,
+            efficent_net_weights=efficent_net_weights
+        )
+        ## Stochastic Latent Variables
+        latent_variables_shape = self.encoder.output.shape[1:]
+        ## Classifier
+        self.classifier = self.build_classifier_model(
+            latent_variables_shape=latent_variables_shape,
+            mc_dropout_rate=self.mc_dropout_rate, 
+            num_classes=self.num_classes,
+            base_model=base_model,
+            efficent_net_weights=efficent_net_weights
+        )
 
-    def call(self, inputs):
-        # EfficentNet
-        if self.mc_dropout_rate > 0:
-            #x = self.input_tensor(inputs)
-            x = self.efficentBX(inputs)
-            # build the softmax classifier
-            x = self.flatten(x)
-            x = self.dense1(x)
-            x = self.bn1(x)
-            x = self.act1(x)
-            x = self.do1(x, training=True) # MC dropout
-            x = self.dense2(x)
-            x = self.bn2(x)
-            x = self.act2(x)
-            x = self.do2(x, training=True) # MC dropout
-            x = self.classifier(x)
+    @staticmethod
+    def build_encoder_model(input_shape, **kwargs):
+        base_model = kwargs["base_model"]
+        efficent_net_weights = kwargs["efficent_net_weights"]
+        x = encoder_input = Input(shape=input_shape)
+        # Efficient Net
+        efficentBX = EfficentNetMCDropout.__base_models[base_model]
+        x = efficentBX(include_top=False, weights=efficent_net_weights)(x)
+        # Flatten layer
+        x = Flatten(name="head_flatten")(x)
+        return tf.keras.Model(encoder_input, x, name="encoder")
+
+    @staticmethod
+    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+        mc_dropout_rate = mc_dropout_rate or 0.0
+
+        x = clasifier_input = Input(shape=latent_variables_shape)
+        if mc_dropout_rate > 0:
+            x = Dense(int(512/mc_dropout_rate), name="head_dense_1")(x)
         else:
-            #x = self.input_tensor(inputs)
-            x = self.efficentBX(inputs)
-            # build the softmax classifier
-            x = self.flatten(x)
-            x = self.dense1(x)
-            x = self.act1(x)
-            x = self.bn1(x)
-            x = self.dense2(x)
-            x = self.act2(x)
-            x = self.bn2(x)
-            x = self.classifier(x)
-        return x
+            x = Dense(512, name="head_dense_1")(x)
+        x = BatchNormalization(name="head_batchnorm_1")(x)
+        x = Activation("relu", name="head_relu_1")(x)
+        if mc_dropout_rate > 0:
+            x = Dropout(mc_dropout_rate, name="head_mc_dropout_1")(x, training=True) # MC dropout
+        ### layer set
+        if mc_dropout_rate > 0:
+            x = Dense(int(512/mc_dropout_rate), name="head_dense_2")(x)
+        else:
+            x = Dense(512, name="head_dense_2")(x)
+        x = BatchNormalization(name="head_batchnorm_2")(x)
+        x = Activation("relu", name="head_relu_2")(x)
+        if mc_dropout_rate > 0:
+            x = Dropout(mc_dropout_rate, name="head_mc_dropout_2")(x, training=True) # MC dropout
+        ### classsifier
+        x = Dense(num_classes, activation="softmax", name="head_classifier")(x)
+        return tf.keras.Model(clasifier_input, x, name="classifier")

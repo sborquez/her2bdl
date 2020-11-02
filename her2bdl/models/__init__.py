@@ -61,5 +61,5 @@ MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
     "EfficentNetMCDropout": EfficentNetMCDropout
 }
-ENSEMBLERS = {
+AGGREGATION_METHODS = {
 }

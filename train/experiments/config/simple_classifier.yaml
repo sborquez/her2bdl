@@ -32,8 +32,8 @@ model:
     varition_ratio: true
     predictive_entropy: true
 
-# Ensemble methods
-ensemble: 
+# Aggregation methods
+aggregation: 
   # Method Class
   method: null
   # Mathod parameters
@@ -61,9 +61,9 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 2
+  epochs: 5
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 4 
+  batch_size: 8 
   # (Optional, default=0.2) Train and validation split.
   validation_split: "sample"
   # Models loss function
@@ -109,7 +109,7 @@ evaluate:
   metrics: [accuracy]
 # Predict 
 predict:
-  save_ensemble: false
+  save_aggregation: false
   save_predictions: true
   save_uncertainty: false
 # Plugin setups

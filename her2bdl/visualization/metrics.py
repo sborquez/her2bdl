@@ -13,10 +13,12 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import seaborn as sns
 from pathlib import Path
+from sklearn.metrics import confusion_matrix
 
 
 __all__ = [
-    'display_model_training_history'
+    'display_model_training_history',
+    'display_confusion_matrix'
 ]
 
 """
@@ -57,7 +59,10 @@ def display_model_training_history(history, training_time, model_name, epochs, s
 Model Metrics
 ==================
 """
-def display_confusion_matrix(cm, target_names, model_name,
+def display_confusion_matrix(y_true, y_pred, 
+                          model_name,
+                          target_names=None, 
+                          cm = None,
                           cmap=None,
                           normalize=True,
                           show=False,
@@ -67,6 +72,10 @@ def display_confusion_matrix(cm, target_names, model_name,
 
     Arguments
     ---------
+    y_true        targets.
+
+    y_pred:       model's predictions.
+
     cm:           confusion matrix from sklearn.metrics.confusion_matrix
 
     target_names: given classification classes such as [0, 1, 2]
@@ -98,6 +107,7 @@ def display_confusion_matrix(cm, target_names, model_name,
     http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
 
     """
+    cm = cm or confusion_matrix(y_true, y_pred)
     accuracy = np.trace(cm) / float(np.sum(cm))
     misclass = 1 - accuracy
 

@@ -4,57 +4,65 @@
 
 ### Bayesian Deep Learning
 
+$\mathbf{F}$ is a neural networks with parameters $\omega$ and the **softmax** output: 
+
+$$p(y|x,\hat{\omega}) := [p(y = C_1|x,\hat{\omega}), \dots, p(y = C_K|x,\hat{\omega})] = \mathbf{F}(x, \hat{\omega})$$
+
+The  **predictive distribution**, can be approximate diverses methods. MC-Dropout methods, require  repeating $T$ **stochastics forward passes**, by sampling $\hat{\omega}_t$ from learned weight distribution $q^*_0(\omega)$ (or $\Omega$) and evaluation $\mathbf{F}(x, \hat{\omega}_t)$.
+
+
+$$p(y = C_k|x, \mathcal{D}_{\text{train}}) \approx \frac{1}{T}\sum_t p(y=C_k|x, \hat{w}_t)$$
+
+
+$$p(y|x, \mathcal{D}_{\text{train}})  := [p(y = C_1|x, \mathcal{D}_{\text{train}}), \dots, p(y = C_K|x, \mathcal{D}_{\text{train}})]$$
+
+Predictive entropy is a biases estimator. The bias of this estimator will decrease as $T$ increases.
+
 ### Sub-Models
 
 The base model is build by the composition of two models: `encoder` and `classifier`.
 The former, extract relevant features for a input image and generate the `latent_variables` vector. Is a **deterministic model**, i.e.  generate the same output for a given input.
 
-<img src="https://render.githubusercontent.com/render/math?math=\Large z=\mathbf{E}(x, \omega^{(e)})">
+$$z=\mathbf{E}(x, \omega^{(e)})$$
 
 The latter, use `latent_variables` as input for classify into `K`classes. The `classifier` is a  **stochastic model**, i.e., each forward pass can generate different outputs with the same input.
 
-<!--$$p(y| z, \omega^{(c)}_t) = \mathbf{C}(z, \omega^{(c)}_t)$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large p(y| z, \omega^{(c)}_t) = \mathbf{C}(z, \omega^{(c)}_t)">
 
-<!--$$\hat{p}(y|z) \approx \frac{1}{T}\sum_t p(y=C_k| z, \omega_t^{(c)})$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large \hat{p}(y|z) \approx \frac{1}{T}\sum_t p(y=C_k| z, \omega_t^{(c)})">
+$$p(y| z, \omega^{(c)}_t) = \mathbf{C}(z, \omega^{(c)}_t)$$
 
-<!--$$\hat{y}_t = \argmax_{k} \hat{p}(y=C_k|z)$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large \hat{y}_t = \argmax_{k} \hat{p}(y=C_k|z)">
+$$p(y=C_k|z, \mathcal{D}^{(z)}_{\text{train}}) \approx \frac{1}{T}\sum_t p(y=C_k| z, \omega_t^{(c)})$$
 
-Where <img src="https://render.githubusercontent.com/render/math?math=\hat{p}(y|z)"> is the _predictive distibution_ the subindice <img src="https://render.githubusercontent.com/render/math?math=t"> indicate that is different for each <img src="https://render.githubusercontent.com/render/math?math=T"> forward passes.
+$$\hat{y} = \argmax_{k} p(y=C_k|z, \mathcal{D}^{(z)}_{\text{train}})$$
 
-The composition of theses models generate the Image Classifier Model <img src="https://render.githubusercontent.com/render/math?math=\mathbf{F}">:
+Where $\mathcal{D}^{(z)}_{\text{train}}$ is the train dataset in the latent variable space, and the subindice $t$ indicates that is different for each $T$ forward passes.
 
-<!--$$p(y|x, \hat{\omega}_t) = \mathbf{F}(x, \hat{\omega}_t) = \mathbf{C}(\mathbf{E}(x, \omega^{(e)}), \omega^{(c)}_t)$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large p(y|x, \hat{\omega}_t) = \mathbf{F}(x, \hat{\omega}_t) = \mathbf{C}(\mathbf{E}(x, \omega^{(e)}), \omega^{(c)}_t)">
+The composition of theses models generate the Image Classifier Model $\mathbf{F}$:
 
-<!--$$\hat{p}(y|x) \approx \frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large \hat{p}(y|x) \approx \frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)">
+$$p(y|x, \hat{\omega}_t) = \mathbf{F}(x, \hat{\omega}_t) = \mathbf{C}(\mathbf{E}(x, \omega^{(e)}), \omega^{(c)}_t)$$
 
-<!--$$\hat{y}_t = \argmax_{k} \hat{p}(y=C_k|x)$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large \hat{y}_t = \argmax_{k} \hat{p}(y=C_k|x)">
+$$p(y = C_k|x, \mathcal{D}_{\text{train}}) \approx \frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)$$
 
-Where <img src="https://render.githubusercontent.com/render/math?math=\hat{\omega}_t := \{\omega^{(e)}, \omega^{(c)}_t\}">. The model  <img src="https://render.githubusercontent.com/render/math?math=\mathbf{F}"> is summarized in the next figure:
+$$\hat{y} = \argmax_{k} p(y=C_k|x, \mathcal{D}_{\text{train}})$$
+
+Where $\hat{\omega}_t := \{\omega^{(e)}, \omega^{(c)}_t\}$. The model  $\mathbf{F}$ is sumorized in the next figure:
 
 ![Base Model F](https://raw.githubusercontent.com/sborquez/her2bdl/uncertainty_models/her2bdl/models/images/assets/BaseModel.png)
 
+
+### Stochastics Forward Passes in the GPU
+
+
+The estimation of the **predictive distribution**  $p(y|x, \mathcal{D}_{\text{train}})$ requiere of multiples forward passes with the same input $x$, this can be memory expensive and time consuming.
+
+Spliting the model in a *deterministic* and *stochastic* submodels, allows to reduce the time and resource required to compute the predictive distibution by reusing the deterministic latent variable $z$ and forward pass $\mathbf{E}(x)$ just once. 
+
+Since the number of parameters $\mathbf{C}$ usually is smaller than $\mathbf{E}$, $T$ copies of $z$ can be stored in just one batch, thus a multiples forward passes of $\mathbf{C}(z)$ can be computed by just one forward pass and a batch of size $T$. This runs faster due to the parallelization provided by the **GPU**.
+
 ### EfficientNet
-This approach can reuse any well-known image classification architecture as encoder model <img src="https://render.githubusercontent.com/render/math?math=\mathbf{E}">, and fine-tuning its parameters.
+
+This approach can reuse any well-known image classification architecture as encoder model $\mathbf{E}$, and fine-tuning its parameters.
 
 For instance, this work use the `EfficientNet` as encoder model. See more. [[2](#[2])]
-
-## Predictive Distribution
-
-
-### Stochastics Forward Passes
-
-
-The estimation of the **predictive distribution**  <img src="https://render.githubusercontent.com/render/math?math=\hat{p}(y|x)"> requiere of multiples forward passes with the same input <img src="https://render.githubusercontent.com/render/math?math=x">,which can be expensive.
-
-Spliting the model in a *deterministic* and *stochastic* submodels, allows to reduce the time and resource required to compute the predictive distibution by reusing the deterministic latent variable <img src="https://render.githubusercontent.com/render/math?math=z"> and forward pass <img src="https://render.githubusercontent.com/render/math?math=\mathbf{E}(x)"> just once. 
-
-Since the number of parameters <img src="https://render.githubusercontent.com/render/math?math=\mathbf{C}"> usually is smaller than <img src="https://render.githubusercontent.com/render/math?math=\mathbf{E}">, <img src="https://render.githubusercontent.com/render/math?math=T"> copies of <img src="https://render.githubusercontent.com/render/math?math=z"> can be stored in just one batch, thus a multiples forward passes of <img src="https://render.githubusercontent.com/render/math?math=\mathbf{C}(z)"> can be computed by just one forward pass and a batch of size <img src="https://render.githubusercontent.com/render/math?math=T">. This runs faster due to the parallelization provided by the GPU.
 
 ## Metrics
 
@@ -69,27 +77,46 @@ Uncertainty metrics for classification models. See more. [[1](#[1])]
 Average amount of information contained in the predictive
 distribution:
 
-<!--$$\hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large \hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))">
+$$\begin{aligned}
+\mathbb{H}[y|x, D_{\text{train}}] &:= -\sum_{k} p(y=C_k|x, D_{\text{train}}) \log(p(y=C_k|x, D_{\text{train}}))\\
+&\approx - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))\\
+&=\mathbb{\tilde{H}}[y|x, D_{\text{train}}] 
+\end{aligned}$$
 
-<!--$$(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))$$-->
-Where <img src="https://render.githubusercontent.com/render/math?math=(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))"> is the **predictive distribution** for <img src="https://render.githubusercontent.com/render/math?math=T"> **stochastics forward pass**. Each pass correspond to a sample model <img src="https://render.githubusercontent.com/render/math?math=\hat{\omega}_t">. 
+<!--
+If $$\T \rightarrow \infty">:
+$$\hat{\mathbb{H}}[y|x, D_{\text{train}}] \approx - \sum_{k} (\int p(y=C_k| x, \omega) d\omega) \log(\int p(y=C_k| x, \omega)d\omega)$$
 
-If <img src="https://render.githubusercontent.com/render/math?math=\T \rightarrow \infty">:
+Where $$(\int p(y=C_k| x, \omega) d\omega)"> is the  **"real" distribution**.-->
 
-<!--$$\hat{\mathbb{H}}[y|x, D_{\text{train}}] \approx - \sum_{k} (\int p(y=C_k| x, \omega) d\omega) \log(\int p(y=C_k| x, \omega)d\omega)$$-->
-<img src="https://render.githubusercontent.com/render/math?math=\Large \hat{\mathbb{H}}[y|x, D_{\text{train}}] \approx - \sum_{k} (\int p(y=C_k| x, \omega) d\omega) \log(\int p(y=C_k| x, \omega)d\omega)">
 
-Where <img src="https://render.githubusercontent.com/render/math?math=(\int p(y=C_k| x, \omega) d\omega)"> is the  **"real" distribution**.
-
-Predictive entropy is a biases estimator. The bias of this estimator will decrease as <img src="https://render.githubusercontent.com/render/math?math=T"> increases.
 
 
 #### Mutual Information
 
+Measure of the mutual dependence between the two variables. More specifically, it quantifies the "amount of information" (in units such as shannons, commonly called bits) obtained about one random variable through observing the other random variable.
 
 
-#### Varition Rate
+$$\begin{aligned}
+\mathbb{I}[y, \omega|x,  D_{\text{train}}] &:= \mathbb{H}[y|x, D_{\text{train}}] - \mathbb{E}_{p(\omega|D_{\text{train}})}[\mathbb{H}[y|x, \omega]]\\
+&=-\sum_{k} p(y=C_k|x, D_{\text{train}}) \log(p(y=C_k|x, D_{\text{train}}))\\
+&\qquad + \mathbb{E}_{p(\omega|D_{\text{train}})}[\sum_{k} p(y=C_k|x, \omega) \log(p(y=C_k|x, \omega))]\\
+&\approx -\sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))\\
+&\qquad + \frac{1}{T}\sum_{k}\sum_{t} p(y=C_k|x, \hat{\omega}_t) \log(p(y=C_k|x, \hat{\omega}_t))\\
+&=\mathbb{\tilde{I}}[y, \omega|x,  D_{\text{train}}]
+\end{aligned}$$
+
+#### Variation Ratios
+
+To use variation ratios we would sample a label $y_t$ from the softmax probabilities at the end of each stochastic forward pass for a test input $x$. 
+
+$$y_t \sim p(y|x,\hat{\omega}_t)$$
+
+Collecting a set of $T$ labels $y_t$ from multiple stochastic forward passes on the same input, we can find the mode of the distribution $k^∗ = \argmax_{k}\sum_t \mathbb{1}[y_t = C_k]$, and the number of times it was sampled  $f_x = \sum_t\mathbb{1}[y_t = C_{k^*}]$.
+
+$$\text{variation-ratios}[x]=1-\frac{f_x}{T}$$
+
+The variation ratio is a measure of dispersion—how “spread” the distribution is around the mode.
 
 ## References
 

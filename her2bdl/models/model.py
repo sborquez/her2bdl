@@ -9,6 +9,7 @@ Models for Image Classification with  predictive distributions and uncertainty m
 """
 #%%
 import numpy as np
+from scipy import stats
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Input, Activation,
@@ -23,7 +24,7 @@ __all__ = ['SimpleClassifierMCDropout', 'EfficentNetMCDropout']
 class ModelMCDropout(tf.keras.Model):
     def __init__(self, input_shape, num_classes, 
                 mc_dropout_rate=0.5, sample_size=500, multual_information=True,
-                varition_ratio=True, predictive_entropy=True):
+                variation_ratios=True, predictive_entropy=True):
         super(ModelMCDropout, self).__init__()
         # Model parameters
         self.mc_dropout_rate = 0.0 if mc_dropout_rate is None else mc_dropout_rate
@@ -36,7 +37,7 @@ class ModelMCDropout(tf.keras.Model):
         self.classifier = None
         # Uncertainty measures
         self.multual_information = multual_information
-        self.varition_ratio = varition_ratio
+        self.variation_ratios = variation_ratios
         self.predictive_entropy = predictive_entropy
     
     def call(self, inputs):
@@ -67,7 +68,8 @@ class ModelMCDropout(tf.keras.Model):
             Return argmax y_predictive_distribution. If is `False`
             `y_pred` is `None`.
         return_samples : `bool`
-            Return forward pass samples. (required by varition_ratio)
+            Return forward passes samples. Required by variation_ratios  and 
+            mutual information.
             If is `False` `y_predictions_samples` is `None`.
         sample_size    : `int` or `None`
             Number of fordward passes, also refers as `T`. If it is `None` 
@@ -106,19 +108,22 @@ class ModelMCDropout(tf.keras.Model):
 
         return y_predictive_distribution, y_pred, y_predictions_samples
 
-    def multual_information(self, x=None, y_predictive_distribution=None, sample_size=None, **kwargs):
+    def multual_information(self, x=None, y_predictive_distribution=None, y_predictions_samples=None, sample_size=None, **kwargs):
         """
         
         .. math::
-        
-        
+        \mathbb{\tilde{I}}[y, \omega|x,  D_{\text{train}}] :=\
+          -\sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))\
+          + \frac{1}{T}\sum_{k}\sum_{t} p(y=C_k|x, \hat{\omega}_t) \log(p(y=C_k|x, \hat{\omega}_t))
         Parameters
         ----------
         x : `np.ndarray`  (batch_size, *input_shape) or `None`
             Batch of inputs. If is `None` use precalculated `y_predictive_distribution`.
         y_predictive_distribution : `np.ndarray` (batch_size, classes) or `None`
-            Model's predictive distributions (normalized histogram). Ignore
+            Model's predictive distributions (normalized histogram). Ignored
             if `x` is not `None`.
+        y_predictions_samples : `np.ndarray` (batch_size, sample size, classes)
+            Forward pass samples. Ignored if `x` is not `None`.
         sample_size    : `int` or `None`
             Number of fordward passes, also refers as `T`. If it is `None` 
             use model`s sample size.
@@ -127,27 +132,79 @@ class ModelMCDropout(tf.keras.Model):
         Return
         ------
             ``np.ndarray` with length batch_size.
-                Return mutual information for a the batch.
+                Return mutual information for a batch.
         """
-        assert not (x is None and y_predictive_distribution is None),\
-            "Must have an input x or a predictive distribution"
+        assert not (x is None and (y_predictive_distribution is None or y_predictions_samples is None) ),\
+            "Must have an input x or a predictive distribution and predictions samples"
         if x is not None:
             sample_size = sample_size or self.sample_size
-            _, y_predictive_distribution, _ = self.predict_distribution(
+            y_predictive_distribution, _, y_predictions_samples = self.predict_distribution(
                 x, 
-                return_y_pred=False, return_samples=False, 
+                return_y_pred=False, return_samples=True, 
                 sample_size=sample_size, verbose=0, 
                 **kwargs
             )
         # Numerical Stability 
-        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
-        I = None
+        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps        
+        ## Entropy
+        y_log_predictive_distribution = np.log(eps + y_predictive_distribution) #(batch, classes) 
+        H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
+        ## Expected value
+        y_log_predictions_samples = np.log(eps + y_predictions_samples) #(batch, samples, classes) 
+        minus_E = (1/sample_size)*np.sum(y_predictions_samples*y_log_predictions_samples, axis=(1,2))
+        ## Mutual Information
+        I = H + minus_E
         return I
 
-    def varition_ratio(self, x=None, y_predictions_samples=None, **kwargs):
+    def variation_ratios(self, x=None, y_predictions_samples=None, num_classes=None, sample_size=None, **kwargs):
+        """
+        Collecting a set of $T$ labels $y_t$ from multiple stochastic forward
+        passes on the same input, we can find the mode of the distribution 
+        $k^∗ = \argmax_{k}\sum_t \mathbb{1}[y_t = C_k]$, and the number of
+        times it was sampled $f_x = \sum_t\mathbb{1}[y_t = C_{k^*}]$.
+        
+        .. math::
+        \text{variation-ratios}[x]=1-\frac{f_x}{T}
+        Parameters
+        ----------
+        x : `np.ndarray`  (batch_size, *input_shape) or `None`
+            Batch of inputs. If is `None` use precalculated `y_predictive_distribution`.
+        y_predictions_samples : `np.ndarray` (batch_size, classes) or `None`
+            Model's predictive distributions (normalized histogram). Ignore
+            if `x` is not `None`.
+        y_predictions_samples : `np.ndarray` (batch_size, sample size, classes)
+            Forward pass samples. Ignored if `x` is not `None`.
+        num_classes : `int` or `None`
+            Number of classes.
+        sample_size : `int` or `None`
+            Number of fordward passes, also refers as `T`. If it is `None` 
+            use model`s sample size.
+        kwargs : 
+            keras.Model.predict kwargs.
+        Return
+        ------
+            ``np.ndarray` with length batch_size.
+                Return predictive entropy for a the batch.
+        """
         assert not (x is None and y_predictions_samples is None),\
                 "Must have an input x or predictions_samples"
-        
+        sample_size = sample_size or self.sample_size
+        num_classes = num_classes or self.num_classes
+        if x is not None:
+            _, _, y_predictions_samples = self.predict_distribution(
+                x, 
+                return_y_pred=False, return_samples=True, 
+                sample_size=sample_size, verbose=0, 
+                **kwargs
+            )
+        def variation_ratio(C, p_T, T):
+            Y_T = np.array([np.random.choice(C, p=p_t) for p_t in p_T])
+            _, fx =  stats.mode(Y_T)
+            return 1.0 - (fx/T)
+        T = sample_size
+        C = np.arange(self.num_classes)
+        return np.array([variation_ratio(C, p_T, T) for p_T in y_predictions_samples])
+
     def predictive_entropy(self, x=None, y_predictive_distribution=None, 
                            sample_size=None, **kwargs):
         """
@@ -155,7 +212,8 @@ class ModelMCDropout(tf.keras.Model):
         the predictive distribution. Predictive entropy is a biases estimator.
         The bias of this estimator will decrease as $T$ (`sample_size`) increases.
         .. math::
-        \hat{\mathbb{H}}[y|x, D_{\text{train}}] := - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))
+        \mathbb{\tilde{H}}[y|x, D_{\text{train}}]  :=\
+         - \sum_{k} (\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t)) \log(\frac{1}{T}\sum_t p(y=C_k| x, \hat{\omega}_t))
         Parameters
         ----------
         x : `np.ndarray`  (batch_size, *input_shape) or `None`
@@ -177,7 +235,7 @@ class ModelMCDropout(tf.keras.Model):
             "Must have an input x or a predictive distribution"
         if x is not None:
             sample_size = sample_size or self.sample_size
-            _, y_predictive_distribution, _ = self.predict_distribution(
+            y_predictive_distribution, _, _ = self.predict_distribution(
                 x, 
                 return_y_pred=False, return_samples=False, 
                 sample_size=sample_size, verbose=0,
@@ -191,15 +249,15 @@ class ModelMCDropout(tf.keras.Model):
         return H
 
     def uncertainty(self, x=None, y_predictive_distribution=None, multual_information=None,
-                    varition_ratio=None, predictive_entropy=None, **kwargs):
+                    variation_ratios=None, predictive_entropy=None, **kwargs):
         assert not (x is None and y_predictive_distribution is None),\
             "Must have an input x or a predictive distribution"
 
 
 class SimpleClassifierMCDropout(ModelMCDropout):
 
-    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, varition_ratio=True, predictive_entropy=True):
-        super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, varition_ratio, predictive_entropy)
+    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, variation_ratios=True, predictive_entropy=True):
+        super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, variation_ratios, predictive_entropy)
         # Architecture
         ## Encoder
         self.encoder = self.build_encoder_model(input_shape=input_shape)
@@ -314,10 +372,10 @@ class EfficentNetMCDropout(ModelMCDropout):
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficent_net_weights='imagenet',
                 mc_dropout_rate=0.5, sample_size=500, 
-                multual_information=True, varition_ratio=True, predictive_entropy=True):
+                multual_information=True, variation_ratios=True, predictive_entropy=True):
         super(EfficentNetMCDropout, self).__init__(
             input_shape, num_classes, mc_dropout_rate, sample_size,
-            multual_information, varition_ratio, predictive_entropy
+            multual_information, variation_ratios, predictive_entropy
         )
         assert input_shape[:2] == EfficentNetMCDropout.__base_models_resolutions[base_model], "Input shape not supported by EfficentNetMCDropout"
 

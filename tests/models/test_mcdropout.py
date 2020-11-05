@@ -1,4 +1,4 @@
-from nose.tools import assert_equals, raises, timed, eq_, ok_
+from nose.tools import raises, timed, eq_, ok_
 from nose import with_setup
 import tensorflow as tf
 from tensorflow.keras import backend as K
@@ -26,11 +26,11 @@ def setup_module():
     dataset_target = "simple"
     input_shape = (224, 224, 3)
     batch_size = 3
-    num_clasess = 10
+    num_classes = 10
     label_mode = "categorical"
     train_, val_ = get_generators_from_tf_Dataset(
         dataset_target, input_shape, batch_size,
-        num_classes=num_clasess, label_mode=label_mode,
+        num_classes=num_classes, label_mode=label_mode,
         validation_split="sample", preprocessing= {"rescale": None}, data_dir=NOSE_DATA_PATH)
     (train_dataset, steps_per_epoch) = train_
     (val_dataset, validation_steps)  = val_
@@ -46,13 +46,65 @@ def teardown_module():
     del val_dataset
 
 
+"""
+MCDropout Tests
+===============
+"""
+y_predictions_samples = None
+y_predictive_distribution = None
+
+def predictive_testing_values():
+    global y_predictions_samples
+    global y_predictive_distribution
+    T = 50
+    y_predictions_samples = np.array([
+        [[1.0, 0]] * T,                  # Low uncertainty and High confidence
+        [[1/2, 1/2]] * T,                # High uncertainty and Low confidence
+        [[1.0, 0], [0.0, 1.0]] * (T//2), # High uncertainty and High confidence
+    ])
+    y_predictive_distribution = y_predictions_samples.mean(axis=1)
+
+@with_setup(setup=predictive_testing_values)
+def test_MCDropout_predictive_entropy():
+    from her2bdl.models import ModelMCDropout
+    expected = np.array([0.0, 0.693, 0.693])
+    H = ModelMCDropout.predictive_entropy(None, None, y_predictive_distribution)
+    H = np.round(H, 3)
+    ok_(np.all(expected == H), f"Entropy is not equal to expected value: H={H}")
+    
+@with_setup(setup=predictive_testing_values)
+def test_MCDropout_variation_ratios():
+    from her2bdl.models import ModelMCDropout
+    vr = np.array([
+        ModelMCDropout.variation_ratios(None, None, y_predictions_samples)
+         for _ in range(100)
+    ])
+    vr = np.round(vr.mean(axis=0), 2)
+    expected_mean = np.array([0.0, 0.33, 0.5])
+    eq_(expected_mean[0], vr[0])
+    ok_((0 < vr[1]) and (vr[1] <= 0.5))
+    eq_(expected_mean[2], vr[2])
+
+@with_setup(setup=predictive_testing_values)
+def test_MCDropout_mutual_information():
+    from her2bdl.models import ModelMCDropout
+    expected = np.array([0.0, 0.0, 0.693])
+    I = ModelMCDropout.mutual_information(None, None, y_predictive_distribution, y_predictions_samples)
+    I = np.round(I, 3)
+    ok_(np.all(expected == I), f"Mutual Information is not equal to expected value: I={I}")
+    
+
+"""
+SimpleClassifier Tests
+======================
+"""
+
 def build_model(model_constructor, model_parameters):
     model = model_constructor(**model_parameters)
     model.compile(loss=tf.keras.losses.CategoricalCrossentropy(), optimizer='adam')
     return model
 
-
-def test_SimpleClassifier_output():
+def test_SimpleClassifierMCDropout_output():
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -70,7 +122,7 @@ def test_SimpleClassifier_output():
     K.clear_session()
 
 
-def test_SimpleClassifier_stochastic():
+def test_SimpleClassifierMCDropout_stochastic():
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -88,22 +140,28 @@ def test_SimpleClassifier_stochastic():
     del model
     K.clear_session()
 
-# def test_SimpleClassifier_uncertainy():
-#     from her2bdl.models import SimpleClassifierMCDropout
-#     model = build_model(
-#         model_constructor = SimpleClassifierMCDropout, 
-#         model_parameters = {
-#             "input_shape" : (224, 224, 3),
-#             "num_classes": 10,
-#             "mc_dropout_rate": 0.5,
-#         }
-#     )
-#     # Model Uncertainty
-#     global image
-#     del model
-#     K.clear_session()
+def test_SimpleClassifierMCDropout_uncertainty():
+    from her2bdl.models import SimpleClassifierMCDropout
+    model = build_model(
+        model_constructor = SimpleClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+        }
+    )
+    # Model Uncertainty
+    global image
+    uncertainty = model.uncertainty(x=image, batch_size=16)
+    del model
+    K.clear_session()
+    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratios']
+    expected_shape   = (len(image), len(expected_columns))
+    eq_(expected_columns, list(uncertainty.columns))
+    eq_(expected_shape, uncertainty.shape)
 
-def test_SimpleClassifier_fit():
+
+def test_SimpleClassifierMCDropout_fit():
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -126,6 +184,12 @@ def test_SimpleClassifier_fit():
     evaluation = model.evaluate(val_dataset, steps=validation_steps)
     del model	
     K.clear_session()
+
+
+"""
+EfficentNetMCDropout Tests
+==========================
+"""
 
 def test_EfficentNetMCDropout_output():
     from her2bdl.models import EfficentNetMCDropout
@@ -167,22 +231,28 @@ def test_EfficentNetMCDropout_output():
     del model
     K.clear_session()
 
-# def test_EfficentNetMCDropout_uncertainty():
-#     from her2bdl.models import EfficentNetMCDropout
-#     model = build_model(
-#         model_constructor = EfficentNetMCDropout, 
-#         model_parameters = {
-#             "input_shape" : (224, 224, 3),
-#             "num_classes": 10,
-#             "mc_dropout_rate": 0.2,
-#             "base_model": "B0", 
-#             "efficent_net_weights": 'imagenet'
-#         }
-#     )
-#     # Model Uncertainty
-#     global image
-#     del model
-#     K.clear_session()
+def test_EfficentNetMCDropout_uncertainty():
+    from her2bdl.models import EfficentNetMCDropout
+    model = build_model(
+        model_constructor = EfficentNetMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.2,
+            "base_model": "B0", 
+            "efficent_net_weights": 'imagenet'
+        }
+    )
+    # Model Uncertainty
+    global image
+    uncertainty = model.uncertainty(x=image, batch_size=8)
+    del model
+    K.clear_session()
+    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratios']
+    expected_shape   = (len(image), len(expected_columns))
+    eq_(expected_columns, list(uncertainty.columns))
+    eq_(expected_shape, uncertainty.shape)
+
 
 def test_EfficentNetMCDropout_fit():
     from her2bdl.models import EfficentNetMCDropout

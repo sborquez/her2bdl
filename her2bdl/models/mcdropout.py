@@ -40,9 +40,9 @@ class ModelMCDropout(tf.keras.Model):
         self.encoder = None
         self.classifier = None
         # Uncertainty measures
-        self.multual_information = multual_information
-        self.variation_ratios = variation_ratios
-        self.predictive_entropy = predictive_entropy
+        self.get_multual_information = multual_information
+        self.get_variation_ratios = variation_ratios
+        self.get_predictive_entropy = predictive_entropy
     
     def call(self, inputs):
         # Encode and extract features from input
@@ -104,9 +104,7 @@ class ModelMCDropout(tf.keras.Model):
             for z_i in deterministic_output
         ])
         # predictive distribution
-        y_predictive_distribution = np.array(
-           [(1.0/T)*y_pred_T.sum(axis=0) for y_pred_T in y_predictions_samples]
-        )
+        y_predictive_distribution = y_predictions_samples.mean(axis=1)
         # class predictions
         y_pred = None
         if return_y_pred:
@@ -270,41 +268,55 @@ class ModelMCDropout(tf.keras.Model):
 
     def uncertainty(self, x=None, 
                     y_predictive_distribution=None, y_predictions_samples=None, 
-                    predictive_entropy=True, multual_information=True,
-                    variation_ratios=True, **kwargs):
-        assert not (x is None or ( y_predictive_distribution is None\
+                    get_predictive_entropy=None, get_multual_information=None,
+                    get_variation_ratios=None, sample_size=None, verbose=0, **kwargs):
+        assert not (x is None and ( y_predictive_distribution is None\
                                    and y_predictions_samples is None)),\
             "Must have an input x or a predictictions"
+        # Get predictions
         if x is not None:
             sample_size = sample_size or self.sample_size
             prediction = self.predict_distribution(
                 x, 
                 return_y_pred=False, return_samples=True, 
-                sample_size=sample_size, verbose=0,
+                sample_size=sample_size, verbose=verbose,
                 **kwargs
             )
             y_predictive_distribution, _, y_predictions_samples = prediction
         batch_size, sample_size, num_classes = y_predictions_samples.shape
-
+        
+        if verbose != 0: print("y_predictions_samples.shape:", batch_size, sample_size, num_classes)
+        # Uncertainty metrics
         uncertainty = {}
-        if predictive_entropy:
+        ## Predictive entropy
+        get_predictive_entropy = get_predictive_entropy or self.get_predictive_entropy
+        if get_predictive_entropy:
+            if verbose != 0: print("predictive_entropy")
             H = self.predictive_entropy(
-                            y_predictive_distribution=y_predictive_distribution, 
-                            sample_size=sample_size, **kwargs
+                y_predictive_distribution=y_predictive_distribution, 
+                sample_size=sample_size, **kwargs
             )
             uncertainty["predictive entropy"] = H
-        if multual_information:
+        ## Mutual Information
+        get_multual_information = get_multual_information or self.get_multual_information
+        if get_multual_information:
+            if verbose != 0: print("multual_information")
             I = self.mutual_information(
                 y_predictive_distribution=y_predictive_distribution,
                 y_predictions_samples=y_predictions_samples, 
                 sample_size=sample_size, **kwargs)
             uncertainty["mutual information"] = I
-        if variation_ratios:
+        ## Variation Ratios
+        get_variation_ratios = get_variation_ratios or self.get_variation_ratios
+        if get_variation_ratios:
+            if verbose != 0: print("variation_ratios")
             vr = self.variation_ratios(
                 y_predictions_samples=y_predictions_samples, 
                 num_classes=num_classes, sample_size=sample_size, **kwargs
             )
             uncertainty["variation-ratios"] = vr
+        # Return DataFrame, where each column is a uncertainty metric
+        # and each row is a image
         return pd.DataFrame(uncertainty)
 
 class SimpleClassifierMCDropout(ModelMCDropout):

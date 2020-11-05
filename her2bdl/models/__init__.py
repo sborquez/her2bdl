@@ -52,10 +52,10 @@ OPTIMIZERS = {
 
 
 """
-Models and Ensemblers
+Models and Aggregations
 ==========
 """
-from .model import *
+from .mcdropout import *
 
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,

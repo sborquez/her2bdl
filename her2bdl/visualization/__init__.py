@@ -15,5 +15,5 @@ type of function can be used by `display_*` to combine different figures.
 
 from .metrics import *
 from .explore import *
-from .inspect import *
+from .prediction import *
 from .gui import *

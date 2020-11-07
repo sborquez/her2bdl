@@ -60,7 +60,7 @@ Model Metrics
 ==================
 """
 def display_confusion_matrix(y_true, y_pred, 
-                          model_name,
+                          model_name=None,
                           target_names=None, 
                           cm = None,
                           cmap=None,
@@ -115,11 +115,12 @@ def display_confusion_matrix(y_true, y_pred,
         cmap = plt.get_cmap('Blues')
 
     fig = plt.figure(figsize=(8, 6))
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    title = f"{model_name} - Confusion Matrix\naccuracy={accuracy:0.4f}; misclass={misclass:0.4f}"
+    if model_name is not None:
+        title = f"{model_name} - Confusion Matrix\naccuracy={accuracy:0.4f}; misclass={misclass:0.4f}"
+    title = f"Confusion Matrix\naccuracy={accuracy:0.4f}; misclass={misclass:0.4f}"
     plt.title(title)
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.colorbar()
-
     if target_names is not None:
         tick_marks = np.arange(len(target_names))
         plt.xticks(tick_marks, target_names, rotation=45)
@@ -139,7 +140,6 @@ def display_confusion_matrix(y_true, y_pred,
             plt.text(j, i, "{:,}".format(cm[i, j]),
                      horizontalalignment="center",
                      color="white" if cm[i, j] > thresh else "black")
-
 
     plt.tight_layout()
     plt.ylabel('True label')

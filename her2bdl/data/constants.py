@@ -29,6 +29,12 @@ TARGET_LABELS = {
     2: '2+',
     3: '3+',
 }
+TARGET_LABELS_list = [
+    '0',
+    '1+',
+    '2+',
+    '3+'
+]
 TARGET_TO_ONEHOT = {
     0: (1, 0, 0, 0),
     1: (0, 1, 0, 0),

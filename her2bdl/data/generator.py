@@ -38,8 +38,9 @@ def generator_to_tf_Dataset(generator, img_height, img_width):
     return dataset
 
 def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, 
-                                   num_classes=None, label_mode="categorical", validation_split=None, 
-                                   preprocessing={}, data_dir=None):
+                                   num_classes=None, label_mode="categorical", 
+                                   validation_split=None, preprocessing={},
+                                   data_dir=None):
     """
     Sources:
         * simple: https://www.tensorflow.org/datasets/catalog/mnist
@@ -63,8 +64,13 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
             return image, label
         return mapper
 
-    assert (dataset_target in ["simple", "binary", "multiclass"]), "Invalid dataset_target."
+    assert (dataset_target in ["simple", "binary", "multiclass", "mnist"]),\
+     "Invalid dataset_target."
     if dataset_target == "simple":
+        to_rgb = True
+        num_classes = 10
+        dataset = 'mnist'
+    elif dataset_target == "mnist":
         to_rgb = True
         num_classes = 10
         dataset = 'mnist'
@@ -87,7 +93,8 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
             split = [f'train[:{2*batch_size}]', f'train[:{2*batch_size}]']
         elif isinstance(validation_split, float):
             #TODO: add split
-            split = ['train', 'test']
+            #validation_split
+            split = ['train[:50%]', 'train[-30%:]']
         train_ds, validation_ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
         train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(train_dataset)

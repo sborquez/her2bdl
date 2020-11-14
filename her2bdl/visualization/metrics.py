@@ -61,7 +61,7 @@ Model Metrics
 """
 def display_confusion_matrix(y_true, y_pred, 
                           model_name=None,
-                          target_names=None, 
+                          labels=None, 
                           cm = None,
                           cmap=None,
                           normalize=True,
@@ -78,7 +78,7 @@ def display_confusion_matrix(y_true, y_pred,
 
     cm:           confusion matrix from sklearn.metrics.confusion_matrix
 
-    target_names: given classification classes such as [0, 1, 2]
+    labels: given classification classes such as [0, 1, 2]
                   the class names, for example: ['high', 'medium', 'low']
 
     title:        the text to display at the top of the matrix
@@ -99,7 +99,7 @@ def display_confusion_matrix(y_true, y_pred,
     plot_confusion_matrix(cm           = cm,                  # confusion matrix created by
                                                               # sklearn.metrics.confusion_matrix
                           normalize    = True,                # show proportions
-                          target_names = y_labels_vals,       # list of names of the classes
+                          labels = y_labels_vals,       # list of names of the classes
                           title        = best_estimator_name) # title of graph
 
     Citiation
@@ -121,10 +121,10 @@ def display_confusion_matrix(y_true, y_pred,
     plt.title(title)
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.colorbar()
-    if target_names is not None:
-        tick_marks = np.arange(len(target_names))
-        plt.xticks(tick_marks, target_names, rotation=45)
-        plt.yticks(tick_marks, target_names)
+    if labels is not None:
+        tick_marks = np.arange(len(labels))
+        plt.xticks(tick_marks, labels, rotation=45)
+        plt.yticks(tick_marks, labels)
 
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]

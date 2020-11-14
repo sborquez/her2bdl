@@ -22,13 +22,13 @@ from tensorflow.keras.layers import (
 
 __all__ = [
     'ModelMCDropout',
-    'SimpleClassifierMCDropout', 'EfficentNetMCDropout'
+    'SimpleClassifierMCDropout', 'EfficientNetMCDropout'
 ]
 
 class ModelMCDropout(tf.keras.Model):
     def __init__(self, input_shape, num_classes, 
                 mc_dropout_rate=0.5, sample_size=500, multual_information=True,
-                variation_ratios=True, predictive_entropy=True):
+                variation_ratio=True, predictive_entropy=True):
         super(ModelMCDropout, self).__init__()
         # Model parameters
         self.mc_dropout_rate = mc_dropout_rate or 0.0
@@ -41,7 +41,7 @@ class ModelMCDropout(tf.keras.Model):
         self.classifier = None
         # Uncertainty measures
         self.get_multual_information = multual_information
-        self.get_variation_ratios = variation_ratios
+        self.get_variation_ratio = variation_ratio
         self.get_predictive_entropy = predictive_entropy
     
     def call(self, inputs):
@@ -78,7 +78,7 @@ class ModelMCDropout(tf.keras.Model):
             Return argmax y_predictive_distribution. If is `False`
             `y_pred` is `None`.
         return_samples : `bool`
-            Return forward passes samples. Required by variation_ratios  and 
+            Return forward passes samples. Required by variation_ratio  and 
             mutual information.
             If is `False` `y_predictions_samples` is `None`.
         sample_size    : `int` or `None`
@@ -171,7 +171,7 @@ class ModelMCDropout(tf.keras.Model):
         I = H + minus_E
         return I
 
-    def variation_ratios(self, x=None, y_predictions_samples=None, num_classes=None, sample_size=None, **kwargs):
+    def variation_ratio(self, x=None, y_predictions_samples=None, num_classes=None, sample_size=None, **kwargs):
         """
         Collecting a set of $T$ labels $y_t$ from multiple stochastic forward
         passes on the same input, we can find the mode of the distribution 
@@ -219,8 +219,8 @@ class ModelMCDropout(tf.keras.Model):
         _, f = stats.mode(Y_T, axis=1)
         # variation-ratios
         T = sample_size
-        variation_ratios_values = 1 - (f/T)
-        return variation_ratios_values.flatten()
+        variation_ratio_values = 1 - (f/T)
+        return variation_ratio_values.flatten()
 
     def predictive_entropy(self, x=None, y_predictive_distribution=None, 
                             sample_size=None, **kwargs):
@@ -269,7 +269,7 @@ class ModelMCDropout(tf.keras.Model):
     def uncertainty(self, x=None, 
                     y_predictive_distribution=None, y_predictions_samples=None, 
                     get_predictive_entropy=None, get_multual_information=None,
-                    get_variation_ratios=None, sample_size=None, verbose=0, **kwargs):
+                    get_variation_ratio=None, sample_size=None, verbose=0, **kwargs):
         assert not (x is None and ( y_predictive_distribution is None\
                                    and y_predictions_samples is None)),\
             "Must have an input x or a predictictions"
@@ -307,22 +307,22 @@ class ModelMCDropout(tf.keras.Model):
                 sample_size=sample_size, **kwargs)
             uncertainty["mutual information"] = I
         ## Variation Ratios
-        get_variation_ratios = get_variation_ratios or self.get_variation_ratios
-        if get_variation_ratios:
-            if verbose != 0: print("variation_ratios")
-            vr = self.variation_ratios(
+        get_variation_ratio = get_variation_ratio or self.get_variation_ratio
+        if get_variation_ratio:
+            if verbose != 0: print("variation_ratio")
+            vr = self.variation_ratio(
                 y_predictions_samples=y_predictions_samples, 
                 num_classes=num_classes, sample_size=sample_size, **kwargs
             )
-            uncertainty["variation-ratios"] = vr
+            uncertainty["variation-ratio"] = vr
         # Return DataFrame, where each column is a uncertainty metric
         # and each row is a image
         return pd.DataFrame(uncertainty)
 
 class SimpleClassifierMCDropout(ModelMCDropout):
 
-    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, variation_ratios=True, predictive_entropy=True):
-        super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, variation_ratios, predictive_entropy)
+    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, variation_ratio=True, predictive_entropy=True):
+        super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, variation_ratio, predictive_entropy)
         # Architecture
         ## Encoder
         self.encoder = self.build_encoder_model(input_shape=input_shape)
@@ -391,11 +391,11 @@ from tensorflow.keras.applications import (
     EfficientNetB0, EfficientNetB1, EfficientNetB2, EfficientNetB3,
     EfficientNetB4,EfficientNetB5, EfficientNetB6, EfficientNetB7
 )
-class EfficentNetMCDropout(ModelMCDropout):
+class EfficientNetMCDropout(ModelMCDropout):
     #TODO: update to encode/classifier 
     """
     EfficientNet MonteCarlo Dropout. 
-    Keras EfficentNets models wrappers with extra dropout layers.
+    Keras EfficientNets models wrappers with extra dropout layers.
 
     For B0 to B7 base models, the input shapes are different. Here is a list
     of input shape expected for each model:
@@ -435,21 +435,21 @@ class EfficentNetMCDropout(ModelMCDropout):
     }
 
     def __init__(self, input_shape, num_classes, 
-                base_model="B0", efficent_net_weights='imagenet',
+                base_model="B0", efficient_net_weights='imagenet',
                 mc_dropout_rate=0.5, sample_size=500, 
-                multual_information=True, variation_ratios=True, predictive_entropy=True):
-        super(EfficentNetMCDropout, self).__init__(
+                multual_information=True, variation_ratio=True, predictive_entropy=True):
+        super(EfficientNetMCDropout, self).__init__(
             input_shape, num_classes, mc_dropout_rate, sample_size,
-            multual_information, variation_ratios, predictive_entropy
+            multual_information, variation_ratio, predictive_entropy
         )
-        assert input_shape[:2] == EfficentNetMCDropout.__base_models_resolutions[base_model], "Input shape not supported by EfficentNetMCDropout"
+        assert input_shape[:2] == EfficientNetMCDropout.__base_models_resolutions[base_model], "Input shape not supported by EfficientNetMCDropout"
 
         # Architecture
-        ## Encoder - EfficentNet
+        ## Encoder - EfficientNet
         self.encoder = self.build_encoder_model(
             input_shape=input_shape, 
             base_model=base_model,
-            efficent_net_weights=efficent_net_weights
+            efficient_net_weights=efficient_net_weights
         )
         ## Stochastic Latent Variables
         latent_variables_shape = self.encoder.output.shape[1:]
@@ -459,17 +459,17 @@ class EfficentNetMCDropout(ModelMCDropout):
             mc_dropout_rate=self.mc_dropout_rate, 
             num_classes=self.num_classes,
             base_model=base_model,
-            efficent_net_weights=efficent_net_weights
+            efficient_net_weights=efficient_net_weights
         )
 
     @staticmethod
     def build_encoder_model(input_shape, **kwargs):
         base_model = kwargs["base_model"]
-        efficent_net_weights = kwargs["efficent_net_weights"]
+        efficient_net_weights = kwargs["efficient_net_weights"]
         x = encoder_input = Input(shape=input_shape)
         # Efficient Net
-        efficentBX = EfficentNetMCDropout.__base_models[base_model]
-        x = efficentBX(include_top=False, weights=efficent_net_weights)(x)
+        efficientBX = EfficientNetMCDropout.__base_models[base_model]
+        x = efficientBX(include_top=False, weights=efficient_net_weights)(x)
         # Flatten layer
         x = Flatten(name="head_flatten")(x)
         return tf.keras.Model(encoder_input, x, name="encoder")

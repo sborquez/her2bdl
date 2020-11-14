@@ -59,37 +59,24 @@ def display_model_training_history(history, training_time, model_name, epochs, s
 Model Metrics
 ==================
 """
-def display_confusion_matrix(y_true, y_pred, 
-                          model_name=None,
-                          labels=None, 
-                          cm = None,
-                          cmap=None,
-                          normalize=True,
-                          show=False,
-                          save_to=None):
+def display_confusion_matrix(y_true, y_pred, model_name=None, labels=None, 
+                            cm=None, cmap=None, normalize=True, show=False,
+                            save_to=None):
     """
     given a sklearn confusion matrix (cm), make a nice plot
-
     Arguments
     ---------
     y_true        targets.
-
     y_pred:       model's predictions.
-
     cm:           confusion matrix from sklearn.metrics.confusion_matrix
-
     labels: given classification classes such as [0, 1, 2]
                   the class names, for example: ['high', 'medium', 'low']
-
     title:        the text to display at the top of the matrix
-
     cmap:         the gradient of the values displayed from matplotlib.pyplot.cm
                   see http://matplotlib.org/examples/color/colormaps_reference.html
                   plt.get_cmap('jet') or plt.cm.Blues
-
     normalize:    If False, plot the raw numbers
                   If True, plot the proportions
-
     Return
     ------
         figure or None
@@ -110,40 +97,34 @@ def display_confusion_matrix(y_true, y_pred,
     cm = cm or confusion_matrix(y_true, y_pred)
     accuracy = np.trace(cm) / float(np.sum(cm))
     misclass = 1 - accuracy
-
-    if cmap is None:
-        cmap = plt.get_cmap('Blues')
-
-    fig = plt.figure(figsize=(8, 6))
-    if model_name is not None:
-        title = f"{model_name} - Confusion Matrix\naccuracy={accuracy:0.4f}; misclass={misclass:0.4f}"
-    title = f"Confusion Matrix\naccuracy={accuracy:0.4f}; misclass={misclass:0.4f}"
-    plt.title(title)
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.colorbar()
-    if labels is not None:
-        tick_marks = np.arange(len(labels))
-        plt.xticks(tick_marks, labels, rotation=45)
-        plt.yticks(tick_marks, labels)
-
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-
-    thresh = cm.max() / 1.5 if normalize else cm.max() / 2
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        if normalize:
-            plt.text(j, i, "{:0.2f}".format(cm[i, j]),
-                     horizontalalignment="center",
-                     color="white" if cm[i, j] > thresh else "black")
-        else:
-            plt.text(j, i, "{:,}".format(cm[i, j]),
-                     horizontalalignment="center",
-                     color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
+        group_counts = [f"{value}".format(value) 
+                        for value in cm.flatten()]
+        group_percentages = [f"{value:.2f}".format(value) 
+                             for value in cm.flatten()/np.sum(cm)]
+        annot = [f"{v1}\n{v2}%"
+                 for v1, v2 in zip(group_counts, group_percentages)]
+        annot = np.array(annot).reshape(cm.shape)
+        fmt =''
+    else:
+        fmt ='d'
+        annot=True
+    # Heatmap
+    fig = plt.figure(figsize=(5, 4))
+    labels = labels or sorted(np.unique(y_true))
+    cmap = cmap or plt.get_cmap('Blues')  
+    sns.heatmap(cm, annot=annot, cmap=cmap, fmt=fmt, 
+                xticklabels=labels, yticklabels=labels)
+    # Style
+    if model_name is not None:
+        title = f"{model_name}\nConfusion Matrix"
+    else:
+        title = f"Confusion Matrix"
+    plt.title(title)
     plt.ylabel('True label')
-    plt.xlabel('Predicted label')
+    plt.xlabel(f'Predicted label\n\naccuracy={accuracy:0.4f}; misclass={misclass:0.4f}')
+    plt.grid(False)
+    plt.tight_layout()
     # Show or Save
     if save_to is not None:
         save_to = Path(save_to)

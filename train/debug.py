@@ -1,7 +1,7 @@
 import sys
-
-# AI project name
 sys.path.insert(1, '..')
+
+# her2bdl project name
 from her2bdl import *
 
 import tensorflow as tf
@@ -36,8 +36,6 @@ def profiling(experimentr):
 
 if __name__ == "__main__":
     import argparse
-    from .utils import *
-
     ap = argparse.ArgumentParser(description="Profiling and debuging tools to find bottlenecks in the architecture and other checks.")
     ap.add_argument("--gpu", dest="gpu", action="store_true", help="Check GPU availability.")
 

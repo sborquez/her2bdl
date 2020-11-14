@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH -p gpuk
-#SBATCH -J her2bdl_debug
+#SBATCH -J her2bdl_nosetests
 #SBATCH --mail-user=sebastian.borquez.g@gmail.com
 #SBATCH --mail-type=ALL
-#SBATCH -o /user/s/sborquez/logs/her2bdl_debug_%j_output.log
-#SBATCH -e /user/s/sborquez/logs/her2bdl_debug_%j_error.log 
+#SBATCH -o /user/s/sborquez/logs/her2bdl_nostests_%j_output.log
+#SBATCH -e /user/s/sborquez/logs/her2bdl_nostests_%j_error.log 
 #SBATCH --gres=gpu:1
 
 # ----------------Moduls-----------------------------
@@ -16,8 +16,8 @@ env="$project/.env"
 # ----------------Comands--------------------------
 
 source activate "$env"
-echo "Running test_gpu.sh"
+echo "Running run_nosetests.sh"
 echo ""
 
-cd "$project/train"
-python debug.py --gpu
+cd "$project"
+nosetests . --verbosity 2

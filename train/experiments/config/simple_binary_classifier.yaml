@@ -10,6 +10,7 @@ experiment:
     - binary
   # Experiments folder: Contains multiples experiments
   experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  # experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -29,6 +30,7 @@ model:
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
+    mc_dropout_batch_size: 16
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -77,7 +79,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     parameters: null
   # Training callbacks
   callbacks:

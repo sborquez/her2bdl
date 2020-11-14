@@ -24,14 +24,18 @@ Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
 
 Check anaconda documentation [here](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-from-an-environment-yml-file).
 
+
 ##### Install dependencies in a new environment
 
 * `environment.yml`: for GPU support
 * `environment_cpu.yml`: for CPU only support
 
+
 ```
 conda env create -f environment.yml
 ```
+
+###### Openslide will be installed by conda using the conda-forge channel.
 
 ##### Load environment
 

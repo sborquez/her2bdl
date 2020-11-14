@@ -73,10 +73,10 @@ def test_MCDropout_predictive_entropy():
     ok_(np.all(expected == H), f"Entropy is not equal to expected value: H={H}")
     
 @with_setup(setup=predictive_testing_values)
-def test_MCDropout_variation_ratios():
+def test_MCDropout_variation_ratio():
     from her2bdl.models import ModelMCDropout
     vr = np.array([
-        ModelMCDropout.variation_ratios(None, None, y_predictions_samples)
+        ModelMCDropout.variation_ratio(None, None, y_predictions_samples)
          for _ in range(100)
     ])
     vr = np.round(vr.mean(axis=0), 2)
@@ -116,7 +116,7 @@ def test_SimpleClassifierMCDropout_output():
     )
     # Model Output shape
     global image, label
-    output_1 = model.predict(image)
+    output_1 = model.predict(image, batch_size=8)
     eq_(output_1.shape, label.shape)
     del model
     K.clear_session()
@@ -129,13 +129,13 @@ def test_SimpleClassifierMCDropout_stochastic():
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
-            "mc_dropout_rate": 0.2,
+            "mc_dropout_rate": 0.5,
         }
     )
     # Model Stochastic
     global image
-    output_1 = model.predict(image)
-    output_2 = model.predict(image)
+    output_1 = model.predict(image, batch_size=8)
+    output_2 = model.predict(image, batch_size=8)
     ok_(np.any(output_1 != output_2), "Models output is deterministic.")
     del model
     K.clear_session()
@@ -152,10 +152,10 @@ def test_SimpleClassifierMCDropout_uncertainty():
     )
     # Model Uncertainty
     global image
-    uncertainty = model.uncertainty(x=image, batch_size=16)
+    uncertainty = model.uncertainty(x=image, batch_size=8)
     del model
     K.clear_session()
-    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratios']
+    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratio']
     expected_shape   = (len(image), len(expected_columns))
     eq_(expected_columns, list(uncertainty.columns))
     eq_(expected_shape, uncertainty.shape)
@@ -198,14 +198,14 @@ def test_EfficientNetMCDropout_output():
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
-            "mc_dropout_rate": 0.2,
+            "mc_dropout_rate": 0.5,
             "base_model": "B0", 
             "efficient_net_weights": 'imagenet'
         }
     )    
     # Model Output shape
     global image, label
-    output_1 = model.predict(image)
+    output_1 = model.predict(image, batch_size=8)
     eq_(output_1.shape, label.shape)
     del model
     K.clear_session()
@@ -218,15 +218,15 @@ def test_EfficientNetMCDropout_output():
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
-            "mc_dropout_rate": 0.2,
+            "mc_dropout_rate": 0.5,
             "base_model": "B0", 
             "efficient_net_weights": 'imagenet'
         }
     )
     # Model Stochastic
     global image
-    output_1 = model.predict(image)
-    output_2 = model.predict(image)
+    output_1 = model.predict(image, batch_size=8)
+    output_2 = model.predict(image, batch_size=8)
     ok_(np.any(output_1 != output_2), "Models output is deterministic.")
     del model
     K.clear_session()
@@ -238,17 +238,17 @@ def test_EfficientNetMCDropout_uncertainty():
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
-            "mc_dropout_rate": 0.2,
+            "mc_dropout_rate": 0.5,
             "base_model": "B0", 
             "efficient_net_weights": 'imagenet'
         }
     )
     # Model Uncertainty
     global image
-    uncertainty = model.uncertainty(x=image, batch_size=8)
+    uncertainty = model.uncertainty(x=image, batch_size=8, sample_size=50)
     del model
     K.clear_session()
-    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratios']
+    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratio']
     expected_shape   = (len(image), len(expected_columns))
     eq_(expected_columns, list(uncertainty.columns))
     eq_(expected_shape, uncertainty.shape)
@@ -261,7 +261,7 @@ def test_EfficientNetMCDropout_fit():
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
-            "mc_dropout_rate": 0.2,
+            "mc_dropout_rate": 0.5,
             "base_model": "B0", 
             "efficient_net_weights": 'imagenet'
         }

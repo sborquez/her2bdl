@@ -94,7 +94,8 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
         elif isinstance(validation_split, float):
             #TODO: add split
             #validation_split
-            split = ['train[:50%]', 'train[-30%:]']
+            split_ = int(10*validation_split)
+            split = [f'train[:{100 - split_}%]', f'train[-{split_}%:]']
         train_ds, validation_ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
         train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(train_dataset)

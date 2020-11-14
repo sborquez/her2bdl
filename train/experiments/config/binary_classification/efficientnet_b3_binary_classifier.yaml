@@ -2,11 +2,11 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: EfficientNetB2 Unit00
+  name: EfficientNetB3 Unit00
   notes: EfficientNet Binary Classification.
   tags:
     - efficientnet
-    - b2
+    - b3
     - binary
     - mcdropout
     - training
@@ -29,7 +29,7 @@ model:
   # Model architecture hyperparameters
   hyperparameters: 
     mc_dropout_rate: 0.5
-    base_model: B2
+    base_model: B3
     efficient_net_weights: imagenet
     classifier_dense_layers: 
       - 256
@@ -60,8 +60,8 @@ data:
       dataset_target: binary
       data_dir: null
   # Input
-  img_height: 260
-  img_width: 260
+  img_height: 300
+  img_width: 300
   img_channels: 3
   preprocessing:
     rescale: null

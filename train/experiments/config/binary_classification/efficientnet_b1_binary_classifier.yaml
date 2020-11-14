@@ -2,12 +2,14 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: efficientnetB1
-  notes: Binary Classification.
+  name: EfficientNetB1 Unit00
+  notes: EfficientNet Binary Classification.
   tags:
     - efficientnet
     - b1
     - binary
+    - training
+    - mcdropout
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
   experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
@@ -35,7 +37,8 @@ model:
       - 64
   # Model uncertainty hyperparameters
   uncertainty:
-    sample_size: 250
+    sample_size: 200
+    mc_dropout_batch_size: 8
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -60,7 +63,8 @@ data:
   img_height: 240
   img_width: 240
   img_channels: 3
-  preprocessing: 
+  preprocessing:
+    rescale: null
   # Target
   num_classes: 2
   label_mode: categorical  # Depends on task and model architecture
@@ -83,7 +87,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     parameters: null
   # Training callbacks
   callbacks:

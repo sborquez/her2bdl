@@ -2,12 +2,14 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: efficientnetB0
-  notes: Binary Classification.
-  tags: 
+  name: EfficientNetB0 Unit00 
+  notes: EfficientNet Binary Classification.
+  tags:
     - efficientnet
     - b0
     - binary
+    - mcdropout
+    - training
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
   experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
@@ -35,12 +37,8 @@ model:
       - 64
   # Model uncertainty hyperparameters
   uncertainty:
-<<<<<<< HEAD:train/experiments/config/binary_classification/efficientnet_b0_binary_classifier.yaml
-    sample_size: 250
-=======
     sample_size: 200
     mc_dropout_batch_size: 8
->>>>>>> dev:train/experiments/config/efficientnet_binary_classifier.yaml
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -66,6 +64,7 @@ data:
   img_width: 224
   img_channels: 3
   preprocessing:
+    rescale: null
   # Target
   num_classes: 2
   label_mode: categorical  # Depends on task and model architecture
@@ -78,7 +77,7 @@ training:
   # Training epochs
   epochs: 50
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 8
+  batch_size: 16
   # (Optional, default=0.2) Train and validation split.
   validation_split: 0.1
   # Models loss function
@@ -88,7 +87,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     parameters: null
   # Training callbacks
   callbacks:
@@ -107,7 +106,7 @@ training:
       # Plots and logs
       log_training_loss_plot: true
       log_training_loss: true
-      log_predictions_plot: false
+      log_predictions_plot: true
       log_predictions: true
       log_uncertainty_plot: true
       log_uncertainty: true

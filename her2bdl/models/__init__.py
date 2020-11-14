@@ -59,7 +59,7 @@ from .mcdropout import *
 
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
-    "EfficentNetMCDropout": EfficentNetMCDropout
+    "EfficientNetMCDropout": EfficientNetMCDropout
 }
 AGGREGATION_METHODS = {
 }

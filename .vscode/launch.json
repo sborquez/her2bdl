@@ -5,32 +5,34 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Train Simple Classifier",
+      "name": "Test Simple Classifier",
       "type": "python",
       "request": "launch",
       "cwd": "${workspaceFolder}/train/",
       "program": "train_model.py",
-      "args": ["-c", "experiments/config/simple_classifier.yaml"],
+      "args": ["-c", "experiments/config/test_simple_classifier.yaml"],
       "console": "integratedTerminal",
       "justMyCode": true
     },
     {
-    "name": "Train Local",
+      "name": "Train Binary Classifier (SimpleClassifierMCDropout)",
       "type": "python",
       "request": "launch",
       "cwd": "${workspaceFolder}/train/",
       "program": "train_model.py",
-      "args": ["-c", "experiments/config/simple_classifier.yaml", "--disable_wandb"],
-      "console": "integratedTerminal"
+      "args": ["-c", "experiments/config/simple_binary_classifier.yaml"],
+      "console": "integratedTerminal",
+      "justMyCode": true
     },
     {
-      "name": "Interactive",
+      "name": "Train Binary Classifier (EfficientNetMCDropout)",
       "type": "python",
       "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "program": "interactive.py",
-      "pythonArgs": ["-i"],
-      "console": "integratedTerminal"
+      "cwd": "${workspaceFolder}/train/",
+      "program": "train_model.py",
+      "args": ["-c", "experiments/config/efficientnet_binary_classifier.yaml"],
+      "console": "integratedTerminal",
+      "justMyCode": true
     },
     {
       "name": "Prepare Dataset",

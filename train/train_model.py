@@ -32,6 +32,9 @@ def train_model(config, display=None):
     preprocessing = config["data"]["preprocessing"]
     num_clasess = config["data"]["num_classes"]
     label_mode = config["data"]["label_mode"]
+    labels = config["data"]["labels"]
+    if labels == "HER2":
+        labels = TARGET_LABELS_list
     batch_size  = config["training"]["batch_size"]
     validation_split = config["training"]["validation_split"]
 
@@ -62,7 +65,11 @@ def train_model(config, display=None):
     if architecture not in MODELS: 
         raise ValueError(f"Unknown architecture: {architecture}")
     base_model = MODELS[architecture]
-    model = base_model(input_shape, num_clasess, **config["model"]["hyperparameters"], **config["model"]["uncertainty"])
+    model = base_model(
+        input_shape, num_clasess, 
+        **config["model"]["hyperparameters"], 
+        **config["model"]["uncertainty"]
+    )
     if config["model"]["weights"] is not None:
         weights = config["model"]["weights"]
         model.load_weights(weights)
@@ -76,6 +83,8 @@ def train_model(config, display=None):
     loss_parameters  = config["training"]["loss"]["parameters"]
     loss_parameters  = {} if loss_parameters is None else loss_parameters
     loss = LOSS[loss_function](**loss_parameters)
+    ## Metrics
+    metrics = config["evaluate"]["metrics"]
     ## Optimizer
     optimizer_name = config["training"]["optimizer"]["name"]
     optimizer_learning_rate = float(config["training"]["optimizer"]["learning_rate"]) # fix scientific notation parsed as str.
@@ -93,13 +102,19 @@ def train_model(config, display=None):
          model_name=experiment_name,
          batch_size=batch_size,
          enable_wandb=enable_wandb,
+         labels=labels,
          earlystop=earlystop,
          experiment_tracker=experiment_tracker,
          checkpoints=checkpoints
     )
     # Train
-    model.compile(optimizer, loss)
+    model.compile(
+        optimizer=optimizer,
+        loss=loss,  
+        metrics=metrics
+    )
     history = model.fit(train_dataset, 
+        
         steps_per_epoch=steps_per_epoch,
         validation_data=val_dataset, 
         validation_steps=validation_steps,

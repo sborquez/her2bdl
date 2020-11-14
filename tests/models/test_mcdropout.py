@@ -187,20 +187,20 @@ def test_SimpleClassifierMCDropout_fit():
 
 
 """
-EfficentNetMCDropout Tests
+EfficientNetMCDropout Tests
 ==========================
 """
 
-def test_EfficentNetMCDropout_output():
-    from her2bdl.models import EfficentNetMCDropout
+def test_EfficientNetMCDropout_output():
+    from her2bdl.models import EfficientNetMCDropout
     model = build_model(
-        model_constructor = EfficentNetMCDropout, 
+        model_constructor = EfficientNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "efficent_net_weights": 'imagenet'
+            "efficient_net_weights": 'imagenet'
         }
     )    
     # Model Output shape
@@ -211,16 +211,16 @@ def test_EfficentNetMCDropout_output():
     K.clear_session()
 
 
-def test_EfficentNetMCDropout_output():
-    from her2bdl.models import EfficentNetMCDropout
+def test_EfficientNetMCDropout_output():
+    from her2bdl.models import EfficientNetMCDropout
     model = build_model(
-        model_constructor = EfficentNetMCDropout, 
+        model_constructor = EfficientNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "efficent_net_weights": 'imagenet'
+            "efficient_net_weights": 'imagenet'
         }
     )
     # Model Stochastic
@@ -231,16 +231,16 @@ def test_EfficentNetMCDropout_output():
     del model
     K.clear_session()
 
-def test_EfficentNetMCDropout_uncertainty():
-    from her2bdl.models import EfficentNetMCDropout
+def test_EfficientNetMCDropout_uncertainty():
+    from her2bdl.models import EfficientNetMCDropout
     model = build_model(
-        model_constructor = EfficentNetMCDropout, 
+        model_constructor = EfficientNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "efficent_net_weights": 'imagenet'
+            "efficient_net_weights": 'imagenet'
         }
     )
     # Model Uncertainty
@@ -254,16 +254,16 @@ def test_EfficentNetMCDropout_uncertainty():
     eq_(expected_shape, uncertainty.shape)
 
 
-def test_EfficentNetMCDropout_fit():
-    from her2bdl.models import EfficentNetMCDropout
+def test_EfficientNetMCDropout_fit():
+    from her2bdl.models import EfficientNetMCDropout
     model = build_model(
-        model_constructor = EfficentNetMCDropout, 
+        model_constructor = EfficientNetMCDropout, 
         model_parameters = {
             "input_shape" : (224, 224, 3),
             "num_classes": 10,
             "mc_dropout_rate": 0.2,
             "base_model": "B0", 
-            "efficent_net_weights": 'imagenet'
+            "efficient_net_weights": 'imagenet'
         }
     )
     # Fit Model

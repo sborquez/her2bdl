@@ -128,6 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-interactive.py
 .test_data/
 .noseids
+*.code-workspace

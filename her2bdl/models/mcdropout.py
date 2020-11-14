@@ -27,8 +27,9 @@ __all__ = [
 
 class ModelMCDropout(tf.keras.Model):
     def __init__(self, input_shape, num_classes, 
-                mc_dropout_rate=0.5, sample_size=500, multual_information=True,
-                variation_ratio=True, predictive_entropy=True):
+                mc_dropout_rate=0.5, sample_size=200, mc_dropout_batch_size=16, 
+                multual_information=True, variation_ratio=True, 
+                predictive_entropy=True):
         super(ModelMCDropout, self).__init__()
         # Model parameters
         self.mc_dropout_rate = mc_dropout_rate or 0.0
@@ -43,6 +44,8 @@ class ModelMCDropout(tf.keras.Model):
         self.get_multual_information = multual_information
         self.get_variation_ratio = variation_ratio
         self.get_predictive_entropy = predictive_entropy
+        # batch size
+        self.mc_dropout_batch_size = mc_dropout_batch_size
     
     def call(self, inputs):
         # Encode and extract features from input
@@ -94,14 +97,25 @@ class ModelMCDropout(tf.keras.Model):
         """
         if x.ndim == 3: x = np.array([x])
         assert x.ndim == 4, "Invalid x dimensions."
+        if "batch_size" in kwargs:
+            batch_size = kwargs["batch_size"]
+            del kwargs["batch_size"]
+        else:
+            batch_size = self.mc_dropout_batch_size
         T = sample_size or self.sample_size
-        deterministic_output = self.encoder.predict(x,verbose=verbose,**kwargs)
+        deterministic_output = self.encoder.predict(x,
+            batch_size=batch_size, verbose=verbose,**kwargs
+        )
+        #deterministic_output_arr = deterministic_output.numpy()
+        #del deterministic_output
         # T stochastics forward passes 
         y_predictions_samples = np.array([
             self.classifier.predict(
-                np.tile(z_i, (T, 1)), verbose=verbose, **kwargs
+                np.tile(z_i, (T, 1)),
+                batch_size=batch_size,
+                verbose=verbose, **kwargs
             )
-            for z_i in deterministic_output
+            for z_i in deterministic_output#_arr
         ])
         # predictive distribution
         y_predictive_distribution = y_predictions_samples.mean(axis=1)
@@ -321,8 +335,13 @@ class ModelMCDropout(tf.keras.Model):
 
 class SimpleClassifierMCDropout(ModelMCDropout):
 
-    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, sample_size=500, multual_information=True, variation_ratio=True, predictive_entropy=True):
-        super(SimpleClassifierMCDropout, self).__init__(input_shape, num_classes, mc_dropout_rate, sample_size, multual_information, variation_ratio, predictive_entropy)
+    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 
+                sample_size=200, mc_dropout_batch_size=16, multual_information=True, 
+                variation_ratio=True, predictive_entropy=True):
+        super(SimpleClassifierMCDropout, self).__init__(
+            input_shape, num_classes, mc_dropout_rate, sample_size, 
+            mc_dropout_batch_size, multual_information, variation_ratio, 
+            predictive_entropy)
         # Architecture
         ## Encoder
         self.encoder = self.build_encoder_model(input_shape=input_shape)
@@ -436,11 +455,13 @@ class EfficientNetMCDropout(ModelMCDropout):
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficient_net_weights='imagenet',
                 classifier_dense_layers=[256, 128],
-                mc_dropout_rate=0.5, sample_size=500, 
-                multual_information=True, variation_ratio=True, predictive_entropy=True):
+                mc_dropout_rate=0.5, sample_size=200, mc_dropout_batch_size=16,
+                multual_information=True, variation_ratio=True,
+                predictive_entropy=True):
         super(EfficientNetMCDropout, self).__init__(
-            input_shape, num_classes, mc_dropout_rate, sample_size,
-            multual_information, variation_ratio, predictive_entropy
+            input_shape, num_classes, mc_dropout_rate, sample_size, 
+            mc_dropout_batch_size, multual_information, variation_ratio,
+            predictive_entropy
         )
         assert input_shape[:2] == EfficientNetMCDropout.__base_models_resolutions[base_model], "Input shape not supported by EfficientNetMCDropout"
 

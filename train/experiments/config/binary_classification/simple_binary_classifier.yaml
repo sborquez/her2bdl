@@ -30,6 +30,7 @@ model:
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
+    mc_dropout_batch_size: 16
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -78,7 +79,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     parameters: null
   # Training callbacks
   callbacks:

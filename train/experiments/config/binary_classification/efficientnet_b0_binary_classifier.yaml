@@ -35,7 +35,12 @@ model:
       - 64
   # Model uncertainty hyperparameters
   uncertainty:
+<<<<<<< HEAD:train/experiments/config/binary_classification/efficientnet_b0_binary_classifier.yaml
     sample_size: 250
+=======
+    sample_size: 200
+    mc_dropout_batch_size: 8
+>>>>>>> dev:train/experiments/config/efficientnet_binary_classifier.yaml
     multual_information: true
     variation_ratio: true
     predictive_entropy: true

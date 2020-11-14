@@ -9,7 +9,7 @@ import time
 from os import path
 
 
-def train_model(config, display=None):
+def train_model(config, quiet=False, display=None):
     # Seed
     seed = config["experiment"]["seed"]
     if seed is not None:
@@ -114,7 +114,7 @@ def train_model(config, display=None):
         metrics=metrics
     )
     history = model.fit(train_dataset, 
-        
+        verbose = 2 if quiet else 1,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_dataset, 
         validation_steps=validation_steps,
@@ -127,9 +127,14 @@ def train_model(config, display=None):
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description="Train a model.")
-    ap.add_argument("-c", "--config", type=str, required=True, help="Configuration file for model/experiment.")
-    ap.add_argument("--dryrun", action='store_true', help="Run locally. Upload your results to wandb servers afterwards.")
-    ap.add_argument("--disable_wandb", action='store_true', help="Disable WandB for locally testing without Weight&Bias Callbacks.")
+    ap.add_argument("-c", "--config", type=str, required=True, 
+        help="Configuration file for model/experiment.")
+    ap.add_argument("--dryrun", action='store_true', 
+        help="Run locally. Upload your results to wandb servers afterwards.")
+    ap.add_argument("--quiet", action='store_true', 
+        help="Disable progress bar.") 
+    ap.add_argument("--disable_wandb", action='store_true', 
+        help="Disable WandB for locally testing without Weight&Bias Callbacks.")
     args = vars(ap.parse_args()) 
 
     # Load experiment configuration
@@ -146,8 +151,11 @@ if __name__ == "__main__":
         os.environ["WANDB_MODE"] = 'dryrun'
     setup_experiment(experiment_config)
     
+    # Verbosity
+    quiet = args["quiet"]
+
     # Run trainong process
-    model = train_model(experiment_config, display=GUIcmd())
+    model = train_model(experiment_config, quiet=quiet, display=GUIcmd())
 
     # restore configuration
     if args["dryrun"]:

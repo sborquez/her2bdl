@@ -2,11 +2,12 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: testing_model
-  notes: simple test for trainig a classifier.
+  name: simple classifier
+  notes: classifier test.
   tags: 
     - test
     - simple
+    - binary
   # Experiments folder: Contains multiples experiments
   experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
@@ -27,7 +28,7 @@ model:
     mc_dropout_rate: 0.5
   # Model uncertainty hyperparameters
   uncertainty:
-    sample_size: 100
+    sample_size: 200
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -46,37 +47,29 @@ data:
     type: tf_Dataset
     # Source type parameters
     parameters:
-      dataset_target: simple
+      dataset_target: binary
       data_dir: null
   # Input
-  img_height: 224
-  img_width: 224
+  img_height: 100
+  img_width: 100
   img_channels: 3
   preprocessing: 
     rescale: 0.00392156862745098
   # Target
-  num_classes: 10
+  num_classes: 2
   label_mode: categorical  # Depends on task and model architecture
   labels: 
-    - '0'
-    - '1'
-    - '2'
-    - '3'
-    - '4'
-    - '5'
-    - '6'
-    - '7'
-    - '8'
-    - '9'
+    - 'cat'
+    - 'dog'
 
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 5
+  epochs: 50
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 8 
+  batch_size: 16 
   # (Optional, default=0.2) Train and validation split.
-  validation_split: "sample"
+  validation_split: 0.1
   # Models loss function
   loss:
     function: CategoricalCrossentropy

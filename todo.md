@@ -1,27 +1,40 @@
-# Week 1 
+# Milestone 1 
 - [x] sbatch
 - [x] "Clean" AI package 
 - [x] Create enviroment
 - [x] Folder Structure
 - [x] Install Environment
 
-# Week 2
+# Milestone 2
 - [x] Gerate Datasets
 - [x] Load data
 - [x] Exploratory Data Analysis (notebook)
 - [x] Temporal hardcode ROI Selection
 - [x] Generators
 
-# Week 3
+# Milestone 3
 - [x] ROI Selection
 
-# Week 4
+# Milestone 4
 - [x] SimpleModel
 - [x] Classifier model (EfficentNet)
-- [ ] Training Script
-- [ ] Weight and Bias
+- [x] Training Script
+- [x] Weight and Bias
+- [x] Uncertainty
+
+# Milestone 5
+- [ ] HPC Training (Binary tests)
+- [ ] Load WSI images
+- [ ] Train EfficientNets B0-B7 (wsi)
+- [ ] Aggregation
+
+# Milestone 6
+- [ ] Evaluation
+- [ ] Model Consumption
+
 
 # Extras
 - [ ] Unit Tests
 - [ ] Her2BDL README
+- [ ] Project WebPage
 - [ ] Pip install

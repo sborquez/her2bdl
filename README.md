@@ -1,6 +1,7 @@
 # Her2BDL
 
 Bayesian Deep Learning for HER2 tissue image classification.
+Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
 
 ## Features
 
@@ -9,7 +10,7 @@ Bayesian Deep Learning for HER2 tissue image classification.
 - [x] Tensorflow, Keras and Scikit-learn.
 - [x] HPC jobs manager.
 - [x] Nose unit tests.
-- [ ] Weight and Bias easy setup.
+- [x] Weight and Bias easy setup.
 - [ ] Easy experiment reproducibility.
 - [ ] Notebooks.
 - [ ] Singularity container.
@@ -42,7 +43,7 @@ conda activate her2bdl
 
 #### 2. Train Model with `Weight & Biases`
 
-#### 3. ...
+#### 3. Consume Models
 
 ### Repository structure
 
@@ -79,13 +80,14 @@ Different options for consume a trained model. More details in `deploy/README.md
 
 ## Referencias
 
+
+### Bibliography
+
+- GAL, Yarin. Uncertainty in deep learning. University of Cambridge, 2016, vol. 1, no 3.[http://mlg.eng.cam.ac.uk/yarin/thesis/thesis.pdf](http://mlg.eng.cam.ac.uk/yarin/thesis/thesis.pdf)
+
 ### Dataset
 
 - HER2 challenge contest: [https://onlinelibrary.wiley.com/doi/10.1111/his.13333](https://onlinelibrary.wiley.com/doi/10.1111/his.13333)
-
-### Papers
-
-- 
 
 ### Web
 

@@ -2,14 +2,15 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: simple classifier
-  notes: classifier test.
+  name: efficientnetB0
+  notes: Binary Classification.
   tags: 
-    - test
-    - simple
+    - efficientnet
+    - b0
     - binary
   # Experiments folder: Contains multiples experiments
-  experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -20,15 +21,21 @@ model:
   # Model task: [classification|regression|hierarchical]
   task: classification
   # Model Class implemented in her2bdl.models
-  architecture: SimpleClassifierMCDropout
+  architecture: EfficientNetMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
   weights: null
   # Model architecture hyperparameters
   hyperparameters: 
     mc_dropout_rate: 0.5
+    base_model: B0
+    efficient_net_weights: imagenet
+    classifier_dense_layers: 
+      - 256
+      - 128
+      - 64
   # Model uncertainty hyperparameters
   uncertainty:
-    sample_size: 200
+    sample_size: 250
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -50,11 +57,10 @@ data:
       dataset_target: binary
       data_dir: null
   # Input
-  img_height: 100
-  img_width: 100
+  img_height: 224
+  img_width: 224
   img_channels: 3
-  preprocessing: 
-    rescale: 0.00392156862745098
+  preprocessing:
   # Target
   num_classes: 2
   label_mode: categorical  # Depends on task and model architecture
@@ -67,7 +73,7 @@ training:
   # Training epochs
   epochs: 50
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 16 
+  batch_size: 8
   # (Optional, default=0.2) Train and validation split.
   validation_split: 0.1
   # Models loss function
@@ -97,10 +103,10 @@ training:
       log_training_loss_plot: true
       log_training_loss: true
       log_predictions_plot: false
-      log_predictions: false
-      log_uncertainty_plot: false
-      log_uncertainty: false
-      log_confusion_matrix_plot: false
+      log_predictions: true
+      log_uncertainty_plot: true
+      log_uncertainty: true
+      log_confusion_matrix_plot: true
     # Save checkpoints: saved at experiments_folder/experiment/checkpoints
     checkpoints:
       # saved weights format

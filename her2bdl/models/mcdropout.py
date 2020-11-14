@@ -392,7 +392,6 @@ from tensorflow.keras.applications import (
     EfficientNetB4,EfficientNetB5, EfficientNetB6, EfficientNetB7
 )
 class EfficientNetMCDropout(ModelMCDropout):
-    #TODO: update to encode/classifier 
     """
     EfficientNet MonteCarlo Dropout. 
     Keras EfficientNets models wrappers with extra dropout layers.
@@ -436,6 +435,7 @@ class EfficientNetMCDropout(ModelMCDropout):
 
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficient_net_weights='imagenet',
+                classifier_dense_layers=[256, 128],
                 mc_dropout_rate=0.5, sample_size=500, 
                 multual_information=True, variation_ratio=True, predictive_entropy=True):
         super(EfficientNetMCDropout, self).__init__(
@@ -456,6 +456,7 @@ class EfficientNetMCDropout(ModelMCDropout):
         ## Classifier
         self.classifier = self.build_classifier_model(
             latent_variables_shape=latent_variables_shape,
+            classifier_dense_layers=classifier_dense_layers,
             mc_dropout_rate=self.mc_dropout_rate, 
             num_classes=self.num_classes,
             base_model=base_model,
@@ -476,26 +477,20 @@ class EfficientNetMCDropout(ModelMCDropout):
 
     @staticmethod
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+        # Architecture parameters
+        classifier_dense_layers = kwargs.get("classifier_dense_layers", [256, 128])
         mc_dropout_rate = mc_dropout_rate or 0.0
-
+        ## Input layer
         x = clasifier_input = Input(shape=latent_variables_shape)
-        if mc_dropout_rate > 0:
-            x = Dense(int(512/mc_dropout_rate), name="head_dense_1")(x)
-        else:
-            x = Dense(512, name="head_dense_1")(x)
-        x = BatchNormalization(name="head_batchnorm_1")(x)
-        x = Activation("relu", name="head_relu_1")(x)
-        if mc_dropout_rate > 0:
-            x = Dropout(mc_dropout_rate, name="head_mc_dropout_1")(x, training=True) # MC dropout
-        ### layer set
-        if mc_dropout_rate > 0:
-            x = Dense(int(512/mc_dropout_rate), name="head_dense_2")(x)
-        else:
-            x = Dense(512, name="head_dense_2")(x)
-        x = BatchNormalization(name="head_batchnorm_2")(x)
-        x = Activation("relu", name="head_relu_2")(x)
-        if mc_dropout_rate > 0:
-            x = Dropout(mc_dropout_rate, name="head_mc_dropout_2")(x, training=True) # MC dropout
-        ### classsifier
+        ## Dense layers
+        for i, units in enumerate(classifier_dense_layers, start=1):
+            if mc_dropout_rate > 0:
+                units = int(units/mc_dropout_rate)
+            x = Dense(units, name=f"head_dense_{i}")(x)
+            x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = Activation("relu", name=f"head_relu_{i}")(x)
+            if mc_dropout_rate > 0:
+                x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
+        ## classsifier
         x = Dense(num_classes, activation="softmax", name="head_classifier")(x)
         return tf.keras.Model(clasifier_input, x, name="classifier")

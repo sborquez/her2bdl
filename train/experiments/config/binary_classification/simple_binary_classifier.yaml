@@ -2,14 +2,15 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: efficientnet classifier
-  notes: classifier test.
+  name: Simple classifier
+  notes: Binary Classification.
   tags: 
     - test
-    - efficientnet
+    - simple
     - binary
   # Experiments folder: Contains multiples experiments
-  experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -20,14 +21,12 @@ model:
   # Model task: [classification|regression|hierarchical]
   task: classification
   # Model Class implemented in her2bdl.models
-  architecture: EfficientNetMCDropout
+  architecture: SimpleClassifierMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
   weights: null
   # Model architecture hyperparameters
   hyperparameters: 
     mc_dropout_rate: 0.5
-    base_model: B0
-    efficient_net_weights: imagenet
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
@@ -52,8 +51,8 @@ data:
       dataset_target: binary
       data_dir: null
   # Input
-  img_height: 224
-  img_width: 224
+  img_height: 100
+  img_width: 100
   img_channels: 3
   preprocessing: 
     rescale: 0.00392156862745098
@@ -69,7 +68,7 @@ training:
   # Training epochs
   epochs: 50
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 8
+  batch_size: 16 
   # (Optional, default=0.2) Train and validation split.
   validation_split: 0.1
   # Models loss function

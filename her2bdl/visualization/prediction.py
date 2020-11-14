@@ -125,10 +125,11 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
                 verticalalignment='top', bbox=props)
     ax3 = plt.subplot(212)
     plot_forward_pass_samples(prediction_samples, y_true=y_true, labels=labels, axis=ax3)
-    plt.tight_layout()
     # Style
     title = f"Uncertainty\n{model_name}" if model_name is not None else "Uncertainty"
-    plt.suptitle(title, y=1.05)
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+
     # Show or Save
     if save_to is not None:
         save_to = Path(save_to)
@@ -153,10 +154,11 @@ def display_prediction(x, y_pred, predictive_distribution, model_name=None,
 
     ax2 = plt.subplot(122)
     plot_predictive_distribution(predictive_distribution, labels=labels, axis=ax2)
-    plt.tight_layout()
     # Style
     title = f"Prediction\n{model_name}" if model_name is not None else "Prediction"
-    plt.suptitle(title, y=1.05)
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+
     # Show or Save
     if save_to is not None:
         save_to = Path(save_to)

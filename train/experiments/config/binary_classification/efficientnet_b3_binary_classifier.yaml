@@ -2,8 +2,8 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: EfficientNetB3 Unit00
-  notes: EfficientNet Binary Classification.
+  name: EfficientNetB3-McDropout C876
+  notes: EfficientNet with MC-Dropout for Binary Classification.
   tags:
     - efficientnet
     - b3
@@ -75,7 +75,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 50
+  epochs: 5
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 8
   # (Optional, default=0.2) Train and validation split.

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ----------------Variables--------------------------
 project=/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl
-jobs=3
+jobs=10
 experiments=(
     "$project/train/experiments/config/binary_classification/efficientnet_b0_binary_classifier.yaml"
     "$project/train/experiments/config/binary_classification/efficientnet_b1_binary_classifier.yaml"

@@ -3,7 +3,7 @@ experiment:
   # Custom indentifier name for the experiment.
   # Experiment
   name: Simple classifier
-  notes: Binary Classification.
+  notes: CNN for testing Binary Classification.
   tags: 
     - test
     - simple

@@ -135,6 +135,8 @@ if __name__ == "__main__":
         help="Disable progress bar.") 
     ap.add_argument("--disable_wandb", action='store_true', 
         help="Disable WandB for locally testing without Weight&Bias Callbacks.")
+    ap.add_argument("--job", type=int, default=None, 
+        help="Disable WandB for locally testing without Weight&Bias Callbacks.")
     args = vars(ap.parse_args()) 
 
     # Load experiment configuration
@@ -142,6 +144,12 @@ if __name__ == "__main__":
     print(f"Loading config from: {config_file}")
     experiment_config = load_config_file(config_file)
 
+    # Configure multiples runs
+    job = args["job"]
+    if job is not None:
+        model_name = experiment_config["experiment"]["name"]
+        job_sufix  = f"job {str(job).zfill(2)}"
+        experiment_config["experiment"]["name"]= f"{model_name} {job_sufix}"
     # Setup experiments and pluggins
     if args["disable_wandb"]:
         experiment_config["training"]["callbacks"]["enable_wandb"] = False

@@ -23,8 +23,8 @@
 - [x] Uncertainty
 
 # Milestone 5
-- [ ] HPC Training (Binary tests)
-- [ ] Load WSI images
+- [x] HPC Training (Binary tests)
+- [x] Load WSI images
 - [ ] Train EfficientNets B0-B7 (wsi)
 - [ ] Aggregation
 

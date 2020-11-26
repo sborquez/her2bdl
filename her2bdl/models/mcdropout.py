@@ -21,16 +21,28 @@ from tensorflow.keras.layers import (
 
 
 __all__ = [
-    'ModelMCDropout',
+    'MCDropoutModel',
     'SimpleClassifierMCDropout', 'EfficientNetMCDropout'
 ]
 
-class ModelMCDropout(tf.keras.Model):
+class MCDropoutModel(tf.keras.Model):
+    """
+    MonteCarlo Dropout base model. 
+    
+    MCDropoutModel has basics methods from `tf.keras.Model`, but also include 
+    methods for GPU efficient stochastics forward passes, predictive distribution
+    and uncertainty estimation.
+
+    Develop new MonteCarlo Dropout models by inheriting from this class. These 
+    new models must implement `build_encoder_model` and `build_classifier_model`
+    and define their deterministic and stochastics corresponding to submodels
+    meta-architecture.
+    """
     def __init__(self, input_shape, num_classes, 
                 mc_dropout_rate=0.5, sample_size=200, mc_dropout_batch_size=16, 
                 multual_information=True, variation_ratio=True, 
                 predictive_entropy=True):
-        super(ModelMCDropout, self).__init__()
+        super(MCDropoutModel, self).__init__()
         # Model parameters
         self.mc_dropout_rate = mc_dropout_rate or 0.0
         self.image_shape = input_shape
@@ -333,7 +345,12 @@ class ModelMCDropout(tf.keras.Model):
         # and each row is a image
         return pd.DataFrame(uncertainty)
 
-class SimpleClassifierMCDropout(ModelMCDropout):
+class SimpleClassifierMCDropout(MCDropoutModel):
+    """
+    SimpleClassifier with MonteCarlo Dropout.
+
+    Convolutional neural network model for testing purposes.
+    """
 
     def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 
                 sample_size=200, mc_dropout_batch_size=16, multual_information=True, 
@@ -410,8 +427,7 @@ from tensorflow.keras.applications import (
     EfficientNetB0, EfficientNetB1, EfficientNetB2, EfficientNetB3,
     EfficientNetB4,EfficientNetB5, EfficientNetB6, EfficientNetB7
 )
-class EfficientNetMCDropout(ModelMCDropout):
-    #TODO: update to encode/classifier 
+class EfficientNetMCDropout(MCDropoutModel):
     """
     EfficientNet MonteCarlo Dropout. 
     Keras EfficientNets models wrappers with extra dropout layers.
@@ -429,6 +445,9 @@ class EfficientNetMCDropout(ModelMCDropout):
     EfficientNetB5	456
     EfficientNetB6	528
     EfficientNetB7	600
+
+    This model takes input images of shape (224, 224, 3), and the input data
+    should range [0, 255]. Normalization is included as part of the model.
     """
 
     __base_models_resolutions = {

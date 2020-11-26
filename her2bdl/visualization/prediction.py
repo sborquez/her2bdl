@@ -65,13 +65,13 @@ def plot_forward_pass_samples(prediction_samples, y_true=None,
     if y_true is not None:
         labels_[y_true] = f"{labels_[y_true]} (true)"  
     df = pd.DataFrame(prediction_samples, columns=labels_)
-    #if any(df.var() == 0):
-    g=sns.histplot(data=df, ax=axis, legend=True, stat="probability",
-        fill=False, palette=DEFAULT_PALETTE, bins=20)    
-    #else:
-    #    g=sns.kdeplot(data=df, ax=axis, legend=True, fill=False, palette=DEFAULT_PALETTE)
+    last = len(df)
+    df.loc[last] = [0.0]*len(labels_)
+    df.loc[last+1] = [1.0]*len(labels_)
+    g=sns.histplot(data=df, ax=axis, legend=True, stat="density", fill=True, 
+                   alpha=0.4, palette=DEFAULT_PALETTE, bins=11, element="poly")    
     # Style
-    axis.set_title("Samples Distribution by Class")
+    axis.set_title("Stochastic Forward Passes Distribution by Class")
     axis.set_xlabel("$p(y=C_k|x, \hat{\omega}_t$)")
     axis.set_xlim([0, 1])
     axis.set_ylabel("Density")
@@ -125,10 +125,11 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
                 verticalalignment='top', bbox=props)
     ax3 = plt.subplot(212)
     plot_forward_pass_samples(prediction_samples, y_true=y_true, labels=labels, axis=ax3)
-    plt.tight_layout()
     # Style
     title = f"Uncertainty\n{model_name}" if model_name is not None else "Uncertainty"
-    plt.suptitle(title, y=1.05)
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+
     # Show or Save
     if save_to is not None:
         save_to = Path(save_to)
@@ -153,10 +154,11 @@ def display_prediction(x, y_pred, predictive_distribution, model_name=None,
 
     ax2 = plt.subplot(122)
     plot_predictive_distribution(predictive_distribution, labels=labels, axis=ax2)
-    plt.tight_layout()
     # Style
     title = f"Prediction\n{model_name}" if model_name is not None else "Prediction"
-    plt.suptitle(title, y=1.05)
+    plt.suptitle(title, fontsize=16)
+    plt.tight_layout()
+
     # Show or Save
     if save_to is not None:
         save_to = Path(save_to)

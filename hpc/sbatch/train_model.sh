@@ -14,17 +14,26 @@ source /opt/software/anaconda3/2019.03/setup.sh
 # ----------------Variables--------------------------
 project=/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl
 env="$project/.env"
-#experiment_config_file="$project/train/experiments/config/simple_binary_classifier.yaml"
-experiment_config_file="$project/train/experiments/config/efficientnet_binary_classifier.yaml"
+experiment_config_file="$project/train/experiments/config/binary_classification/efficientnet_b0_binary_classifier.yaml"
+#experiment_config_file="$project/train/experiments/config/binary_classification/efficientnet_b1_binary_classifier.yaml"
+#experiment_config_file="$project/train/experiments/config/binary_classification/efficientnet_b2_binary_classifier.yaml"
+#experiment_config_file="$project/train/experiments/config/binary_classification/efficientnet_b3_binary_classifier.yaml"
+#experiment_config_file="$project/train/experiments/config/binary_classification/efficientnet_b4_binary_classifier.yaml"
 # ----------------Comands--------------------------
 source activate "$project/.env"
 echo "Running train_model.sh"
 echo ""
- 
+
+if [ -z "$experiment" ];
+then
+    experiment=$experiment_config_file;
+fi
 cd "$project/train"
+echo "Running $experiment"
 
-## Parameters
-echo "Experiment: $experiment_config_file"
-
-#TODO: Support cmd parameters
-python train_model.py -c $experiment_config_file --quiet
+if [ -z "$job" ];
+then
+    python train_model.py -c $experiment --quiet;
+else
+    python train_model.py -c $experiment --quiet --job $job;
+fi

@@ -2,15 +2,17 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: efficientnet classifier
-  notes: classifier test.
-  tags: 
-    - test
+  name: EfficientNetB3-McDropout C876
+  notes: EfficientNet with MC-Dropout for Binary Classification.
+  tags:
     - efficientnet
+    - b3
     - binary
+    - mcdropout
+    - training
   # Experiments folder: Contains multiples experiments
-  experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
-  # experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -27,8 +29,12 @@ model:
   # Model architecture hyperparameters
   hyperparameters: 
     mc_dropout_rate: 0.5
-    base_model: B0
+    base_model: B3
     efficient_net_weights: imagenet
+    classifier_dense_layers: 
+      - 256
+      - 128
+      - 64
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
@@ -54,11 +60,11 @@ data:
       dataset_target: binary
       data_dir: null
   # Input
-  img_height: 224
-  img_width: 224
+  img_height: 300
+  img_width: 300
   img_channels: 3
-  preprocessing: 
-    rescale: 0.00392156862745098
+  preprocessing:
+    rescale: null
   # Target
   num_classes: 2
   label_mode: categorical  # Depends on task and model architecture
@@ -69,7 +75,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 50
+  epochs: 5
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 8
   # (Optional, default=0.2) Train and validation split.
@@ -81,7 +87,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     parameters: null
   # Training callbacks
   callbacks:
@@ -100,11 +106,11 @@ training:
       # Plots and logs
       log_training_loss_plot: true
       log_training_loss: true
-      log_predictions_plot: false
-      log_predictions: false
-      log_uncertainty_plot: false
-      log_uncertainty: false
-      log_confusion_matrix_plot: false
+      log_predictions_plot: true
+      log_predictions: true
+      log_uncertainty_plot: true
+      log_uncertainty: true
+      log_confusion_matrix_plot: true
     # Save checkpoints: saved at experiments_folder/experiment/checkpoints
     checkpoints:
       # saved weights format

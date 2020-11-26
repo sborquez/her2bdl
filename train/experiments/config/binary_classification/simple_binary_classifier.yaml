@@ -2,15 +2,15 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: simple classifier
-  notes: classifier test.
+  name: Simple classifier
+  notes: CNN for testing Binary Classification.
   tags: 
     - test
     - simple
     - binary
   # Experiments folder: Contains multiples experiments
-  experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
-  # experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
+  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.

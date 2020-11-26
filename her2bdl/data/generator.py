@@ -12,13 +12,16 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import atexit
+import cv2
 from .constants import *
 from .wsi import *
+from .dataset import *
 
 __all__ = [
     'get_generator_from_wsi', 'GridPatchGenerator', 'MCPatchGenerator', 
     'get_generators_from_tf_Dataset', 'get_generators_from_directory', 'generator_to_tf_Dataset'
 ]
+
 
 def generator_to_tf_Dataset(generator, img_height, img_width):
     """
@@ -27,7 +30,6 @@ def generator_to_tf_Dataset(generator, img_height, img_width):
     def callable_iterator(generator):
         for img_batch, targets_batch in generator:
             yield img_batch, targets_batch
-
     num_classes = generator.num_classes 
     output_shape = ([None, img_height, img_width, 3], [None, num_classes])
     dataset = tf.data.Dataset.from_generator(
@@ -109,6 +111,7 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
         steps_per_epoch = len(steps_per_epoch)
         return (train_dataset, steps_per_epoch)
 
+
 def get_generators_from_directory(data_directory, input_shape, batch_size, num_classes=None, label_mode="categorical", validation_split=None, preprocessing={}):
     rescale = preprocessing.get("rescale", None)
     image_generator = tf.keras.preprocessing.image.ImageDataGenerator(
@@ -142,8 +145,52 @@ def get_generators_from_directory(data_directory, input_shape, batch_size, num_c
     else:
         return (train_dataset, steps_per_epoch)
 
-def get_generator_from_wsi(patch_mode="grid"):
-    pass
+
+def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes=4,
+                        validation_generator=None, label_mode='categorical', preprocessing={}):
+    patch_size = input_shape[:2] # target_size
+    img_height, img_width = patch_size
+    generator_contructor = {
+        "GridPatchGenerator": GridPatchGenerator,
+        "MCPatchGenerator": MCPatchGenerator 
+    }
+    aggregate_dataset_parameters = preprocessing.get("aggregate_dataset_parameters", None)  or {}
+    # Train generator
+    train_generator_type = train_generator["generator"]
+    train_generator_parameters = train_generator["generator_parameters"]
+    train_generator_parameters["dataset"] = aggregate_dataset(
+        load_dataset(train_generator_parameters["dataset"]),
+        **aggregate_dataset_parameters
+    )
+    train_generator = generator_contructor[train_generator_type](
+        batch_size=batch_size, 
+        patch_size=patch_size, 
+        label_mode=label_mode, 
+        **train_generator_parameters
+    )
+    steps_per_epoch = int(train_generator.size // batch_size)
+    #train_dataset   = generator_to_tf_Dataset(train_generator, img_height, img_width)
+    train_dataset   = train_generator
+    if validation_generator is not None:
+        validation_generator_type = validation_generator["generator"]
+        validation_generator_parameters = validation_generator["generator_parameters"]
+        validation_generator_parameters["dataset"] = aggregate_dataset(
+            load_dataset(validation_generator_parameters["dataset"]),
+            **aggregate_dataset_parameters
+        )
+        validation_generator  = generator_contructor[validation_generator_type](
+            batch_size=batch_size, 
+            patch_size=patch_size, 
+            label_mode=label_mode, 
+            **validation_generator_parameters
+        )
+        validation_steps = int(validation_generator.size // batch_size)
+        #validation_dataset = generator_to_tf_Dataset(validation_generator, img_height, img_width)
+        validation_dataset = validation_generator
+        return (train_dataset, steps_per_epoch), (validation_dataset, validation_steps)
+    else:
+        return (train_dataset, steps_per_epoch)
+
 
 class GridPatchGenerator(keras.utils.Sequence):
     """
@@ -151,13 +198,14 @@ class GridPatchGenerator(keras.utils.Sequence):
     """
 
     def __init__(self, dataset, batch_size, patch_level, patch_size, 
-                 patch_vertical_flip=False, patch_horizontal_flip=False, label_mode="categorical",
-                 shuffle=True):
+                 patch_vertical_flip=False, patch_horizontal_flip=False, 
+                 label_mode="categorical", shuffle=True):
         # Generator parameters
         self.batch_size = batch_size
         self.patch_size = patch_size
         self.patch_level = patch_level
         self.shuffle = shuffle
+        self.label_mode = label_mode
         
         # Data augmentation parameters
         self.patch_vertical_flip = patch_vertical_flip
@@ -180,15 +228,24 @@ class GridPatchGenerator(keras.utils.Sequence):
             for _, row in df.iterrows():
                 # Slide levels
                 segmentation_level = row["segmentation_level"] # level where tissue was detected
-                sampling_map_level = row["sampling_map_level"] # level where background is ignored
-                patch_level        = self.patch_level          # level where patch are obtained 
-                sampling_map       = np.load(row["sampling_map"]).astype(bool)
+                sampling_map_level = row["sampling_map_level"] # level with background mask
+                patch_level        = self.patch_level          # level for patch extraction 
+                # TODO: Check rows without sampling_maps
+                sampling_map       = np.load(row["sampling_map"]).astype(bool) 
                 # Downscale Patch size to sampling map level
                 sampling_map_patch_size = level_scaler(self.patch_size, patch_level, sampling_map_level)
                 # Find patches in sampling map scale with at least half of relevant pixels.
+                if np.any(np.array(sampling_map.shape) < sampling_map_patch_size):
+                    # patch_size is bigger than src tissue
+                    diff = np.array(sampling_map_patch_size)-np.array(sampling_map.shape)
+                    diff[diff<0] = 0
+                    sampling_map = np.pad(sampling_map, pad_width=diff, mode="symmetric")
                 sampling_map_patch_selector = strided_convolution(sampling_map, np.ones(sampling_map_patch_size), sampling_map_patch_size)
-                sampling_map_patch_selector = np.argwhere(sampling_map_patch_selector > (np.prod(sampling_map_patch_size)*PATCH_RELEVANT_RATIO))
-                # Scale indexes to sampling map level and and translate them with respect slide origin
+                sampling_map_patch_selector = np.argwhere(
+                    # Number of relevant pixels > an area threshold
+                    sampling_map_patch_selector > (np.prod(sampling_map_patch_size)*PATCH_RELEVANT_RATIO)
+                )
+                # Scale indexes to sampling map level and translate them with according to source slide
                 sampling_map_translation = level_scaler((row["min_row"], row["min_col"]), segmentation_level, sampling_map_level)
                 sampling_map_patch_indexes = sampling_map_patch_size*sampling_map_patch_selector + sampling_map_translation
                 # Upscale patches indexes from sampling map level to level 0 (for `read_region` method)
@@ -205,18 +262,19 @@ class GridPatchGenerator(keras.utils.Sequence):
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
         self.num_classes = self.dataset[TARGET].nunique()
-        self.size = len(self.dataset)
+        self.size = self.batch_size * (len(self.dataset)//self.batch_size)
         atexit.register(self.cleanup)
-
+ 
     def cleanup(self):
         'Close opened slides'
         for case_no in self.slides.keys():
             close_slide(self.slides[case_no])
-            del self.slides[case_no]
+            #del self.slides[case_no]
+        del self.slides
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(self.size)/self.batch_size)
+        return int(self.size//self.batch_size)
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -229,9 +287,20 @@ class GridPatchGenerator(keras.utils.Sequence):
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(self.size)
-        if self.shuffle == True:
-            np.random.shuffle(self.indexes)
+        if self.shuffle:
+            self.indexes = np.random.choice(
+                np.arange(len(self.dataset)), size=self.size, replace=False
+            )
+        else: #ignore last rows
+            self.indexes = np.arange(self.size)
+        if self.patch_vertical_flip:
+            self.vertical_flips = np.random.choice((-1, 1), size=self.size)
+        else:
+            self.vertical_flips = np.ones(self.size, dtype=int)
+        if self.patch_horizontal_flip:
+            self.horizational_flips = np.random.choice((-1, 1), size=self.size)
+        else:
+            self.horizational_flips = np.ones(self.size, dtype=int)
 
     def __data_generation__(self, list_indexes):
         'Generates data containing batch_size samples'
@@ -240,23 +309,29 @@ class GridPatchGenerator(keras.utils.Sequence):
         batch_patches = np.empty((len(list_indexes), *self.patch_size, 3), dtype=np.float64)
         batch_scores  = np.empty((len(list_indexes), len(TARGET_LABELS)))
         for i, (_, row) in enumerate(batch_rows.iterrows()):
-            img = self.slides[int(row["CaseNo"])]
+            case_no = int(row["CaseNo"])
+            score   = int(row[TARGET])
+            img = self.slides[case_no]
             patch = img.read_region((int(row["col"]), int(row["row"])), self.patch_level, self.patch_size)
-            batch_patches[i] = np.array(patch)[:,:,:3] / 255.0
-            batch_scores[i]  = TARGET_TO_ONEHOT[int(row[TARGET])]
+            v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
+            batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
+            batch_scores[i]  = TARGET_TO_ONEHOT[score]
         return batch_patches, batch_scores
     
 class MCPatchGenerator(GridPatchGenerator):
     """
     Monte-Carlo Patch Generator 
     """
-
-    def __init__(self, dataset, batch_size, patch_level, patch_size, samples_per_tissue=500,
-                 patch_vertical_flip=False, patch_horizontal_flip=False, label_mode="categorical",
+    def __init__(self, dataset, batch_size, patch_level, patch_size, 
+                 samples_per_tissue=100, patch_vertical_flip=True, 
+                 patch_horizontal_flip=True, label_mode="categorical", 
                  shuffle=True):
         # Take m samples from each tissue
-        self.samples_per_tissue = samples_per_tissue
-        super().__init__(dataset, batch_size, patch_level, patch_size, patch_vertical_flip, patch_horizontal_flip, shuffle)
+        self.samples_per_tissue = int(batch_size * (samples_per_tissue//batch_size))
+        super().__init__(
+            dataset, batch_size, patch_level, patch_size, patch_vertical_flip,
+            patch_horizontal_flip, label_mode, shuffle
+        )
 
 
     def __setup__(self, dataset):
@@ -268,6 +343,9 @@ class MCPatchGenerator(GridPatchGenerator):
         total = dataset["CaseNo"].nunique()
         self.patches = {}
         self.weights = {}
+        # Move TODO: Check this hand selected values
+        kernel = np.zeros((800, 800))
+        kernel[400:, 400:] = 1/(400*400)
         for case_no, df in tqdm(dataset.groupby("CaseNo"), total=dataset["CaseNo"].nunique()):
             self.slides[case_no] = open_slide(df.iloc[0]["slide_path"])
             self.patches[case_no] = {}
@@ -281,7 +359,12 @@ class MCPatchGenerator(GridPatchGenerator):
                 sampling_map       = np.load(row["sampling_map"])
                 # Sampler values and weights
                 indexes = np.argwhere(sampling_map > 0)
-                weights = sampling_map[indexes[:,0], indexes[:,1]]
+                weights = cv2.filter2D(sampling_map, -1, kernel)[indexes[:,0], indexes[:,1]]
+                weights_sum = weights.sum()
+                if weights_sum > 0:
+                    weights /= weights.sum()
+                else:
+                    weights[:] = 1.0/len(weights)
                 # Translate and scale to level 0
                 sampling_map_translation = level_scaler((row["min_row"], row["min_col"]), segmentation_level, sampling_map_level)
                 patch_indexes = level_scaler(indexes + sampling_map_translation, sampling_map_level, 0, "numpy")
@@ -301,29 +384,42 @@ class MCPatchGenerator(GridPatchGenerator):
         self.upsample_pixels_level_0     = level_scaler((1, 1), patch_level, 0)
         atexit.register(self.cleanup)
 
+
     def on_epoch_end(self):
         'Updates samples after each epoch'
-        self.indexes = np.empty((self.samples_per_tissue*len(self.dataset), 2), dtype=int)
-        self.dataset_ref = np.empty((self.samples_per_tissue*len(self.dataset)), dtype=int)
+        self.size = len(self.dataset)*self.samples_per_tissue
+        self.indexes = np.empty((self.size, 2), dtype=int)
+        self.dataset_ref = np.empty((self.size), dtype=int)
         for i, (_, row) in enumerate(self.dataset.iterrows()):
             case_no = int(row["CaseNo"])
             label   = int(row["label"])
             score   = int(row[TARGET])
             # samples
             m       = self.samples_per_tissue
-            indexes = self.patches[case_no][label]
-            weights = self.weights[case_no][label]
-            samples_indexes = indexes[np.random.choice(np.arange(len(indexes)), size=m)] 
-            samples_fine_selection = np.random.randint((0,0), self.upsample_pixels_patch_level, size=(m, 2)) * self.upsample_pixels_level_0
-            self.indexes[i*m: (i+1)*m] = samples_indexes + samples_fine_selection
+            indexes = self.patches[case_no][label] # index in wsi at level 0
+            weights = self.weights[case_no][label] # 
+            random_selector = np.random.choice(np.arange(len(indexes)), size=m, p=weights)
+            samples_indexes = indexes[random_selector]
+            if self.upsample_pixels_patch_level != (0, 0): # is higher resolution
+                samples_fine_selection = np.random.randint((0,0), self.upsample_pixels_patch_level, size=(m, 2)) * self.upsample_pixels_level_0
+                samples_indexes = samples_indexes + samples_fine_selection
+            self.indexes[i*m: (i+1)*m] = samples_indexes
             self.dataset_ref[i*m: (i+1)*m] = i
-        if self.shuffle == True:
+        if self.shuffle:
             shuffler = np.arange(len(self.indexes))
             np.random.shuffle(shuffler)
             self.indexes     = self.indexes[shuffler]
             self.dataset_ref = self.dataset_ref[shuffler]
-        
-    
+        if self.patch_vertical_flip:
+            self.vertical_flips = np.random.choice((-1, 1), size=self.size)
+        else:
+            self.vertical_flips = np.ones(self.size, dtype=int)
+        if self.patch_horizontal_flip:
+            self.horizational_flips = np.random.choice((-1, 1), size=self.size)
+        else:
+            self.horizational_flips = np.ones(self.size, dtype=int)
+
+
     def __getitem__(self, index):
         'Generate one batch of data'
         # Generate indexes of the batch
@@ -334,6 +430,7 @@ class MCPatchGenerator(GridPatchGenerator):
         X, y = self.__data_generation__(indexes, dataset_ref)
         return X, y
 
+
     def __data_generation__(self, list_indexes, dataset_ref):
         'Generates data containing batch_size samples'
         # Initialization
@@ -342,11 +439,11 @@ class MCPatchGenerator(GridPatchGenerator):
         batch_scores  = np.empty((len(list_indexes), len(TARGET_LABELS)))
         for i, (_, row) in enumerate(batch_rows.iterrows()):
             case_no = int(row["CaseNo"])
-            label   = int(row["label"])
             score   = int(row[TARGET])
             img = self.slides[case_no]
             location = (list_indexes[i][1], list_indexes[i][0])
             patch = img.read_region(location, self.patch_level, self.patch_size)
-            batch_patches[i] = np.array(patch)[:,:,:3] / 255.0
+            v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
+            batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]
         return batch_patches, batch_scores

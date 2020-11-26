@@ -20,7 +20,6 @@ def train_model(config, quiet=False, display=None):
     experiment_name    = config["experiment"]["name"]
     experiment_folder  = path.join(experiments_folder, experiment_name)
     run_id             = config["experiment"]["run_id"]
-
     # Dataset
     source_type = config["data"]["source"]["type"]
     dataset_parameters = config["data"]["source"]["parameters"]
@@ -33,12 +32,12 @@ def train_model(config, quiet=False, display=None):
     num_clasess = config["data"]["num_classes"]
     label_mode = config["data"]["label_mode"]
     labels = config["data"]["labels"]
-    if labels == "HER2":
-        labels = TARGET_LABELS_list
+    if labels == "HER2": labels = TARGET_LABELS_list
     batch_size  = config["training"]["batch_size"]
     validation_split = config["training"]["validation_split"]
-
+    # Load train and validation generators
     if source_type == "tf_Dataset":
+        print("Loading tf_Dataset generators:")
         train_, val_ = get_generators_from_tf_Dataset(
             **dataset_parameters, 
             num_classes=num_clasess, label_mode=label_mode,
@@ -48,11 +47,21 @@ def train_model(config, quiet=False, display=None):
         (train_dataset, steps_per_epoch) = train_
         (val_dataset, validation_steps)  = val_
     elif source_type == "wsi":
-        # TODO: implement and add get_generators_from_wsi
-        # generator_to_tf_Dataset
-        # (train_dataset, steps_per_epoch) = train_
-        # (val_dataset, validation_steps)  = val_
-        raise NotImplementedError
+        # ignore test dataset 
+        __test_generator = dataset_parameters["test_generator"] 
+        del dataset_parameters["test_generator"]
+        # 
+        print("Loading WSI generators:")
+        train_, val_ = get_generator_from_wsi(
+            **dataset_parameters, 
+            num_classes=num_clasess, label_mode=label_mode,
+            input_shape=input_shape, batch_size=batch_size,
+            preprocessing=preprocessing
+        )
+        (train_dataset, steps_per_epoch) = train_
+        (val_dataset, validation_steps)  = val_
+        dataset_parameters["test_generator"] = __test_generator
+        del __test_generator
     # elif source_type == "directory":
     #     # TODO: add get_generators_from_directory
     #     raise NotImplementedError
@@ -77,11 +86,11 @@ def train_model(config, quiet=False, display=None):
     # Training parameters
     epochs = config["training"]["epochs"]
     batch_size  = config["training"]["batch_size"]
-    validation_split = config["training"]["validation_split"]
+    validation_split = config["training"].get("validation_split", None)
     ## Loss
     loss_function    = config["training"]["loss"]["function"]
     loss_parameters  = config["training"]["loss"]["parameters"]
-    loss_parameters  = {} if loss_parameters is None else loss_parameters
+    loss_parameters  = loss_parameters or {}
     loss = LOSS[loss_function](**loss_parameters)
     ## Metrics
     metrics = config["evaluate"]["metrics"]
@@ -89,8 +98,11 @@ def train_model(config, quiet=False, display=None):
     optimizer_name = config["training"]["optimizer"]["name"]
     optimizer_learning_rate = float(config["training"]["optimizer"]["learning_rate"]) # fix scientific notation parsed as str.
     optimizer_parameters = config["training"]["optimizer"].get("parameters", {})
-    optimizer_parameters = {} if optimizer_parameters is None else optimizer_parameters
-    optimizer = OPTIMIZERS[optimizer_name](learning_rate=optimizer_learning_rate, **optimizer_parameters)
+    optimizer_parameters = optimizer_parameters or {}
+    optimizer = OPTIMIZERS[optimizer_name](
+        learning_rate=optimizer_learning_rate, 
+        **optimizer_parameters
+    )
     ## Callbacks
     enable_wandb = config["training"]["callbacks"]["enable_wandb"]
     earlystop = config["training"]["callbacks"]["earlystop"]

@@ -37,13 +37,28 @@ def size_scaler(list_of_values, src_size, dst_size, output_type="tuple"):
     pass
   return list_of_values
 
-def level_scaler(list_of_values, src_level, dst_level, output_type="tuple"):
+def level_scaler(list_of_values, src_level, dst_level, output_type="tuple", 
+                 dtype=int):
+  """
+  Scale pixels meassures, i.e. images size, image location, between different
+  piramidal levels.
+
+  Args:
+    list_of_values: List of values at `src_level` scale.
+    src_level: WSI source level (int).
+    dst_level: WSI destiny level (int).
+    output_type: Iterable type:  'tuple' or 'array'.
+    dtype: output dtype values.
+    
+  Returns:
+    `list_of_values` at `dst_level`.
+  """
   scaler = 2.0**int(src_level - dst_level)
   mapper = np.array(list_of_values)*scaler
   if output_type == "tuple":
-    list_of_values = tuple(mapper.astype(int))
+    list_of_values = tuple(mapper.astype(dtype))
   else:
-    list_of_values = mapper.astype(int)
+    list_of_values = mapper.astype(dtype)
   return list_of_values
 
 def pil_to_np_rgb(pil_img):

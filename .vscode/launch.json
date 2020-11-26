@@ -15,6 +15,19 @@
       "justMyCode": true
     },
     {
+      "name": "Train HER2 Classifier (EfficientNetMCDropout-GRID)",
+      "type": "python",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/train/",
+      "program": "train_model.py",
+      "args": [
+        "-c", "experiments/config/wsi_generators/efficientnet_b0_her2_grid.yaml",
+        "--disable_wandb"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
       "name": "Train Binary Classifier (SimpleClassifierMCDropout)",
       "type": "python",
       "request": "launch",

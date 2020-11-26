@@ -167,8 +167,9 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
         label_mode=label_mode, 
         **train_generator_parameters
     )
-    steps_per_epoch = train_generator.size // batch_size
-    train_dataset   = generator_to_tf_Dataset(train_generator, img_height, img_width)
+    steps_per_epoch = int(train_generator.size // batch_size)
+    #train_dataset   = generator_to_tf_Dataset(train_generator, img_height, img_width)
+    train_dataset   = train_generator
     if validation_generator is not None:
         validation_generator_type = validation_generator["generator"]
         validation_generator_parameters = validation_generator["generator_parameters"]
@@ -182,8 +183,9 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
             label_mode=label_mode, 
             **validation_generator_parameters
         )
-        validation_steps = validation_generator.size // batch_size
-        validation_dataset = generator_to_tf_Dataset(validation_generator, img_height, img_width)
+        validation_steps = int(validation_generator.size // batch_size)
+        #validation_dataset = generator_to_tf_Dataset(validation_generator, img_height, img_width)
+        validation_dataset = validation_generator
         return (train_dataset, steps_per_epoch), (validation_dataset, validation_steps)
     else:
         return (train_dataset, steps_per_epoch)
@@ -259,18 +261,19 @@ class GridPatchGenerator(keras.utils.Sequence):
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
         self.num_classes = self.dataset[TARGET].nunique()
-        self.size = len(self.dataset)
+        self.size = self.batch_size * (len(self.dataset)//self.batch_size)
         atexit.register(self.cleanup)
  
     def cleanup(self):
         'Close opened slides'
         for case_no in self.slides.keys():
             close_slide(self.slides[case_no])
-            del self.slides[case_no]
+            #del self.slides[case_no]
+        del self.slides
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(self.size)/self.batch_size)
+        return int(self.size//self.batch_size)
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -283,9 +286,12 @@ class GridPatchGenerator(keras.utils.Sequence):
 
     def on_epoch_end(self):
         'Updates indexes after each epoch'
-        self.indexes = np.arange(self.size)
-        if self.shuffle == True:
-            np.random.shuffle(self.indexes)
+        if self.shuffle:
+            self.indexes = np.random.choice(
+                np.arange(len(self.dataset)), size=self.size, replace=False
+            )
+        else: #ignore last rows
+            self.indexes = np.arange(self.size)
         if self.patch_vertical_flip:
             self.vertical_flips = np.random.choice((-1, 1), size=self.size)
         else:
@@ -316,11 +322,11 @@ class MCPatchGenerator(GridPatchGenerator):
     Monte-Carlo Patch Generator 
     """
     def __init__(self, dataset, batch_size, patch_level, patch_size, 
-                 samples_per_tissue=500, patch_vertical_flip=True, 
+                 samples_per_tissue=100, patch_vertical_flip=True, 
                  patch_horizontal_flip=True, label_mode="categorical", 
                  shuffle=True):
         # Take m samples from each tissue
-        self.samples_per_tissue = samples_per_tissue
+        self.samples_per_tissue = int(batch_size * (samples_per_tissue//batch_size))
         super().__init__(
             dataset, batch_size, patch_level, patch_size, patch_vertical_flip,
             patch_horizontal_flip, label_mode, shuffle

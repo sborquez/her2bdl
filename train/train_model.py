@@ -37,6 +37,7 @@ def train_model(config, quiet=False, display=None):
     validation_split = config["training"]["validation_split"]
     # Load train and validation generators
     if source_type == "tf_Dataset":
+        print("Loading tf_Dataset generators:")
         train_, val_ = get_generators_from_tf_Dataset(
             **dataset_parameters, 
             num_classes=num_clasess, label_mode=label_mode,
@@ -50,6 +51,7 @@ def train_model(config, quiet=False, display=None):
         __test_generator = dataset_parameters["test_generator"] 
         del dataset_parameters["test_generator"]
         # 
+        print("Loading WSI generators:")
         train_, val_ = get_generator_from_wsi(
             **dataset_parameters, 
             num_classes=num_clasess, label_mode=label_mode,

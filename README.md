@@ -13,7 +13,7 @@ Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
 - [x] Weight and Bias easy setup.
 - [ ] Easy experiment reproducibility.
 - [ ] Notebooks.
-- [ ] Singularity container.
+- [ ] Docker container.
 - [ ] Pip Package.
 
 ## Her2BDL Package

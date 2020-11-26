@@ -34,7 +34,7 @@ __sections = set([
 
 __required = {
     "experiment":
-        ["name", "experiments_folder"],
+        ["name", "notes", "experiments_folder"],
     "model":
         ["task", "architecture", "hyperparameters", "uncertainty"],
     "aggregation":
@@ -56,7 +56,7 @@ __required = {
 
 __default_optional = {
     "experiment":
-        {"run_id": None, "seed": 1234},
+        {"tags": [], "run_id": None, "seed": 1234},
     "model":
         {"weights": None, "seed": 1234},
     "aggregation":

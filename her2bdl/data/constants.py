@@ -10,7 +10,7 @@ SEED = 42
 
 # Dataset columns roles
 GROUND_TRUTH_FILE = 'groundTruth.xlsx'
-IMAGE_FILES = ("{CaseNo:02d}_Her2.ndpi", "{CaseNo:02d}_HE.ndpi") 
+IMAGE_FILES = ("{CaseNo:02d}_HER2.ndpi", "{CaseNo:02d}_HE.ndpi") 
 
 # Input
 INPUTS  = ['image_her2']

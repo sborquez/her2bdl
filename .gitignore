@@ -131,3 +131,4 @@ dmypy.json
 .test_data/
 .noseids
 *.code-workspace
+.vscode/settings.json

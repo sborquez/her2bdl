@@ -183,7 +183,7 @@ def describe_dataset(dataset, include_targets=True):
         for score, size in size_by_class.items():
             print(f'    Score {score}: {size}')
 
-def aggregate_dataset(dataset, replace_source=None, filter_selected=True):
+def aggregate_dataset(dataset, replace_source=None, filter_selected=True, fix_lowercase=True):
     """
     Perform simple aggegation to dataset.
 
@@ -201,6 +201,11 @@ def aggregate_dataset(dataset, replace_source=None, filter_selected=True):
     #TODO: Add option to replace parent folder of sampling maps, segmentation and slide paths.
     if replace_source is not None:
         dataset.source = replace_source
+    if fix_lowercase:
+        fixable_columns = ["image_her2", "slide_path"]
+        mapper = ("_Her2.ndpi", "_HER2.ndpi")
+        for col in fixable_columns:
+            dataset[col] = dataset[col].str.replace(*mapper)
     if filter_selected:
        return dataset[dataset.selected == True] 
     return dataset

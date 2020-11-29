@@ -98,9 +98,9 @@ def display_confusion_matrix(y_true, y_pred, model_name=None, labels=None,
     accuracy = np.trace(cm) / float(np.sum(cm))
     misclass = 1 - accuracy
     if normalize:
-        group_counts = [f"{value}".format(value) 
+        group_counts = [f"{value}"
                         for value in cm.flatten()]
-        group_percentages = [f"{value:.2f}".format(value) 
+        group_percentages = [f"{100*value:.1f}"
                              for value in cm.flatten()/np.sum(cm)]
         annot = [f"{v1}\n{v2}%"
                  for v1, v2 in zip(group_counts, group_percentages)]

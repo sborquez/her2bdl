@@ -12,6 +12,7 @@ experiment:
     - dropout_rate=0.8
     - her2
     - MCPatchGenerator
+    - level 4
     - baseline
     - training
   # Experiments folder: Contains multiples experiments
@@ -66,7 +67,7 @@ data:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/train.csv'
           dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/train.csv'
           patch_level: 4
-          samples_per_tissue: 200
+          samples_per_tissue: 20
           patch_vertical_flip: true
           patch_horizontal_flip: true
           shuffle: true
@@ -107,7 +108,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 100
+  epochs: 30
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 16
   # (Optional, default=0.2) Train and validation split.
@@ -119,7 +120,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-5
+    learning_rate: 1e-4
     parameters: null
   # Training callbacks
   callbacks:
@@ -127,7 +128,7 @@ training:
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 10
+      patience: 5
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:

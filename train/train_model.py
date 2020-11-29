@@ -9,7 +9,7 @@ import time
 from os import path
 
 
-def train_model(config, quiet=False, display=None):
+def train_model(config, quiet=False, run_dir=".", display=None):
     # Seed
     seed = config["experiment"]["seed"]
     if seed is not None:
@@ -117,7 +117,8 @@ def train_model(config, quiet=False, display=None):
          labels=labels,
          earlystop=earlystop,
          experiment_tracker=experiment_tracker,
-         checkpoints=checkpoints
+         checkpoints=checkpoints,
+         run_dir=run_dir
     )
     # Train
     model.compile(
@@ -169,13 +170,13 @@ if __name__ == "__main__":
     if args["dryrun"]:
         WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
         os.environ["WANDB_MODE"] = 'dryrun'
-    setup_experiment(experiment_config)
+    run_dir = setup_experiment(experiment_config)
     
     # Verbosity
     quiet = args["quiet"]
 
     # Run trainong process
-    model = train_model(experiment_config, quiet=quiet, display=GUIcmd())
+    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir, display=GUIcmd())
 
     # restore configuration
     if args["dryrun"]:

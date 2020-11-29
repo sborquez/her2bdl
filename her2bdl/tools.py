@@ -125,6 +125,7 @@ def setup_experiment(experiment_config, mode="training"):
             id      = experiment_config["experiment"]["run_id"],
             config  = experiment_config
         )
+        return wandb.run.dir
     else:
         if mode == "training":
             # for consistency
@@ -137,13 +138,15 @@ def setup_experiment(experiment_config, mode="training"):
             os.makedirs(experiment_folder, exist_ok=True)
             with open(join(experiment_folder, 'config.yml'), 'w') as outfile:
                 yaml.dump(experiment_config, outfile)
+            return experiment_folder
         else:
             raise NotImplementedError
 
 
 def setup_callbacks(validation_data, validation_steps, model_name, batch_size, 
     	           enable_wandb, labels=None,
-                   earlystop=None, experiment_tracker=None, checkpoints=None):
+                   earlystop=None, experiment_tracker=None, checkpoints=None,
+                   run_dir="."):
     """
     Callbacks configuration:
         # Early stop, use null to disable.
@@ -174,6 +177,7 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
     """
     callbacks =[]
     if enable_wandb:
+        # TODO use experiment_tracker parameters    
         callbacks.append(
             UncertantyCallback(
                 generator=validation_data,
@@ -183,8 +187,12 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
                 labels=labels
             )
         )
-    else:
-        pass
+    if checkpoints is not None:
+        os.makedirs(join(run_dir, "checkpoints"), exist_ok=True)
+        filepath_format = checkpoints["format"]
+        del checkpoints["format"]
+        filepath = join(run_dir, "checkpoints", filepath_format)
+        callbacks.append(ModelCheckpoint(filepath, **checkpoints))
     if earlystop is not None:
         callbacks.append(EarlyStopping(**earlystop))
     return callbacks

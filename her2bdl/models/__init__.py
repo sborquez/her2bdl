@@ -24,6 +24,7 @@ Custom Layers
 """
 from .layers import *
 LAYERS = {
+    "Separate_HED_stains": Separate_HED_stains
 }
 
 
@@ -59,7 +60,9 @@ from .mcdropout import *
 
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
-    "EfficientNetMCDropout": EfficientNetMCDropout
+    "EfficientNetMCDropout": EfficientNetMCDropout,
+    "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout
+
 }
 AGGREGATION_METHODS = {
 }

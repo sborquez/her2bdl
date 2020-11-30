@@ -54,6 +54,19 @@
       "justMyCode": true
     },
     {
+      "name": "Train HER2 Classifier (HEDConvClassifier-MC)",
+      "type": "python",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/train/",
+      "program": "train_model.py",
+      "args": [
+        "-c", "experiments/config/wsi_generators/hedconv_classifier_her2_mc.yaml",
+        "--disable_wandb"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
       "name": "Train Binary Classifier (SimpleClassifierMCDropout)",
       "type": "python",
       "request": "launch",

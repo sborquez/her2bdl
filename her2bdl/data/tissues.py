@@ -156,7 +156,7 @@ def save_segmentation(case_no, labeled_segmentation, output):
 
     return segmentation_path
 
-def select_roi_manual(slide,  level=None, size=None, include_guess=True, display=None):
+def select_roi_manual(slide,  level=None, size=None, include_guess=True, title=None, display=None):
     """
     Select ROIs from WSI using a GUI.
     Parameters
@@ -197,10 +197,11 @@ def select_roi_manual(slide,  level=None, size=None, include_guess=True, display
         if include_guess:
             display.imshow("Label Segmentation rgb", labels_to_rgb)
             display.imshow("Segmentation", segmentation)
-        ROIs = display.interactive_roi_selection("ROI Selector", image, ROIs_manually, ROIs_guess)
+        title = title or "ROI Selector"
+        ROIs = display.interactive_roi_selection(title, image, ROIs_manually, ROIs_guess)
         if include_guess:
             display.close_canvas(["Label Segmentation rgb", "Segmentation"])
-        display.close_canvas("ROI Selector")
+        display.close_canvas(title)
     else:
         ROIs = ROIs_guess
 
@@ -234,7 +235,7 @@ def fit_sampling_map(slide, object, level=None, size=None, mode='uniform', displ
     src_image = cv2.cvtColor(np.array(slide.get_thumbnail(src_size)),  cv2.COLOR_RGB2BGR)
     
     # Source segmentation 
-    min_row, min_col, max_row, max_col = src_box
+    min_row, min_col, max_row, max_col = list(map(int, src_box))
     src_segmentation = np.load(object["segmentation_path"])
     src_roi_segmentation = src_segmentation[min_row:max_row, min_col:max_col]
     src_roi_segmentation[src_roi_segmentation != object["label"]] = 0

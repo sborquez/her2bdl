@@ -30,8 +30,12 @@ def prepare_dataset(source, output,
             iterator = dataset.iterrows()
         for _, sample in iterator:
             slide_filepath = path.join(sample["source"], str(sample["CaseNo"]).zfill(2), sample[IMAGE_IHC])
+
             slide = open_slide(slide_filepath)
-            rois, labeled_segmentation = select_roi_manual(slide, level=level, display=display)
+            score = sample[TARGET]
+            rois, labeled_segmentation = select_roi_manual( slide, level=level, 
+                title=f"ROI Selection - HER2 Score {score} - ", display=display
+            )
             segmentation_path = save_segmentation(sample["CaseNo"], labeled_segmentation, output)
             for selected, is_guess, label, centroid, bbox in rois:
                 size = labeled_segmentation.shape[:2][::-1]

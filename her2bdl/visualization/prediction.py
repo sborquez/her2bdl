@@ -79,6 +79,7 @@ def plot_forward_pass_samples(prediction_samples, y_true=None,
 
 def plot_sample(x, y_true=None, y_pred=None, labels=None, axis=None):
     # Create new figure
+    x = x.copy()
     if axis is None:
         plt.figure(figsize=(6,6))
         axis = plt.gca()

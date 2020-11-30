@@ -15,14 +15,15 @@ import tensorflow as tf
 from tensorflow.keras.layers import (
     Input, Activation,
     Flatten, Dense,
-    Conv2D, MaxPooling2D,
+    Conv2D, MaxPooling2D, DepthwiseConv2D,
     BatchNormalization, Dropout
 )
 
 
 __all__ = [
     'MCDropoutModel',
-    'SimpleClassifierMCDropout', 'EfficientNetMCDropout'
+    'SimpleClassifierMCDropout', 'EfficientNetMCDropout',
+    'HEDConvClassifierMCDropout'
 ]
 
 class MCDropoutModel(tf.keras.Model):
@@ -474,7 +475,7 @@ class EfficientNetMCDropout(MCDropoutModel):
 
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficient_net_weights='imagenet',
-                classifier_dense_layers=[256, 128],
+                classifier_dense_layers=[256, 128], activation='relu',
                 mc_dropout_rate=0.5, sample_size=200, mc_dropout_batch_size=16,
                 multual_information=True, variation_ratio=True,
                 predictive_entropy=True):
@@ -497,11 +498,10 @@ class EfficientNetMCDropout(MCDropoutModel):
         ## Classifier
         self.classifier = self.build_classifier_model(
             latent_variables_shape=latent_variables_shape,
-            classifier_dense_layers=classifier_dense_layers,
-            mc_dropout_rate=self.mc_dropout_rate, 
             num_classes=self.num_classes,
-            base_model=base_model,
-            efficient_net_weights=efficient_net_weights
+            mc_dropout_rate=self.mc_dropout_rate,
+            classifier_dense_layers=classifier_dense_layers,
+            activation=activation
         )
 
     @staticmethod
@@ -514,12 +514,18 @@ class EfficientNetMCDropout(MCDropoutModel):
         x = efficientBX(include_top=False, weights=efficient_net_weights)(x)
         # Flatten layer
         x = Flatten(name="head_flatten")(x)
-        return tf.keras.Model(encoder_input, x, name="encoder")
+        # Model
+        encoder_model = tf.keras.Model(encoder_input, x, name="encoder")
+        ## fix weights
+        if efficient_net_weights is not None:
+            for layer in encoder_model.layers: layer.trainable = False
+        return encoder_model
 
     @staticmethod
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
-        # Architecture parameters
+        # Architecture hyperparameters
         classifier_dense_layers = kwargs.get("classifier_dense_layers", [256, 128])
+        dense_activation = kwargs.get("activation", 'relu')
         mc_dropout_rate = mc_dropout_rate or 0.0
         ## Input layer
         x = clasifier_input = Input(shape=latent_variables_shape)
@@ -528,10 +534,136 @@ class EfficientNetMCDropout(MCDropoutModel):
             if mc_dropout_rate > 0:
                 units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
-            x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
-            x = Activation("relu", name=f"head_relu_{i}")(x)
+            #x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = Activation(dense_activation, name=f"head_activation_{i}")(x)
             if mc_dropout_rate > 0:
                 x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
         ## classsifier
         x = Dense(num_classes, activation="softmax", name="head_classifier")(x)
-        return tf.keras.Model(clasifier_input, x, name="classifier")
+        ## Model
+        classifier_model = tf.keras.Model(clasifier_input, x, name="classifier")
+        return classifier_model
+
+
+from .layers import Separate_HED_stains
+
+class HEDConvClassifierMCDropout(MCDropoutModel):
+    """
+    HED Stain separator Classifier with MonteCarlo Dropout.
+
+    Convolutional neural network model that use the Separate_HED_stains layer.
+
+    This model takes input images of any shape, and the input data
+    should range [0, 255].
+    
+    """
+
+    CONV_KERNEL_INITIALIZER = {
+    'class_name': 'VarianceScaling',
+    'config': {
+        'scale': 2.0,
+        'mode': 'fan_out',
+        # EfficientNet actually uses an untruncated normal distribution for
+        # initializing conv layers, but keras.initializers.VarianceScaling use
+        # a truncated distribution.
+        # We decided against a custom initializer for better serializability.
+        'distribution': 'normal'
+    }
+}
+
+
+    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 
+                encoder_kernel_sizes=[3, 3, 3], conv_activation='swish',
+                classifier_dense_layers=[256, 128], dense_activation='swish',
+                sample_size=200, mc_dropout_batch_size=16, multual_information=True, 
+                variation_ratio=True, predictive_entropy=True):
+        super(HEDConvClassifierMCDropout, self).__init__(
+            input_shape, num_classes, mc_dropout_rate, sample_size, 
+            mc_dropout_batch_size, multual_information, variation_ratio, 
+            predictive_entropy)
+        # Architecture
+        ## Encoder
+        self.encoder = self.build_encoder_model(
+            input_shape=input_shape,
+            encoder_kernel_sizes=encoder_kernel_sizes,
+            activation=conv_activation
+        )
+        ## Stochastic Latent Variables
+        latent_variables_shape = self.encoder.output.shape[1:]
+        ## Classifier
+        self.classifier = self.build_classifier_model(
+            latent_variables_shape=latent_variables_shape,
+            num_classes=self.num_classes,
+            mc_dropout_rate=self.mc_dropout_rate, 
+            classifier_dense_layers=classifier_dense_layers,
+            activation=dense_activation
+        )
+    
+    @staticmethod
+    def build_encoder_model(input_shape, **kwargs):
+        # Architecture hyperparameters
+        activation_fn = kwargs.get("activation", 'relu')
+        encoder_kernel_sizes = kwargs.get("encoder_kernel_sizes", [3, 3, 3])
+        ## Input Layers
+        x = encoder_input = Input(shape=input_shape)
+        x = Separate_HED_stains(name='stain_separator')(x)
+        # Delthwise Conv
+        x = DepthwiseConv2D(
+            kernel_size=3,
+            depth_multiplier=8,
+            strides=1,
+            padding="valid",
+            use_bias=False,
+            depthwise_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER,
+            name='stain_depthwiseConv2D'
+        )(x)
+        x = BatchNormalization(axis=3, name='depthwiseConv2D_batchnorm')(x)
+        x = Activation(activation_fn, name='depthwiseConv2D_activation')(x)
+        
+        ## initialize the layers in the first (CONV => RELU) * 2 => POOL
+        ### layer set\
+        filters_2 = 4
+        for i, kernel_size in enumerate(encoder_kernel_sizes):
+            x = Conv2D(
+                filters=2**filters_2, kernel_size=kernel_size,
+                padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
+                kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
+            )(x)
+            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_a")(x)
+            x = Activation(activation_fn, name=f"block{i}_activation_a")(x)
+            x = Conv2D(
+                filters=2**filters_2, kernel_size=kernel_size,
+                padding="valid", name=f"block{i}_conv2d_b", use_bias=False,
+                kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
+            )(x)
+            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_b")(x)
+            x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
+            x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
+        ## initialize the layers in our fully-connected layer sets
+        ### layer set
+        x = Flatten(name="head_flatten")(x)
+        return tf.keras.Model(encoder_input, x, name="encoder")
+
+    @staticmethod
+    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+        # Architecture hyperparameters
+        classifier_dense_layers = kwargs.get("classifier_dense_layers", [256, 128])
+        activation_fn = kwargs.get("activation", 'relu')
+        mc_dropout_rate = mc_dropout_rate or 0.0
+        ## Input layer
+        x = clasifier_input = Input(shape=latent_variables_shape)
+        ## Dense layers
+        for i, units in enumerate(classifier_dense_layers, start=1):
+            if mc_dropout_rate > 0:
+                units = int(units/mc_dropout_rate)
+            x = Dense(units, name=f"head_dense_{i}")(x)
+            #x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = Activation(activation_fn, name=f"head_activation_{i}")(x)
+            if mc_dropout_rate > 0:
+                x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
+        ## classsifier
+        x = Dense(num_classes, activation="softmax", name="head_classifier")(x)
+        ## Model
+        classifier_model = tf.keras.Model(clasifier_input, x, name="classifier")
+        return classifier_model
+

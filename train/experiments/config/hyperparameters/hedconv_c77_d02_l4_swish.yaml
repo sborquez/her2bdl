@@ -8,12 +8,13 @@ experiment:
     - hedconv
     - C77
     - mcdropout
-    - dropout_rate=0.8
+    - dropout_rate=0.2
     - her2
     - MCPatchGenerator
     - hyperparameters
     - training
     - swish
+    - level 4
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
   experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
@@ -32,7 +33,7 @@ model:
   weights: null
   # Model architecture hyperparameters
   hyperparameters: 
-    mc_dropout_rate: 0.8
+    mc_dropout_rate: 0.2
     encoder_kernel_sizes:
       - 3
       - 5
@@ -123,7 +124,7 @@ training:
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
     name: adam
-    learning_rate: 1e-5
+    learning_rate: 1e-4
     parameters: null
   # Training callbacks
   callbacks:

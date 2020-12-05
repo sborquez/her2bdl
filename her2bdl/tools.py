@@ -7,6 +7,7 @@ Collection of functions shared between train scripts.
 
 import os
 from os.path import join
+from pathlib import Path
 from datetime import datetime
 import numpy as np
 import yaml
@@ -23,13 +24,16 @@ from .visualization.prediction import (
     display_prediction, display_uncertainty, display_uncertainty_by_class
 )
 
-__all__ = ["load_config_file", "setup_callbacks", "setup_experiment"]
+__all__ = [
+    "load_config_file", "load_run_config",
+    "setup_callbacks", "setup_experiment"
+]
 
 
 # Experiment files variables
 __sections = set([
     "experiment", "model", "aggregation", "data",
-    "training", "evaluate", "predict", "plugins"
+    "training", "evaluate", "predict", "plugins",
 ])
 
 __required = {
@@ -49,9 +53,7 @@ __required = {
     "evaluate":
         ["metrics"],
     "predict":
-        ["save_aggregation", "save_predictions", "save_uncertainty"],
-    "plugins":
-        []
+        ["save_aggregation", "save_predictions", "save_uncertainty"]
 }
 
 __default_optional = {
@@ -76,14 +78,21 @@ __default_optional = {
         {"wandb": None}
 }
 
+def parse_wandb_config(config):
+    return {
+        section: config.get(section)["value"]
+        for section in __sections if section in (set(config.keys()) - set(("wandb_version", "_wandb")))
+    }
 
-def load_config_file(config_filepath):
+def load_config_file(config_filepath, **overwrite_config):
     """Load, validate and set default values"""
     # Read config file
     with open(config_filepath) as yaml_file:
         base_config = yaml.safe_load(yaml_file)
+        if "wandb_version" in base_config:
+            base_config = parse_wandb_config(base_config)
     # Check sections
-    assert set(base_config.keys()) == __sections,\
+    assert set(base_config.keys()).issubset(__sections),\
      "Configuration file has missings sections."
     # Check required sections and subsections
     not_defined = {}
@@ -93,13 +102,37 @@ def load_config_file(config_filepath):
             not_defined[section] = set(required_keys) - set(defined_keys)
     assert len(not_defined) == 0, f"Configuration not defined: {not_defined}"
     # Default values
-    config = dict(__default_optional)
-    for section in __default_optional.keys():
+    config = __default_optional.copy()
+    
+    for section in base_config.keys():
         config[section].update(base_config[section])
+    for section in overwrite_config:
+        config[section].update(overwrite_config[section])
+    
     # Set Experiment run id
     if config["experiment"]["run_id"] is None:
         config["experiment"]["run_id"] = wandb.util.generate_id()
     return config
+
+
+def load_run_config(run_folderpath, **overwrite_config):
+    run_folder = Path(run_folderpath)
+    # is wandb run
+    if len(list(run_folder.glob('run-*.wandb'))) > 0:
+        config_filepath = run_folder / "files" / "config.yaml"
+        best_model = run_folder / "files" / "model-best.h5"
+        if "experiment" not in overwrite_config:
+            overwrite_config["experiment"] = dict()
+        overwrite_config["experiment"]["run_id"] = None
+    # is local
+    else:
+        config_filepath = run_folder / "config.yaml"
+        best_model = sorted((run_folder / "checkpoints").glob("*.h5"))[-1]
+    config = load_config_file(config_filepath, **overwrite_config)
+    config["experiment"]["run_folder"] = run_folder.as_posix()
+    config["model"]["weights"] = best_model
+    return config
+
 
 def setup_experiment(experiment_config, mode="training"):
     # Weight and Bias
@@ -136,7 +169,7 @@ def setup_experiment(experiment_config, mode="training"):
             folder_ = f"run-{datetime.now().strftime('%Y%m%d_%H%M%S')}-{run_id}"
             experiment_folder = join(experiments_folder, folder_)
             os.makedirs(experiment_folder, exist_ok=True)
-            with open(join(experiment_folder, 'config.yml'), 'w') as outfile:
+            with open(join(experiment_folder, 'config.yaml'), 'w') as outfile:
                 yaml.dump(experiment_config, outfile)
             return experiment_folder
         else:
@@ -526,3 +559,30 @@ class UncertantyCallback(wandb.keras.WandbCallback):
             )
             plt.close(figure)
         return wandb_images
+
+
+def setup_evaluation_logger(test_generator, model_name, batch_size, enable_wandb, labels=None, run_dir="."):
+    if enable_wandb:
+        pass
+    else:
+        pass
+
+class EvaluationLogger():
+    def __init__(self, test_generator):
+        pass
+
+    def log(self, evaluation, predictive_distribution):
+        pass
+
+    def _log_uncertainty_map(self):
+        pass
+
+class EvaluationWandBLogger(EvaluationLogger):
+    def __init__(self, test_generator):
+        pass
+
+    def log(self, evaluation, predictive_distribution):
+        pass
+
+    def _log_uncertainty_map(self):
+        pass

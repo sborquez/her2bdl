@@ -132,3 +132,6 @@ dmypy.json
 .noseids
 *.code-workspace
 .vscode/settings.json
+
+#secrets
+.wandb_secret

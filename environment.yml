@@ -28,3 +28,4 @@ dependencies:
     - tensorflow-gpu==2.3.0
     - tensorflow-probability
     - tensorflow-datasets
+    - pycm==3.0

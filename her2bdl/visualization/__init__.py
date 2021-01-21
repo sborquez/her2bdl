@@ -13,7 +13,7 @@ figure.
 type of function can be used by `display_*` to combine different figures.
 """
 
-from .metrics import *
+from .performance import *
 from .explore import *
 from .prediction import *
 from .gui import *

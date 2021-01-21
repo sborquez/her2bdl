@@ -17,10 +17,10 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
-from .models.classification_metrics import (
+from .models.metrics import (
     confusion_matrix, class_stat, overall_stat, multiclass_roc_curve
 )
-from .visualization.metrics import (
+from .visualization.performance import (
     display_confusion_matrix, display_multiclass_roc_curve
 )
 from .visualization.prediction import (

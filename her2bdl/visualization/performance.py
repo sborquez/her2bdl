@@ -1,5 +1,5 @@
 """
-Metrics Visualizations
+Models Performence Visualizations
 ======================
 
 Generate plot for different metrics of models.

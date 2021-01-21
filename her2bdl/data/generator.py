@@ -156,21 +156,20 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
     }
     aggregate_dataset_parameters = preprocessing.get("aggregate_dataset_parameters", None)  or {}
     # Train generator
-    train_generator_type = train_generator["generator"]
-    train_generator_parameters = train_generator["generator_parameters"]
-    train_generator_parameters["dataset"] = aggregate_dataset(
-        load_dataset(train_generator_parameters["dataset"]),
+    generator_type = train_generator["generator"]
+    generator_parameters = train_generator["generator_parameters"]
+    generator_parameters["dataset"] = aggregate_dataset(
+        load_dataset(generator_parameters["dataset"]),
         **aggregate_dataset_parameters
     )
-    train_generator = generator_contructor[train_generator_type](
+    generator = generator_contructor[generator_type](
         batch_size=batch_size, 
         patch_size=patch_size, 
         label_mode=label_mode, 
-        **train_generator_parameters
+        **generator_parameters
     )
-    steps_per_epoch = int(train_generator.size // batch_size)
-    #train_dataset   = generator_to_tf_Dataset(train_generator, img_height, img_width)
-    train_dataset   = train_generator
+    steps_per_epoch = int(generator.size // batch_size)
+    dataset   = generator
     if validation_generator is not None:
         validation_generator_type = validation_generator["generator"]
         validation_generator_parameters = validation_generator["generator_parameters"]
@@ -185,11 +184,10 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
             **validation_generator_parameters
         )
         validation_steps = int(validation_generator.size // batch_size)
-        #validation_dataset = generator_to_tf_Dataset(validation_generator, img_height, img_width)
         validation_dataset = validation_generator
-        return (train_dataset, steps_per_epoch), (validation_dataset, validation_steps)
+        return (dataset, steps_per_epoch), (validation_dataset, validation_steps)
     else:
-        return (train_dataset, steps_per_epoch)
+        return (dataset, steps_per_epoch)
 
 
 class GridPatchGenerator(keras.utils.Sequence):
@@ -201,11 +199,12 @@ class GridPatchGenerator(keras.utils.Sequence):
                  patch_vertical_flip=False, patch_horizontal_flip=False, 
                  label_mode="categorical", shuffle=True):
         # Generator parameters
-        self.batch_size = batch_size
+        self.batch_size = batch_size 
         self.patch_size = patch_size
         self.patch_level = patch_level
         self.shuffle = shuffle
         self.label_mode = label_mode
+        self.patch_relevant_ratio = PATCH_RELEVANT_RATIO
         
         # Data augmentation parameters
         self.patch_vertical_flip = patch_vertical_flip
@@ -243,7 +242,7 @@ class GridPatchGenerator(keras.utils.Sequence):
                 sampling_map_patch_selector = strided_convolution(sampling_map, np.ones(sampling_map_patch_size), sampling_map_patch_size)
                 sampling_map_patch_selector = np.argwhere(
                     # Number of relevant pixels > an area threshold
-                    sampling_map_patch_selector > (np.prod(sampling_map_patch_size)*PATCH_RELEVANT_RATIO)
+                    sampling_map_patch_selector > (np.prod(sampling_map_patch_size)*self.patch_relevant_ratio)
                 )
                 # Scale indexes to sampling map level and translate them with according to source slide
                 sampling_map_translation = level_scaler((row["min_row"], row["min_col"]), segmentation_level, sampling_map_level)
@@ -262,7 +261,11 @@ class GridPatchGenerator(keras.utils.Sequence):
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
         self.num_classes = self.dataset[TARGET].nunique()
-        self.size = self.batch_size * (len(self.dataset)//self.batch_size)
+        if self.batch_size == -1:
+            self.batch_size = len(self.dataset)
+            self.size = len(self.dataset)
+        else:
+            self.size = self.batch_size * (len(self.dataset)//self.batch_size)
         atexit.register(self.cleanup)
  
     def cleanup(self):
@@ -311,13 +314,19 @@ class GridPatchGenerator(keras.utils.Sequence):
         for i, (_, row) in enumerate(batch_rows.iterrows()):
             case_no = int(row["CaseNo"])
             score   = int(row[TARGET])
-            img = self.slides[case_no]
-            patch = img.read_region((int(row["col"]), int(row["row"])), self.patch_level, self.patch_size)
+            patch = self.load_patch(case_no, int(row["row"]), int(row["col"]))
             v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
             batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]
         return batch_patches, batch_scores
-    
+
+    def load_patch(self, case_no, row, col, patch_level=None, patch_size=None):
+        patch_level = patch_level or self.patch_level
+        patch_size = patch_size or self.patch_size
+        img = self.slides[case_no]
+        patch = img.read_region((col, row), patch_level, patch_size)    
+        return patch
+
 class MCPatchGenerator(GridPatchGenerator):
     """
     Monte-Carlo Patch Generator 
@@ -440,9 +449,7 @@ class MCPatchGenerator(GridPatchGenerator):
         for i, (_, row) in enumerate(batch_rows.iterrows()):
             case_no = int(row["CaseNo"])
             score   = int(row[TARGET])
-            img = self.slides[case_no]
-            location = (list_indexes[i][1], list_indexes[i][0])
-            patch = img.read_region(location, self.patch_level, self.patch_size)
+            patch = self.load_patch(case_no, list_indexes[i][0], list_indexes[i][1])
             v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
             batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]

@@ -8,17 +8,21 @@ Collection of functions shared between train scripts.
 import os
 from os.path import join
 from datetime import datetime
+import pandas as pd
 import numpy as np
 import yaml
 import wandb
 from wandb.keras import WandbCallback
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-
-from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
-from .visualization.metrics import display_confusion_matrix
+from .models.classification_metrics import (
+    confusion_matrix, class_stat, overall_stat, multiclass_roc_curve
+)
+from .visualization.metrics import (
+    display_confusion_matrix, display_multiclass_roc_curve
+)
 from .visualization.prediction import (
     display_prediction, display_uncertainty, display_uncertainty_by_class
 )
@@ -211,7 +215,7 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                  output_type="label", log_evaluation=False, class_colors=None,
                  log_batch_frequency=None, log_best_prefix="best_",
                  log_confusion_matrix=True, log_predictions=True, 
-                 log_uncertainty=True):
+                 log_uncertainty=True, log_metrics=True, log_roc_curve=True):
         super().__init__(monitor=monitor,
                         verbose=verbose,
                         mode=mode,
@@ -246,6 +250,8 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         self.log_confusion_matrix = log_confusion_matrix
         self.log_predictions      = log_predictions
         self.log_uncertainty      = log_uncertainty
+        self.log_metrics          = log_metrics
+        self.log_roc_curve        = log_roc_curve
 
     def setup_validation_data(self, generator, predictions, 
                               batch_size, validation_steps, sample_size=None):
@@ -295,26 +301,43 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         if self.log_gradients:
             wandb.log(self._log_gradients(), commit=False)
 
-        if any((self.log_predictions, self.log_uncertainty, self.log_confusion_matrix)):
+        if any((self.log_predictions, self.log_uncertainty, 
+                self.log_confusion_matrix, self.log_metrics)):
             validation_data, predictions_uncertainty = self._get_predictions_uncertainty()
 
-        if self.log_confusion_matrix:
-            #(x_true, y_true, y_pred)  = self._get_predictions()
-            (x_true, y_true) = validation_data
+        if self.log_metrics:
+            (_, y_true) = self._get_data(mode="labels")
             _, y_pred, _ = predictions_uncertainty
+            class_stat_table, overall_stat_table = self._log_metrics(y_pred, y_true)
+            wandb.log({
+                "Class Stat": class_stat_table,
+                "Overall Stat": overall_stat_table
+            }, commit=False)
+
+        if self.log_roc_curve:
+            (_, y_true) = self._get_data(mode="labels")
+            y_predictive_distribution, _, _ = predictions_uncertainty
+            roc_plot = self._log_roc_curve(y_predictive_distribution, y_true)
             wandb.log(
-               {"Confusion Matrix": \
-                   self._log_confusion_matrix(y_pred, y_true)},
-               commit=False
+               { "ROC Curve": roc_plot}, commit=False
+            )
+
+        if self.log_confusion_matrix:
+            _, y_true = self._get_data(mode="labels")
+            _, y_pred, _ = predictions_uncertainty
+            cm_plot = self._log_confusion_matrix(y_pred, y_true)
+            wandb.log(
+               { "Confusion Matrix": cm_plot}, commit=False
             )
 
         if self.log_predictions:
             y_predictive_distribution, y_pred, _ = predictions_uncertainty
             wandb.log(
-                {"Examples": self._log_predictions(
-                   *validation_data, 
-                    y_predictive_distribution, y_pred
-                )},
+                {
+                    "Examples": self._log_predictions(
+                        *validation_data, y_predictive_distribution, y_pred
+                    )
+                },
                commit=False
             )
         if self.log_uncertainty:
@@ -374,33 +397,50 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                 self._save_model(epoch)
             self.best = self.current
 
-    def _get_predictions(self):
+    def _get_data(self, mode="onehot"):
         X_test, y_test = self.validation_data
-        y_test = y_test.argmax(axis=1)
+        if mode == "labels":
+            y_test = y_test.argmax(axis=1)
+        elif mode == "onehot":
+            pass
+        else:
+            raise ValueError("Invalid data mode:", mode)
+        return X_test, y_test
+
+    def _get_predictions(self):
+        X_test, y_test = self._get_data(mode="labels")
         y_pred = self.model.predict(X_test).argmax(axis=1)
         return  (X_test, y_test, y_pred)
 
     def _get_predictions_uncertainty(self):
-        #X_sample, y_sample = self.sample_data
-        X_sample, y_sample = self.validation_data
-        y_sample = y_sample.argmax(axis=1)
-        predictions = self.model.predict_distribution(x=X_sample)
+        X_test, y_test = self._get_data(mode="labels")
+        predictions = self.model.predict_distribution(x=X_test)
         y_predictive_distribution, y_pred, y_predictions_samples = predictions
-        return  (X_sample, y_sample),\
+        return  (X_test, y_test),\
                 (y_predictive_distribution, y_pred, y_predictions_samples)
 
     def _log_confusion_matrix(self, y_pred, y_true):
-        """
-        Display a deterministic confusion matrix evaluating validation_data.
-        Parameters
-        ----------
-        Return
-        ------
-        """
+        cm = confusion_matrix(y_true, y_pred, labels=self.labels)
         figure = display_confusion_matrix(
-                    y_true=y_true, y_pred=y_pred,
-                    model_name=self.model_name,
-                    labels=self.labels
+            cm=cm,
+            model_name=self.model_name,
+            labels=self.labels
+        )
+        img_log = wandb.Image(figure)
+        plt.close(figure)
+        return img_log
+
+    def _log_metrics(self, y_pred, y_true):
+        class_stats_table   = wandb.Table(dataframe=class_stat(y_true, y_pred, labels=self.labels))
+        overall_stats_table = wandb.Table(dataframe=overall_stat(y_true, y_pred, labels=self.labels))
+        return class_stats_table, overall_stats_table
+
+    def _log_roc_curve(self, y_prob, y_true):
+        fpr, tpr, roc_auc = multiclass_roc_curve(y_true, y_prob)
+        figure = display_multiclass_roc_curve(
+            fpr, tpr, roc_auc,
+            model_name=self.model_name,
+            labels=self.labels
         )
         img_log = wandb.Image(figure)
         plt.close(figure)

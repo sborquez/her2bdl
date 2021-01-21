@@ -57,6 +57,8 @@ Models and Aggregations
 ==========
 """
 from .mcdropout import *
+from .uncertainty import *
+from .classification_metrics import *
 
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,

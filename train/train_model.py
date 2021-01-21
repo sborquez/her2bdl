@@ -4,21 +4,17 @@ sys.path.insert(1, '..')
 
 from her2bdl import *
 
+from pathlib import Path
 import logging
 import time
-from os import path
+import numpy as np
 
 
-def train_model(config, quiet=False, run_dir=".", display=None):
-    # Seed
-    seed = config["experiment"]["seed"]
-    if seed is not None:
-        pass #TODO: add seed
-
+def train_model(config, quiet=False, run_dir="."):
     # Experiment paths and indentifiers
     experiments_folder = config["experiment"]["experiments_folder"]
     experiment_name    = config["experiment"]["name"]
-    experiment_folder  = path.join(experiments_folder, experiment_name)
+    experiment_folder  = Path(experiments_folder) / experiment_name
     run_id             = config["experiment"]["run_id"]
     # Dataset
     source_type = config["data"]["source"]["type"]
@@ -48,28 +44,22 @@ def train_model(config, quiet=False, run_dir=".", display=None):
         (val_dataset, validation_steps)  = val_
     elif source_type == "wsi":
         # ignore test dataset 
-        __test_generator = dataset_parameters["test_generator"] 
-        del dataset_parameters["test_generator"]
-        # 
         print("Loading WSI generators:")
         train_, val_ = get_generator_from_wsi(
-            **dataset_parameters, 
+            generator=dataset_parameters["train_generator"],
+            validation_generator=dataset_parameters["validation_generator"],
             num_classes=num_clasess, label_mode=label_mode,
             input_shape=input_shape, batch_size=batch_size,
             preprocessing=preprocessing
         )
         (train_dataset, steps_per_epoch) = train_
         (val_dataset, validation_steps)  = val_
-        dataset_parameters["test_generator"] = __test_generator
-        del __test_generator
-    # elif source_type == "directory":
-    #     # TODO: add get_generators_from_directory
-    #     raise NotImplementedError
     else:
         raise ValueError(f"Unknown source_type: {source_type}")
 
-    # Model architecture
-    task  = config["model"]["task"]
+    # Build Model
+    ## Model architecture
+    # task  = config["model"]["task"]
     architecture = config["model"]["architecture"]
     if architecture not in MODELS: 
         raise ValueError(f"Unknown architecture: {architecture}")
@@ -79,10 +69,11 @@ def train_model(config, quiet=False, run_dir=".", display=None):
         **config["model"]["hyperparameters"], 
         **config["model"]["uncertainty"]
     )
+    ## Load weights
     if config["model"]["weights"] is not None:
+        model(np.empty((1, *input_shape), np.float32)) # check dimensions
         weights = config["model"]["weights"]
         model.load_weights(weights)
-    
     # Training parameters
     epochs = config["training"]["epochs"]
     batch_size  = config["training"]["batch_size"]
@@ -93,7 +84,7 @@ def train_model(config, quiet=False, run_dir=".", display=None):
     loss_parameters  = loss_parameters or {}
     loss = LOSS[loss_function](**loss_parameters)
     ## Metrics
-    metrics = config["evaluate"]["metrics"]
+    metrics = config["evaluate"]["metrics"] #TODO: move to training section
     ## Optimizer
     optimizer_name = config["training"]["optimizer"]["name"]
     optimizer_learning_rate = float(config["training"]["optimizer"]["learning_rate"]) # fix scientific notation parsed as str.
@@ -175,8 +166,8 @@ if __name__ == "__main__":
     # Verbosity
     quiet = args["quiet"]
 
-    # Run trainong process
-    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir, display=GUIcmd())
+    # Run training process
+    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir)
 
     # restore configuration
     if args["dryrun"]:

@@ -559,17 +559,17 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
     """
 
     CONV_KERNEL_INITIALIZER = {
-    'class_name': 'VarianceScaling',
-    'config': {
-        'scale': 2.0,
-        'mode': 'fan_out',
-        # EfficientNet actually uses an untruncated normal distribution for
-        # initializing conv layers, but keras.initializers.VarianceScaling use
-        # a truncated distribution.
-        # We decided against a custom initializer for better serializability.
-        'distribution': 'normal'
+        'class_name': 'VarianceScaling',
+        'config': {
+            'scale': 2.0,
+            'mode': 'fan_out',
+            # EfficientNet actually uses an untruncated normal distribution for
+            # initializing conv layers, but keras.initializers.VarianceScaling use
+            # a truncated distribution.
+            # We decided against a custom initializer for better serializability.
+            'distribution': 'normal'
+        }
     }
-}
 
 
     def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 

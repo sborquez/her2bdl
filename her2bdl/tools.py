@@ -26,7 +26,7 @@ from .visualization.prediction import (
 
 __all__ = [
     "load_config_file", "load_run_config",
-    "setup_callbacks", "setup_experiment"
+    "setup_callbacks", "setup_evaluation_logger", "setup_experiment"
 ]
 
 
@@ -135,6 +135,10 @@ def load_run_config(run_folderpath, **overwrite_config):
 
 
 def setup_experiment(experiment_config, mode="training"):
+    # Seed
+    seed = experiment_config["experiment"]["seed"]
+    if seed is not None:
+        pass #TODO: add seed
     # Weight and Bias
     plugins = experiment_config.get("plugins", {})
     del experiment_config["plugins"]
@@ -163,17 +167,19 @@ def setup_experiment(experiment_config, mode="training"):
         if mode == "training":
             # for consistency
             experiment_config["training"]["callbacks"]["enable_wandb"] = False 
-            experiments_folder = \
-                experiment_config['experiment']['experiments_folder']
-            run_id = experiment_config["experiment"]["run_id"]
-            folder_ = f"run-{datetime.now().strftime('%Y%m%d_%H%M%S')}-{run_id}"
-            experiment_folder = join(experiments_folder, folder_)
-            os.makedirs(experiment_folder, exist_ok=True)
-            with open(join(experiment_folder, 'config.yaml'), 'w') as outfile:
-                yaml.dump(experiment_config, outfile)
-            return experiment_folder
         else:
-            raise NotImplementedError
+            # TODO: add enable_wandb option for evaluation
+            pass
+        experiments_folder = \
+            experiment_config['experiment']['experiments_folder']
+        run_id = experiment_config["experiment"]["run_id"]
+        folder_ = f"run-{datetime.now().strftime('%Y%m%d_%H%M%S')}-{run_id}"
+        experiment_folder = join(experiments_folder, folder_)
+        os.makedirs(experiment_folder, exist_ok=True)
+        with open(join(experiment_folder, 'config.yaml'), 'w') as outfile:
+            yaml.dump(experiment_config, outfile)
+        return experiment_folder
+
 
 
 def setup_callbacks(validation_data, validation_steps, model_name, batch_size, 
@@ -565,7 +571,9 @@ def setup_evaluation_logger(test_generator, model_name, batch_size, enable_wandb
     if enable_wandb:
         pass
     else:
+        # This can be implemented later ;)
         pass
+
 
 class EvaluationLogger():
     def __init__(self, test_generator):

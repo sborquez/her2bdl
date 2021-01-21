@@ -55,7 +55,7 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: '/'
-          dataset: 'D:/sebas/Projects/her2bdl/train/datasets/sample_dataset.csv'
+          dataset: 'D:/sebas/Projects/her2bdl/train/datasets/train.csv'
           patch_level: 5
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -63,7 +63,7 @@ data:
       validation_generator:
         generator: 'GridPatchGenerator'
         generator_parameters:
-          dataset: 'D:/sebas/Projects/her2bdl/train/datasets/sample_dataset.csv'
+          dataset: 'D:/sebas/Projects/her2bdl/train/datasets/validation.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -71,7 +71,7 @@ data:
       test_generator:
         generator: 'GridPatchGenerator'
         generator_parameters:
-          dataset: 'D:/sebas/Projects/her2bdl/train/datasets/sample_dataset.csv'
+          dataset: 'D:/sebas/Projects/her2bdl/train/datasets/test.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false

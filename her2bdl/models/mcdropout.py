@@ -539,21 +539,21 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
     """
 
     CONV_KERNEL_INITIALIZER = {
-    'class_name': 'VarianceScaling',
-    'config': {
-        'scale': 2.0,
-        'mode': 'fan_out',
-        # EfficientNet actually uses an untruncated normal distribution for
-        # initializing conv layers, but keras.initializers.VarianceScaling use
-        # a truncated distribution.
-        # We decided against a custom initializer for better serializability.
-        'distribution': 'normal'
+        'class_name': 'VarianceScaling',
+        'config': {
+            'scale': 2.0,
+            'mode': 'fan_out',
+            # EfficientNet actually uses an untruncated normal distribution for
+            # initializing conv layers, but keras.initializers.VarianceScaling use
+            # a truncated distribution.
+            # We decided against a custom initializer for better serializability.
+            'distribution': 'normal'
+        }
     }
-}
 
 
     def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 
-                encoder_kernel_sizes=[3, 3, 3], conv_activation='swish',
+                encoder_kernel_sizes=[3, 3, 3], conv_activation='swish', ignore_eosin=False,
                 classifier_dense_layers=[256, 128], dense_activation='swish',
                 sample_size=200, mc_dropout_batch_size=16, multual_information=True, 
                 variation_ratio=True, predictive_entropy=True):
@@ -566,8 +566,10 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         self.encoder = self.build_encoder_model(
             input_shape=input_shape,
             encoder_kernel_sizes=encoder_kernel_sizes,
-            activation=conv_activation
+            activation=conv_activation,
+            ignore_eosin=ignore_eosin
         )
+        self.ignore_eosin = ignore_eosin
         ## Stochastic Latent Variables
         latent_variables_shape = self.encoder.output.shape[1:]
         ## Classifier
@@ -584,9 +586,10 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         # Architecture hyperparameters
         activation_fn = kwargs.get("activation", 'relu')
         encoder_kernel_sizes = kwargs.get("encoder_kernel_sizes", [3, 3, 3])
+        ignore_eosin = kwargs.get("ignore_eosin", False)
         ## Input Layers
         x = encoder_input = Input(shape=input_shape)
-        x = Separate_HED_stains(name='stain_separator')(x)
+        x = Separate_HED_stains(name='stain_separator', ignore_eosin=ignore_eosin)(x)
         # Delthwise Conv
         x = DepthwiseConv2D(
             kernel_size=3,

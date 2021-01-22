@@ -6,6 +6,7 @@ experiment:
   notes: HEDConvClassifier with MC-Dropout for Her2 Classification using WSI-GridPatchGenerator.
   tags:
     - hedconv
+    - hed
     - C77
     - mcdropout
     - dropout_rate=0.8
@@ -33,6 +34,7 @@ model:
   weights: null
   # Model architecture hyperparameters
   hyperparameters: 
+    ignore_eosin: false
     mc_dropout_rate: 0.8
     encoder_kernel_sizes:
       - 3
@@ -141,13 +143,11 @@ training:
       # Save datasets info: source, sizes, etc. 
       log_dataset_description: true
       # Plots and logs
-      log_training_loss_plot: true
       log_training_loss: true
-      log_predictions_plot: true
       log_predictions: true
-      log_uncertainty_plot: true
       log_uncertainty: true
-      log_confusion_matrix_plot: true
+      log_metrics: true
+      log_roc_curve: true
     # Save checkpoints: saved at experiments_folder/experiment/checkpoints
     checkpoints:
       # saved weights format

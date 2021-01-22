@@ -26,8 +26,9 @@ from .visualization.performance import (
 from .visualization.prediction import (
     display_prediction, display_uncertainty, display_uncertainty_by_class
 )
+from .models import MODELS
 
-__all__ = ["load_config_file", "setup_callbacks", "setup_experiment"]
+__all__ = ["load_config_file", "setup_callbacks", "setup_experiment", "setup_model_from_config"]
 
 
 # Experiment files variables
@@ -104,6 +105,20 @@ def load_config_file(config_filepath):
     if config["experiment"]["run_id"] is None:
         config["experiment"]["run_id"] = wandb.util.generate_id()
     return config
+
+def setup_model_from_config(input_shape, num_clasess, architecture, 
+                            hyperparameters, weights=None, task=None):
+    if architecture not in MODELS: 
+        raise ValueError(f"Unknown architecture: {architecture}")
+    base_model = MODELS[architecture]
+    model = base_model(
+        input_shape, num_clasess, 
+        **hyperparameters, #config["model"]["hyperparameters"], 
+        **uncertainty, #config["model"]["uncertainty"]
+    )
+    if weights is not None:
+        model(np.empty((1, *input_shape), np.float32))
+        model.load_weights(weights)
 
 def setup_experiment(experiment_config, mode="training"):
     # Weight and Bias

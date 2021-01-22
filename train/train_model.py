@@ -69,20 +69,8 @@ def train_model(config, quiet=False, run_dir=".", display=None):
         raise ValueError(f"Unknown source_type: {source_type}")
 
     # Model architecture
-    task  = config["model"]["task"]
-    architecture = config["model"]["architecture"]
-    if architecture not in MODELS: 
-        raise ValueError(f"Unknown architecture: {architecture}")
-    base_model = MODELS[architecture]
-    model = base_model(
-        input_shape, num_clasess, 
-        **config["model"]["hyperparameters"], 
-        **config["model"]["uncertainty"]
-    )
-    if config["model"]["weights"] is not None:
-        weights = config["model"]["weights"]
-        model.load_weights(weights)
-    
+    model = setup_model_from_config(input_shape, num_clasess, **config["model"])
+
     # Training parameters
     epochs = config["training"]["epochs"]
     batch_size  = config["training"]["batch_size"]

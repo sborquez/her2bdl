@@ -18,6 +18,7 @@ from tensorflow.keras.layers import (
     Conv2D, MaxPooling2D, DepthwiseConv2D,
     BatchNormalization, Dropout
 )
+from .uncertainty import predictive_entropy, mutual_information, variation_ratio
 
 
 __all__ = [
@@ -73,6 +74,9 @@ class MCDropoutModel(tf.keras.Model):
     @staticmethod
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
         raise NotImplementedError
+
+    #TODO: customize evaluate methods
+    #def evaluate(self, ...):
 
     def predict_distribution(self, x, return_y_pred=True, return_samples=True,
                              sample_size=None, verbose=0, **kwargs):
@@ -184,18 +188,8 @@ class MCDropoutModel(tf.keras.Model):
                 **kwargs
             )
             y_predictive_distribution, _, y_predictions_samples = prediction
-        sample_size = y_predictions_samples.shape[1]
-        # Numerical Stability 
-        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps        
-        ## Entropy (batch, classes)
-        y_log_predictive_distribution = np.log(eps + y_predictive_distribution) 
-        H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
-        ## Expected value (batch, classes) 
-        y_log_predictions_samples = np.log(eps + y_predictions_samples)
-        minus_E = np.sum(y_predictions_samples*y_log_predictions_samples, axis=(1,2))
-        minus_E /= sample_size
         ## Mutual Information
-        I = H + minus_E
+        I = mutual_information(y_predictive_distribution, y_predictions_samples)
         return I
 
     def variation_ratio(self, x=None, y_predictions_samples=None, num_classes=None, sample_size=None, **kwargs):
@@ -211,9 +205,6 @@ class MCDropoutModel(tf.keras.Model):
         x : `np.ndarray`  (batch_size, *input_shape) or `None`
             Batch of inputs. If is `None` use precalculated 
             `y_predictive_distribution`.
-        y_predictions_samples : `np.ndarray` (batch_size, classes) or `None`
-            Model's predictive distributions (normalized histogram). Ignore
-            if `x` is not `None`.
         y_predictions_samples : `np.ndarray` (batch_size, sample size, classes)
             Forward pass samples. Ignored if `x` is not `None`.
         num_classes : `int` or `None`
@@ -238,16 +229,8 @@ class MCDropoutModel(tf.keras.Model):
                 sample_size=sample_size, verbose=0, 
                 **kwargs
             )
-        batch_size, sample_size, num_classes = y_predictions_samples.shape
-        # Sample a class for each forward pass
-        cum_dist = y_predictions_samples.cumsum(axis=-1)
-        Y_T = (np.random.rand(batch_size, sample_size, 1) < cum_dist).argmax(-1)
-        # For each batch, get the frecuency of the mode.
-        _, f = stats.mode(Y_T, axis=1)
-        # variation-ratios
-        T = sample_size
-        variation_ratio_values = 1 - (f/T)
-        return variation_ratio_values.flatten()
+        VR = variation_ratio(y_predictions_samples)
+        return VR
 
     def predictive_entropy(self, x=None, y_predictive_distribution=None, 
                             sample_size=None, **kwargs):
@@ -286,11 +269,8 @@ class MCDropoutModel(tf.keras.Model):
                 sample_size=sample_size, verbose=0,
                 **kwargs
             )
-        # Numerical Stability 
-        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
-        y_log_predictive_distribution = np.log(eps + y_predictive_distribution)
         # Predictive Entropy
-        H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
+        H = predictive_entropy(y_predictive_distribution)
         return H
 
     def uncertainty(self, x=None, 

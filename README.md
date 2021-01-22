@@ -13,7 +13,7 @@ Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
 - [x] Weight and Bias easy setup.
 - [ ] Easy experiment reproducibility.
 - [ ] Notebooks.
-- [ ] Docker container.
+- [ ] Docker/singularity container.
 - [ ] Pip Package.
 
 ## Her2BDL Package
@@ -37,7 +37,7 @@ conda env create -f environment.yml
 
 ###### Openslide will be installed by conda using the conda-forge channel.
 
-##### Load environment
+##### Activate environment
 
 ```
 conda activate her2bdl
@@ -45,9 +45,7 @@ conda activate her2bdl
 
 #### 1. Prepare Dataset
 
-#### 2. Train Model with `Weight & Biases`
-
-#### 3. Consume Models
+#### 2. Predict 
 
 ### Repository structure
 
@@ -99,6 +97,5 @@ Different options for consume a trained model. More details in `deploy/README.md
 - WSL Preprocessing: [https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/](https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/)
 - Weight and Bias: [https://www.wandb.com/](https://www.wandb.com/)
 - Tensorflow: [https://www.tensorflow.org/](https://www.tensorflow.org/)
-- Tensorflow Probability: [https://www.tensorflow.org/probability](https://www.tensorflow.org/probability)
 - Tensorflow Datasets:[https://www.tensorflow.org/datasets](https://www.tensorflow.org/datasets?hl=es-419)
 

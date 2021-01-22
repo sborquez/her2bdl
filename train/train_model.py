@@ -93,7 +93,7 @@ def train_model(config, quiet=False, run_dir=".", display=None):
     loss_parameters  = loss_parameters or {}
     loss = LOSS[loss_function](**loss_parameters)
     ## Metrics
-    metrics = config["evaluate"]["metrics"]
+    #metrics = config["evaluate"]["metrics"]
     ## Optimizer
     optimizer_name = config["training"]["optimizer"]["name"]
     optimizer_learning_rate = float(config["training"]["optimizer"]["learning_rate"]) # fix scientific notation parsed as str.
@@ -123,8 +123,8 @@ def train_model(config, quiet=False, run_dir=".", display=None):
     # Train
     model.compile(
         optimizer=optimizer,
-        loss=loss,  
-        metrics=metrics
+        loss=loss
+        #metrics=metrics
     )
     history = model.fit(train_dataset, 
         verbose = 2 if quiet else 1,

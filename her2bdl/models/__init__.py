@@ -63,7 +63,8 @@ from .metrics import *
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
     "EfficientNetMCDropout": EfficientNetMCDropout,
-    "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout
+    "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout,
+    "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout
 
 }
 AGGREGATION_METHODS = {

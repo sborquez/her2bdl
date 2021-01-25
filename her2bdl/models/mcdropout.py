@@ -14,7 +14,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Input, Activation,
-    Flatten, Dense,
+    Flatten, Dense, Lambda,
     Conv2D, MaxPooling2D, DepthwiseConv2D,
     BatchNormalization, Dropout
 )
@@ -24,7 +24,7 @@ from .uncertainty import predictive_entropy, mutual_information, variation_ratio
 __all__ = [
     'MCDropoutModel',
     'SimpleClassifierMCDropout', 'EfficientNetMCDropout',
-    'HEDConvClassifierMCDropout'
+    'HEDConvClassifierMCDropout', 'RGBConvClassifierMCDropout'
 ]
 
 class MCDropoutModel(tf.keras.Model):
@@ -514,7 +514,7 @@ class EfficientNetMCDropout(MCDropoutModel):
             if mc_dropout_rate > 0:
                 units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
-            #x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
             x = Activation(dense_activation, name=f"head_activation_{i}")(x)
             if mc_dropout_rate > 0:
                 x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
@@ -590,6 +590,7 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         ## Input Layers
         x = encoder_input = Input(shape=input_shape)
         x = Separate_HED_stains(name='stain_separator', ignore_eosin=ignore_eosin)(x)
+        x = Lambda(lambda x: (x*2) - 1, name='scaler')(x)
         # Delthwise Conv
         x = DepthwiseConv2D(
             kernel_size=3,
@@ -640,7 +641,7 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
             if mc_dropout_rate > 0:
                 units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
-            #x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
             x = Activation(activation_fn, name=f"head_activation_{i}")(x)
             if mc_dropout_rate > 0:
                 x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
@@ -650,3 +651,60 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         classifier_model = tf.keras.Model(clasifier_input, x, name="classifier")
         return classifier_model
 
+class RGBConvClassifierMCDropout(HEDConvClassifierMCDropout):
+    """
+    RGB Classifier with MonteCarlo Dropout.
+
+    Convolutional neural network model with an architecture comparable to 
+    the HEDConvClassifierMCDropout model.
+
+    This model takes input images of any shape, and the input data
+    should range [0, 255].
+    
+    """
+    
+    @staticmethod
+    def build_encoder_model(input_shape, **kwargs):
+        # Architecture hyperparameters
+        activation_fn = kwargs.get("activation", 'relu')
+        encoder_kernel_sizes = kwargs.get("encoder_kernel_sizes", [3, 3, 3])
+        ## Input Layers
+        x = encoder_input = Input(shape=input_shape)
+        x = Lambda(lambda x: 2*(x/255) - 1, name='scaler')(x)
+        
+        # Delthwise Conv
+        x = DepthwiseConv2D(
+            kernel_size=3,
+            depth_multiplier=8,
+            strides=1,
+            padding="valid",
+            use_bias=False,
+            depthwise_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER,
+            name='stain_depthwiseConv2D'
+        )(x)
+        x = BatchNormalization(axis=3, name='depthwiseConv2D_batchnorm')(x)
+        x = Activation(activation_fn, name='depthwiseConv2D_activation')(x)
+        
+        ## initialize the layers in the first (CONV => RELU) * 2 => POOL
+        ### layer set\
+        filters_2 = 4
+        for i, kernel_size in enumerate(encoder_kernel_sizes):
+            x = Conv2D(
+                filters=2**filters_2, kernel_size=kernel_size,
+                padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
+                kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
+            )(x)
+            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_a")(x)
+            x = Activation(activation_fn, name=f"block{i}_activation_a")(x)
+            x = Conv2D(
+                filters=2**filters_2, kernel_size=kernel_size,
+                padding="valid", name=f"block{i}_conv2d_b", use_bias=False,
+                kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
+            )(x)
+            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_b")(x)
+            x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
+            x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
+        ## initialize the layers in our fully-connected layer sets
+        ### layer set
+        x = Flatten(name="head_flatten")(x)
+        return tf.keras.Model(encoder_input, x, name="encoder")

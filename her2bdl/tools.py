@@ -27,8 +27,14 @@ from .visualization.prediction import (
     display_prediction, display_uncertainty, display_uncertainty_by_class
 )
 from .models import MODELS
+from .data import get_generator_from_wsi, get_generators_from_tf_Dataset
+from .data import TARGET_LABELS_list
 
-__all__ = ["load_config_file", "setup_callbacks", "setup_experiment", "setup_model_from_config"]
+
+__all__ = [
+    "load_config_file", "setup_experiment", 
+    "setup_model", "setup_generators", "setup_callbacks"
+]
 
 
 # Experiment files variables
@@ -63,7 +69,7 @@ __default_optional = {
     "experiment":
         {"tags": [], "run_id": None, "seed": 1234},
     "model":
-        {"weights": None, "seed": 1234},
+        {"weights": None},
     "aggregation":
         {},
     "data":
@@ -106,19 +112,6 @@ def load_config_file(config_filepath):
         config["experiment"]["run_id"] = wandb.util.generate_id()
     return config
 
-def setup_model_from_config(input_shape, num_clasess, architecture, 
-                            hyperparameters, weights=None, task=None):
-    if architecture not in MODELS: 
-        raise ValueError(f"Unknown architecture: {architecture}")
-    base_model = MODELS[architecture]
-    model = base_model(
-        input_shape, num_clasess, 
-        **hyperparameters, #config["model"]["hyperparameters"], 
-        **uncertainty, #config["model"]["uncertainty"]
-    )
-    if weights is not None:
-        model(np.empty((1, *input_shape), np.float32))
-        model.load_weights(weights)
 
 def setup_experiment(experiment_config, mode="training"):
     # Weight and Bias
@@ -161,6 +154,59 @@ def setup_experiment(experiment_config, mode="training"):
         else:
             raise NotImplementedError
 
+def setup_model(input_shape, num_clasess, architecture, uncertainty,
+                            hyperparameters, weights=None, task=None):
+    if architecture not in MODELS: 
+        raise ValueError(f"Unknown architecture: {architecture}")
+    base_model = MODELS[architecture]
+    model = base_model(
+        input_shape, num_clasess, 
+        **hyperparameters, #config["model"]["hyperparameters"], 
+        **uncertainty, #config["model"]["uncertainty"]
+    )
+    if weights is not None:
+        model(np.empty((1, *input_shape), np.float32))
+        model.load_weights(weights)
+    return model
+
+def setup_generators(source, num_classes, labels, label_mode, preprocessing, 
+                     img_height=300, img_width=300, img_channels=3, 
+                     validation_split=None, batch_size=16, test_dataset=False):
+    # Parameters
+    input_shape = (img_height, img_width, img_channels)
+    labels = labels
+    if labels == "HER2": labels = TARGET_LABELS_list
+    source_type = source["type"]
+    dataset_parameters = source["parameters"]
+    # Load train and validation generators
+    if source_type == "tf_Dataset":
+        if not test_dataset:
+            generators = get_generators_from_tf_Dataset(
+                **dataset_parameters, 
+                num_classes=num_classes, label_mode=label_mode,
+                input_shape=input_shape, batch_size=batch_size, 
+                validation_split=validation_split, preprocessing=preprocessing
+            )
+        else:
+            raise NotImplementedError
+    elif source_type == "wsi":
+        if not test_dataset:
+            # Ignore test dataset 
+            __test_generator = dataset_parameters["test_generator"] 
+            del dataset_parameters["test_generator"]
+            generators = get_generator_from_wsi(
+                **dataset_parameters, 
+                num_classes=num_classes, label_mode=label_mode,
+                input_shape=input_shape, batch_size=batch_size,
+                preprocessing=preprocessing
+            )
+            dataset_parameters["test_generator"] = __test_generator
+            del __test_generator
+        else:
+            raise NotImplementedError
+    else:
+        raise ValueError(f"Unknown source_type: {source_type}")
+    return generators, input_shape, num_classes, labels
 
 def setup_callbacks(validation_data, validation_steps, model_name, batch_size, 
     	           enable_wandb, labels=None,

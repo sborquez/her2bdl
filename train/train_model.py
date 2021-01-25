@@ -7,7 +7,7 @@ from her2bdl import *
 import logging
 import time
 from os import path
-from tensorflow import set_random_seed
+from tensorflow.random import set_seed
 from numpy.random import seed
 
 
@@ -16,7 +16,7 @@ def train_model(config, quiet=False, run_dir=".", display=None):
     seed = config["experiment"]["seed"]
     if seed is not None:
         np.random.seed(seed)
-        set_random_seed(seed)
+        set_seed(seed)
 
     # Experiment paths and indentifiers
     experiments_folder = config["experiment"]["experiments_folder"]

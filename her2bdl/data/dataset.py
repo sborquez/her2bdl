@@ -6,18 +6,20 @@ This module handle data files and generate the datasets used
 by the models.
 """
 
-from . import INPUTS, TARGETS, GROUND_TRUTH_FILE, IMAGE_FILES 
+from . import INPUTS, TARGETS, TARGET, GROUND_TRUTH_FILE, IMAGE_FILES 
 import logging
 from os.path import join, split, basename
+from pathlib import Path
 from glob import glob
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
+from sklearn.utils import shuffle
 
 __all__ = [
     'get_dataset', 
-    'load_dataset', 'save_dataset', 'split_dataset',
+    'load_dataset', 'save_dataset', 'split_dataset', 'prepare_cv_splits',
     'aggregate_dataset', 'describe_dataset'
 ]
 
@@ -91,32 +93,44 @@ def split_dataset(dataset, validation_ratio=0.1, test_ratio=None, seed=None):
     train_all = []
     test_all = []
     validation_all = []
-    for _, score_dataset in dataset.groupby('HeR2 SCORE'):
-        # train/validation
-        if test_ratio is None:
-            train, validation = train_test_split(score_dataset, shuffle=True, random_state=r, test_size=validation_ratio)
-            train_all.append(train)
-            validation_all.append(validation)
-        # train/validation/test
-        else:
-            train_and_val, test = train_test_split(score_dataset, shuffle=True, random_state=r, test_size=test_ratio)
-            alpha = validation_ratio/(1. - test_ratio)
-            train, validation = train_test_split(train_and_val, shuffle=True, random_state=r, test_size=alpha)
-            train_all.append(train)
-            validation_all.append(validation)
-            test_all.append(test)
-
-    # train/validation
+    # TODO: Use stratify
     if test_ratio is None:
-        train = pd.concat(train_all).sample(frac=1., random_state=r).reset_index().drop(columns='index')
-        validation = pd.concat(validation_all).sample(frac=1., random_state=r).reset_index().drop(columns='index')
+        train, validation = train_test_split(dataset, stratify=dataset[TARGET], shuffle=True, random_state=r, test_size=validation_ratio)
         return train, validation
     # train/validation/test
     else:
-        train = pd.concat(train_all).sample(frac=1., random_state=r).reset_index().drop(columns='index')
-        validation = pd.concat(validation_all).sample(frac=1., random_state=r).reset_index().drop(columns='index')
-        test = pd.concat(test_all).sample(frac=1., random_state=r).reset_index().drop(columns='index')
+        train_and_val, test = train_test_split(dataset, stratify=dataset[TARGET], shuffle=True, random_state=r, test_size=test_ratio)
+        alpha = validation_ratio/(1. - test_ratio)
+        train, validation = train_test_split(train_and_val, stratify=train_and_val[TARGET], shuffle=True, random_state=r, test_size=alpha)
         return train, validation, test
+
+def prepare_cv_splits(dataset, k, seed=None):
+    """Split dataset into k folds and  return cv train/validation datasets.
+    Splits keep class balance.
+
+    Parameters
+    ==========
+    dataset : `pd.DataFramer`
+        Original dataset.
+    k : `int`
+        Number of dataset subdivisions and pairs of train/validation datasets.
+    seed : `int`or `None`
+        Split by images
+    Returns
+    =======
+    list of tuple of `pd.DataFrame`
+        splits = [(train, val), ...]
+    """
+    dataset = shuffle(dataset, random_state=seed)
+    kfolds = StratifiedKFold(n_splits=k)
+    y = dataset[TARGET]
+    splits = []
+    for train_index, test_index in kfolds.split(dataset, y):
+        train_df = dataset.iloc[train_index]
+        test_df = dataset.iloc[test_index]
+        splits.append((train_df, test_df))
+    return splits
+
 
 def load_dataset(dataset_filepath):
     """Load dataset.
@@ -133,7 +147,7 @@ def load_dataset(dataset_filepath):
     dataset = pd.read_csv(dataset_filepath)
     return dataset
 
-def save_dataset(dataset, objects, output_folder, dataset_name):
+def save_dataset(dataset, objects=None, output_folder=".", dataset_name="training"):
     """Save Dataset.
     Parameters
     ----------
@@ -141,20 +155,22 @@ def save_dataset(dataset, objects, output_folder, dataset_name):
         Dataset.
     objects : `pd.DataFrame` 
         Selected objects.
-    output_folder : `str`
+    output_folder : `str` or `Path`
         Folder containing saved file.
     dataset_name : `str`
-        File name or dataset split (i.e. 'train').
+        File name or dataset split (i.e. 'training').
     Returns
     =======
     `str`
         Dataset filepath 
     """
     filename = f"{dataset_name}.csv"
-    filepath = join(output_folder, filename)
-
-    dataset_with_objects = pd.merge(dataset, objects.drop(columns=["source"]), on="CaseNo", validate="1:m")
-    dataset_with_objects.to_csv(filepath, index=False)
+    filepath = Path(output_folder) / filename
+    if objects is not None:
+        dataset_with_objects = pd.merge(dataset, objects.drop(columns=["source"]), on="CaseNo", validate="1:m")
+        dataset_with_objects.to_csv(filepath, index=False)
+    else:
+        dataset.to_csv(filepath, index=False)
     return filepath
 
 """

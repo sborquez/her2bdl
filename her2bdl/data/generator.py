@@ -154,7 +154,7 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
         "GridPatchGenerator": GridPatchGenerator,
         "MCPatchGenerator": MCPatchGenerator 
     }
-    aggregate_dataset_parameters = preprocessing.get("aggregate_dataset_parameters", None)  or {}
+    aggregate_dataset_parameters = preprocessing.get("aggregate_dataset_parameters", {})
     # Train generator
     generator_type = train_generator["generator"]
     generator_parameters = train_generator["generator_parameters"]

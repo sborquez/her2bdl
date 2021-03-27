@@ -13,7 +13,7 @@ ARG HER2BDL_VERSION=dev
 ENV WAND_AND_KEY=dryrun
 
 #---------------- Prepare the envirennment ----------------
-RUN apt-get update && apt-get install -y gcc
+RUN apt-get update && apt-get install gcc ffmpeg libsm6 libxext6  -y
 RUN git clone -b ${HER2BDL_VERSION} --single-branch \
     https://github.com/sborquez/her2bdl 
 ENV APP_HOME /her2bdl

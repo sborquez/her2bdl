@@ -71,7 +71,7 @@ RUN mkdir ${APP_DEV}
 
 RUN conda update --name base conda &&\
     conda env create --file environment_gpu.yml
-
+RUN echo "conda activate her2bdl" >> ~/.bashrc
 SHELL ["conda", "run", "--name", "her2bdl", "/bin/bash", "-c"]
 
 #CMD 

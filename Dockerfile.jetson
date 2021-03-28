@@ -1,4 +1,4 @@
-FROM  nvcr.io/nvidia/l4t-base:r32.5.0
+FROM  nvcr.io/nvidia/l4t-tensorflow:r32.5.0-tf2.3-py3
 # TODO: Check GPU support with nvidia-docker
 LABEL Author, Sebastian Borquez
 
@@ -20,24 +20,12 @@ RUN apt-get update -q && \
     && apt-get clean
 
 ENV PATH /opt/conda/bin:$PATH
+RUN alias python=python3 && \
+    alias pip=pip3
+RUN echo "alias python=python3" >> ~/.bashrc && \
+    echo "alias pip=pip3" >> ~/.bashrc
 
 CMD [ "/bin/bash" ]
-
-# Leave these args here to better use the Docker build cache
-# ARG CONDA_VERSION=py38_4.9.2
-# ARG CONDA_MD5=122c8c9beb51e124ab32a0fa6426c656
-
-RUN wget -O Miniforge3.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh  && \
-        mkdir -p /opt && \
-        sh Miniforge3.sh -b -p /opt/conda && \
-        rm Miniforge3.sh && \
-        ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-        echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-        echo "conda activate base" >> ~/.bashrc && \
-        find /opt/conda/ -follow -type f -name '*.a' -delete && \
-        find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-        /opt/conda/bin/conda clean -afy
-
 
 # Define a variable with an optional default value that can be override at 
 # build-time with docker build.
@@ -81,26 +69,8 @@ RUN mkdir ${APP_EXPERIMENTS}
 ENV APP_DEV /her2bdl_dev
 RUN mkdir ${APP_DEV}
 
-RUN conda update --name base conda &&\
-    conda env create --file environment_jetson.yml
-RUN echo "conda activate her2bdl" >> ~/.bashrc
-RUN conda activate her2bdl
-RUN pip install \
-    testresources \
-    future==0.18.2 \
-     mock==3.0.5 \
-     keras_preprocessing==1.1.1 \
-     keras_applications==1.0.8 \
-     gast==0.2.2 \
-     futures \
-     protobuf \
-     pybind11
-RUN pip install --pre --extra-index-url \
-        https://developer.download.nvidia.com/compute/redist/jp/v45 tensorflow==2.4.0
-RUN pip install \
-    tensorflow-probability \
-    tensorflow-datasets
-SHELL ["conda", "run", "--name", "her2bdl", "/bin/bash", "-c"]
+RUN pip install -r requirements_jetson.txt
+
 
 #CMD 
 # TODO: container commands

@@ -369,12 +369,12 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         if self.log_metrics:
             (_, y_true) = self._get_data(mode="labels")
             _, y_pred, _ = predictions_uncertainty
-            class_stat_table, overall_stat_table = self._log_metrics(y_pred, y_true)
+            class_stat_table, overall_stat_table, overall_and_class_values = self._log_metrics(y_pred, y_true)
+            wandb.log(overall_and_class_values, commit=False)
             wandb.log({
                 "Class Stat": class_stat_table,
                 "Overall Stat": overall_stat_table
             }, commit=False)
-
         if self.log_roc_curve:
             (_, y_true) = self._get_data(mode="labels")
             y_predictive_distribution, _, _ = predictions_uncertainty
@@ -492,9 +492,22 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         return img_log
 
     def _log_metrics(self, y_pred, y_true):
-        class_stats_table   = wandb.Table(dataframe=class_stat(y_true, y_pred, labels=self.labels))
-        overall_stats_table = wandb.Table(dataframe=overall_stat(y_true, y_pred, labels=self.labels))
-        return class_stats_table, overall_stats_table
+        # 
+        class_stat_df = class_stat(y_true, y_pred, labels=self.labels)
+        class_stats_table = wandb.Table(dataframe=class_stat_df)
+        class_stats_dict  = {}
+        for i, row in class_stat_df.iterrows():
+            class_stat_prefix = row["class stat"]
+            for metric,value in row.items():
+                if metric == "class stat": continue
+                class_stats_dict[f"{class_stat_prefix} - Class {metric}"] = value
+        # 
+        overall_stat_df = overall_stat(y_true, y_pred, labels=self.labels)
+        overall_stats_table = wandb.Table(dataframe=overall_stat_df)
+        overall_stat_dict = {row["overall stat"]:row["value"]for i, row in overall_stat_df.iterrows()}
+        #
+        overall_and_class_values = {**overall_stat_dict, **class_stats_dict}
+        return class_stats_table, overall_stats_table, overall_and_class_values
 
     def _log_roc_curve(self, y_prob, y_true):
         fpr, tpr, roc_auc = multiclass_roc_curve(y_true, y_prob)

@@ -8,10 +8,10 @@ import logging
 import time
 from os import path
 from tensorflow.random import set_seed
-from numpy.random import seed
+import numpy as np
 
 
-def train_model(config, quiet=False, run_dir=".", display=None):
+def train_model(config, quiet=False, run_dir="."):
     # Seed
     seed = config["experiment"]["seed"]
     if seed is not None:
@@ -98,6 +98,8 @@ if __name__ == "__main__":
         help="Disable WandB for locally testing without Weight&Bias Callbacks.")
     ap.add_argument("--job", type=int, default=None, 
         help="Disable WandB for locally testing without Weight&Bias Callbacks.")
+    ap.add_argument("--seed", type=int, default=None, 
+        help="Overwrite experiment`s seed.")
     args = vars(ap.parse_args()) 
 
     # Load experiment configuration
@@ -111,6 +113,10 @@ if __name__ == "__main__":
         model_name = experiment_config["experiment"]["name"]
         job_sufix  = f"job {str(job).zfill(2)}"
         experiment_config["experiment"]["name"]= f"{model_name} {job_sufix}"
+    # Overwrite seed
+    seed = args["seed"]
+    if seed is not None:
+        experiment_config["experiment"]["seed"]= seed
     # Setup experiments and pluggins
     if args["disable_wandb"]:
         experiment_config["training"]["callbacks"]["enable_wandb"] = False
@@ -124,7 +130,7 @@ if __name__ == "__main__":
     quiet = args["quiet"]
 
     # Run trainong process
-    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir, display=GUIcmd())
+    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir)
 
     # restore configuration
     if args["dryrun"]:

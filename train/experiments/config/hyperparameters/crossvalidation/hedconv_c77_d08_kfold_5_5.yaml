@@ -113,7 +113,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 75
+  epochs: 25
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 32
   # (Optional, default=0.2) Train and validation split.
@@ -125,7 +125,7 @@ training:
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
     name: sgd
-    learning_rate: 5e-4
+    learning_rate: 1e-4
     parameters: null
   # Training callbacks
   callbacks:
@@ -133,7 +133,7 @@ training:
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 10
+      patience: 4
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:

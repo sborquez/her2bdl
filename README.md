@@ -38,7 +38,7 @@ docker run -it \
      her2bdl:latest
 ```
 
-Ignore the `-v .:/her2bdl_dev` option if you will only use the framework. The `-e WANDB_APY_KEY=<wandb_secret>` argument is optional, replace `<wandb_secret>` with you own api key from [Weight & Biases](https://docs.wandb.ai/library/public-api-guide#authentication).
+Ignore the `-v "$(pwd)":/her2bdl_dev` option if you will only use the framework. The `-e WANDB_APY_KEY=<wandb_secret>` argument is optional, replace `<wandb_secret>` with you own api key from [Weight & Biases](https://docs.wandb.ai/library/public-api-guide#authentication).
 
 #### GPU support with nvidia-dockers 
 

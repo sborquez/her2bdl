@@ -2,18 +2,16 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: EfficientNetB0-McDropout C86 D05 MC
-  notes: EfficientNet with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
+  name: HEDConvClassifier-McDropout
+  notes: HEDConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
-    - efficientnet
-    - B0
-    - C86
+    - hedconv
+    - hed
+    - C77
     - mcdropout
-    - dropout_rate=0.5
+    - dropout_rate=0.2
     - her2
     - MCPatchGenerator
-    - level 4
-    - baseline
     - training
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
@@ -28,17 +26,22 @@ model:
   # Model task: [classification|regression]
   task: classification
   # Model Class implemented in her2bdl.models
-  architecture: EfficientNetMCDropout
+  architecture: HEDConvClassifierMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
   weights: null
   # Model architecture hyperparameters
   hyperparameters: 
-    mc_dropout_rate: 0.5
-    base_model: B0
-    efficient_net_weights: imagenet
+    ignore_eosin: false
+    mc_dropout_rate: 0.2
+    encoder_kernel_sizes:
+      - 3
+      - 5
+      - 3
+    conv_activation: swish
     classifier_dense_layers: 
-      - 256
-      - 64
+      - 128
+      - 128
+    dense_activation: swish
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
@@ -65,9 +68,9 @@ data:
         generator: 'MCPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/train.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/train.csv'
-          patch_level: 4
-          samples_per_tissue: 20
+          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/training.csv'
+          patch_level: 3
+          samples_per_tissue: 200
           patch_vertical_flip: true
           patch_horizontal_flip: true
           shuffle: true
@@ -75,8 +78,8 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/validation.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/validation.csv'
-          patch_level: 4
+          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/validation.csv'
+          patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
           shuffle: true
@@ -85,13 +88,13 @@ data:
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/test.csv'
           dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/test.csv'
-          patch_level: 4
+          patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 224
-  img_width: 224
+  img_height: 300
+  img_width: 300
   img_channels: 3
   preprocessing:
     rescale: null
@@ -108,18 +111,18 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 30
+  epochs: 75
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 16
+  batch_size: 32
   # (Optional, default=0.2) Train and validation split.
   validation_split: null
   # Models loss function
   loss:
     function: CategoricalCrossentropy
     parameters: null
-  # (Optional, default=Adam(lr=1e-4)) Training optimizer
+  # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
-    name: adam
+    name: sgd
     learning_rate: 1e-4
     parameters: null
   # Training callbacks
@@ -128,7 +131,7 @@ training:
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 5
+      patience: 6
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:
@@ -137,13 +140,12 @@ training:
       # Save datasets info: source, sizes, etc. 
       log_dataset_description: true
       # Plots and logs
-      log_training_loss_plot: true
       log_training_loss: true
-      log_predictions_plot: true
       log_predictions: true
-      log_uncertainty_plot: true
       log_uncertainty: true
-      log_confusion_matrix_plot: true
+      log_confusion_matrix: true
+      log_metrics: true
+      log_roc_curve: true
     # Save checkpoints: saved at experiments_folder/experiment/checkpoints
     checkpoints:
       # saved weights format

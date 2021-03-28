@@ -85,8 +85,21 @@ RUN conda update --name base conda &&\
     conda env create --file environment_jetson.yml
 RUN echo "conda activate her2bdl" >> ~/.bashrc
 RUN conda activate her2bdl
+RUN pip install \
+    testresources \
+    future==0.18.2 \
+     mock==3.0.5 \
+     keras_preprocessing==1.1.1 \
+     keras_applications==1.0.8 \
+     gast==0.2.2 \
+     futures \
+     protobuf \
+     pybind11
 RUN pip install --pre --extra-index-url \
         https://developer.download.nvidia.com/compute/redist/jp/v45 tensorflow==2.4.0
+RUN pip install \
+    tensorflow-probability \
+    tensorflow-datasets
 SHELL ["conda", "run", "--name", "her2bdl", "/bin/bash", "-c"]
 
 #CMD 

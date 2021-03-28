@@ -24,6 +24,4 @@ dependencies:
     - wandb
     - openslide-python
     - opencv-python
-    - tensorflow-probability
-    - tensorflow-datasets
     - pycm==3.0

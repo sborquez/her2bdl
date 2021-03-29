@@ -29,7 +29,7 @@ CMD [ "/bin/bash" ]
 
 # Define a variable with an optional default value that can be override at 
 # build-time with docker build.
-ARG HER2BDL_VERSION=dev
+ARG HER2BDL_VERSION=jetson
 # TODO: change it when merge to master
 #ARG HER2BDL_VERSION=master 
 
@@ -69,7 +69,8 @@ RUN mkdir ${APP_EXPERIMENTS}
 ENV APP_DEV /her2bdl_dev
 RUN mkdir ${APP_DEV}
 
-RUN pip install -r requirements_jetson.txt
+RUN pip3 install --upgrade pip
+RUN pip3 install -r requirements_jetson.txt
 
 
 #CMD 

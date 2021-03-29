@@ -6,7 +6,7 @@ experiment:
   notes: HEDConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
     - hedconv
-    - hdx
+    - hed
     - C77
     - mcdropout
     - dropout_rate=0.2
@@ -141,7 +141,6 @@ training:
       # Save datasets info: source, sizes, etc. 
       log_dataset_description: true
       # Plots and logs
-      log_training_loss: true
       log_training_loss: true
       log_predictions: true
       log_uncertainty: true

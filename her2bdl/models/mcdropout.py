@@ -129,7 +129,7 @@ class MCDropoutModel(tf.keras.Model):
         y_predictions_samples = np.array([
             self.classifier.predict(
                 np.tile(z_i, (T, 1)),
-                batch_size=batch_size,
+                batch_size=self.mc_dropout_batch_size,
                 verbose=verbose, **kwargs
             )
             for z_i in deterministic_output#_arr

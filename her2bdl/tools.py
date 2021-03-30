@@ -189,19 +189,42 @@ def setup_experiment(experiment_config, mode="training"):
         else:
             raise NotImplementedError
 
-def setup_model(input_shape, num_clasess, architecture, uncertainty,
-                            hyperparameters, weights=None, task=None):
+def setup_model(input_shape, num_classes, architecture, uncertainty,
+                            hyperparameters, weights=None, task=None, build=False):
+    """
+    Construct model from configuration.
+    Parameters
+    ----------
+    input_shape : `tuple` (img_widht, img_height, img_channels)
+        Model's input shape.
+    num_classes: `ìnt`
+        Output shape, number of classes.
+    architecture : `str`
+        model architecture defined in models submodule.
+    hyperparameters :  `dict`
+        model's hyperparameters defined in configuration file.
+    uncertainty :  `dict`
+        model's uncertainty hyperparameters defined in configuration file.
+    training:  `bool`
+        Use `build=True` for inspect the model without compiling it.
+    Return
+    ------
+        `her2bdl.models.mcdropout.MCDropoutModel`.
+    """
+    
     if architecture not in MODELS: 
         raise ValueError(f"Unknown architecture: {architecture}")
     base_model = MODELS[architecture]
     model = base_model(
-        input_shape, num_clasess, 
+        input_shape, num_classes, 
         **hyperparameters, #config["model"]["hyperparameters"], 
         **uncertainty, #config["model"]["uncertainty"]
     )
     if weights is not None:
         model(np.empty((1, *input_shape), np.float32))
         model.load_weights(weights)
+    elif build:
+        model(np.empty((1, *input_shape), np.float32))
     return model
 
 def setup_generators(source, num_classes, labels, label_mode, preprocessing, 

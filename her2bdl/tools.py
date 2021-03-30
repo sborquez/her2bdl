@@ -155,8 +155,8 @@ def setup_experiment(experiment_config, mode="training"):
         if wand_config["apikey"]  == 'WANDB_API_KEY':
             assert wand_config["apikey"] in os.environ,\
                 "Requiere enviroment variable 'WANDB_API_KEY' defined."
-        if Path(wand_config["apikey"]).is_file() and \
-                Path(wand_config["apikey"]).stem() == '.wandb_secret':
+        elif Path(wand_config["apikey"]).is_file() and \
+                Path(wand_config["apikey"]).stem == '.wandb_secret':
             with open(wand_config["apikey"]) as secret:
                 os.environ["WANDB_API_KEY"] = secret.read().strip()
         else:

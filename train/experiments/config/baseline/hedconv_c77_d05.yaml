@@ -166,4 +166,4 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret

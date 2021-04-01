@@ -27,15 +27,15 @@ from .visualization.performance import (
 from .visualization.prediction import (
     display_prediction, display_uncertainty, display_uncertainty_by_class
 )
-from .models import MODELS
+from .models import MODELS, AGGREGATION_METHODS
 from .data import get_generator_from_wsi, get_generators_from_tf_Dataset
 from .data import TARGET_LABELS_list
 
 
 __all__ = [
     "load_config_file", "load_run_config",
-    "setup_experiment", "setup_model", "setup_generators", "setup_callbacks",
-    "setup_evaluation_logger"
+    "setup_experiment", "setup_model", "setup_aggregator"
+    "setup_generators", "setup_callbacks", "setup_evaluation_logger"
 ]
 
 # Experiment files variables
@@ -221,7 +221,6 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
     ------
         `her2bdl.models.mcdropout.MCDropoutModel`.
     """
-    
     if architecture not in MODELS: 
         raise ValueError(f"Unknown architecture: {architecture}")
     base_model = MODELS[architecture]
@@ -236,6 +235,27 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
     elif build:
         model(np.empty((1, *input_shape), np.float32))
     return model
+
+def setup_aggregator(method, parameters):
+    """
+    Construct aggregator from configuration.
+    Parameters
+    ----------
+    method : `str`
+        Aggregation method in models submodule.
+    parameters :  `dict`
+        Aggregator's parameters defined in configuration file.
+    Return
+    ------
+        `her2bdl.models.aggregation.Aggregator`.
+    """
+    if method not in AGGREGATION_METHODS: 
+        raise ValueError(f"Unknown aggregation method: {method}")
+    base_aggregator = AGGREGATION_METHODS[method]
+    aggregator = base_aggregator(
+        **parameters
+    )
+    return aggregator
 
 def setup_generators(source, num_classes, labels, label_mode, preprocessing, 
                      img_height=300, img_width=300, img_channels=3, 

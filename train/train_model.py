@@ -23,6 +23,7 @@ def train_model(config, quiet=False, run_dir="."):
     experiment_name    = config["experiment"]["name"]
     experiment_folder  = Path(experiments_folder) / experiment_name
     run_id             = config["experiment"]["run_id"]
+    
     # Training parameters
     epochs = config["training"]["epochs"]
     batch_size  = config["training"]["batch_size"]    
@@ -68,6 +69,7 @@ def train_model(config, quiet=False, run_dir="."):
          checkpoints=checkpoints,
          run_dir=run_dir
     )
+    
     # Train
     model.compile(
         optimizer=optimizer,
@@ -81,6 +83,7 @@ def train_model(config, quiet=False, run_dir="."):
         epochs=epochs,
         callbacks=callbacks
     )
+    
     # Return final model
     return model
 

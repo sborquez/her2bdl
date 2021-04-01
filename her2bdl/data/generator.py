@@ -146,7 +146,7 @@ def get_generators_from_directory(data_directory, input_shape, batch_size, num_c
         return (train_dataset, steps_per_epoch)
 
 
-def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes=4,
+def get_generator_from_wsi(generator, input_shape, batch_size, num_classes=4,
                         validation_generator=None, label_mode='categorical', preprocessing={}):
     patch_size = input_shape[:2] # target_size
     img_height, img_width = patch_size
@@ -157,8 +157,8 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
     aggregate_dataset_parameters = preprocessing.get("aggregate_dataset_parameters", None)
     aggregate_dataset_parameters = aggregate_dataset_parameters or {}
     # Train generator
-    generator_type = train_generator["generator"]
-    generator_parameters = train_generator["generator_parameters"]
+    generator_type = generator["generator"]
+    generator_parameters = generator["generator_parameters"]
     generator_parameters["dataset"] = aggregate_dataset(
         load_dataset(generator_parameters["dataset"]),
         **aggregate_dataset_parameters

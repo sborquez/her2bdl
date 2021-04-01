@@ -161,7 +161,7 @@ def setup_experiment(experiment_config, mode="training"):
             assert wand_config["apikey"] in os.environ,\
                 "Requiere enviroment variable 'WANDB_API_KEY' defined."
         if Path(wand_config["apikey"]).is_file() and \
-                Path(wand_config["apikey"]).stem() == '.wandb_secret':
+                Path(wand_config["apikey"]).stem == '.wandb_secret':
             with open(wand_config["apikey"]) as secret:
                 os.environ["WANDB_API_KEY"] = secret.read().strip()
         else:
@@ -207,13 +207,16 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
     num_classes: `ìnt`
         Output shape, number of classes.
     architecture : `str`
-        model architecture defined in models submodule.
+        Model architecture defined in models submodule.
     hyperparameters :  `dict`
-        model's hyperparameters defined in configuration file.
+        Model's hyperparameters defined in configuration file.
     uncertainty :  `dict`
         model's uncertainty hyperparameters defined in configuration file.
-    training:  `bool`
+    weights : `str`
+        Path to model`s trained weights or checkpoint.
+    build :  `bool`
         Use `build=True` for inspect the model without compiling it.
+    task : (ignored)
     Return
     ------
         `her2bdl.models.mcdropout.MCDropoutModel`.
@@ -225,7 +228,7 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
     model = base_model(
         input_shape, num_classes, 
         **hyperparameters, #config["model"]["hyperparameters"], 
-        **uncertainty, #config["model"]["uncertainty"]
+        **uncertainty,     #config["model"]["uncertainty"]
     )
     if weights is not None:
         model(np.empty((1, *input_shape), np.float32))
@@ -256,19 +259,22 @@ def setup_generators(source, num_classes, labels, label_mode, preprocessing,
             raise NotImplementedError
     elif source_type == "wsi":
         if not test_dataset:
-            # Ignore test dataset 
-            __test_generator = dataset_parameters["test_generator"] 
-            del dataset_parameters["test_generator"]
+            #Load train and validation generators 
             generators = get_generator_from_wsi(
-                **dataset_parameters, 
+                generator =  dataset_parameters["train_generator"],
+                validation_generator = dataset_parameters["validation_generator"],
                 num_classes=num_classes, label_mode=label_mode,
                 input_shape=input_shape, batch_size=batch_size,
                 preprocessing=preprocessing
             )
-            dataset_parameters["test_generator"] = __test_generator
-            del __test_generator
         else:
-            raise NotImplementedError
+            # Load test generator
+            generators = get_generator_from_wsi(
+                generator = dataset_parameters["test_generator"],
+                num_classes = num_classes, label_mode = label_mode,
+                input_shape = input_shape, batch_size = batch_size,
+                preprocessing = preprocessing
+            )
     else:
         raise ValueError(f"Unknown source_type: {source_type}")
     return generators, input_shape, num_classes, labels
@@ -309,7 +315,7 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
     if enable_wandb:
         # TODO use experiment_tracker parameters    
         callbacks.append(
-            UncertantyCallback(
+            UncertaintyCallback(
                 generator=validation_data,
                 validation_steps=len(validation_data),
                 model_name=model_name,
@@ -327,8 +333,290 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
         callbacks.append(EarlyStopping(**earlystop))
     return callbacks
 
+class WandBLogGenerator():
+    """
+    WandB plots and metrics formater.
+    """
 
-class UncertantyCallback(wandb.keras.WandbCallback):
+    def __init__(self, model_name, labels=None, max_plots=35):
+        self.model_name = model_name
+        self.labels     = labels
+        self.max_plots  = 35
+
+    def _log_metrics(self, y_pred, y_true):
+        """
+        Get confussion matrix metrics, and formated into tables.
+        
+        Parameters
+        ----------
+        y_pred : `np.ndarray`
+            Predicted classes. (batch, 1)
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        Return
+        ------
+            `(wandb.Table, wandb.Table, dict)`
+                Return class and overall metrics, on table and dict format.
+        """
+        labels = self.labels
+        # Individual class metrics
+        class_stat_df = class_stat(y_true, y_pred, labels=labels)
+        class_stats_table = wandb.Table(dataframe=class_stat_df)
+        class_stats_dict  = {}
+        for i, row in class_stat_df.iterrows():
+            class_stat_prefix = row["class stat"]
+            for metric, value in row.items():
+                if metric == "class stat": continue
+                class_stats_dict[f"{class_stat_prefix} - Class {metric}"] = value
+        # Overall metrics: micro and macro averages.
+        overall_stat_df = overall_stat(y_true, y_pred, labels=labels)
+        overall_stats_table = wandb.Table(dataframe=overall_stat_df)
+        overall_stat_dict = {
+            row["overall stat"]:row["value"] 
+            for i, row in overall_stat_df.iterrows()
+        }
+        # 
+        overall_and_class_values = {**overall_stat_dict, **class_stats_dict}
+        return class_stats_table, overall_stats_table, overall_and_class_values
+    
+    def _log_confusion_matrix(self, y_pred, y_true):
+        """
+        Get confussion matrix plot.
+        
+        Parameters
+        ----------
+        y_pred : `np.ndarray`
+            Predicted classes. (batch, 1)
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        Return
+        ------
+            `wandb.Image`
+                Confussion matrix plot.
+        """
+        labels = self.labels
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        figure = display_confusion_matrix(
+            cm=cm,
+            model_name=self.model_name,
+            labels=labels
+        )
+        img_log = wandb.Image(figure)
+        plt.close(figure)
+        return img_log
+
+    def _log_roc_curve(self, y_prob, y_true):
+        """
+        Get ROC plot.
+        
+        Parameters
+        ----------
+        y_prob : `np.ndarray`
+            Predicted probability classes. (batch, classes)
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        Return
+        ------
+            `wandb.Image`
+                ROC curve plot.
+        """
+        fpr, tpr, roc_auc = multiclass_roc_curve(y_true, y_prob)
+        figure = display_multiclass_roc_curve(
+            fpr, tpr, roc_auc,
+            model_name=self.model_name,
+            labels=self.labels
+        )
+        img_log = wandb.Image(figure)
+        plt.close(figure)
+        return img_log
+
+    def _log_predictions(self, x_true, y_true, 
+                         y_predictive_distribution, y_pred):
+        """
+        Display sample and models prediction.
+        
+        Parameters
+        ----------
+        x_true : `np.ndarray`
+            True classes. (batch, 1)
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        y_predictive_distribution : `np.ndarray`
+            Predicted distribution. (batch, ?, ?)
+        y_pred : `np.ndarray`
+            Predicted classes. (batch, 1)
+        Return
+        ------
+            List of `wandb.Image`
+                Prediction and input image samples.
+        """
+        wandb_images = []
+        length = len(x_true)
+        if length > self.max_plots :
+            choices = np.random.choice(
+                range(length), size=self.max_plots , replace=False
+            )
+        else:
+            choices = range(length)
+        for i in choices:
+            figure = display_prediction(
+                x = x_true[i],
+                y_pred = y_pred[i],
+                y_true = y_true[i], 
+                predictive_distribution = y_predictive_distribution[i],
+                model_name = self.model_name,
+                labels = self.labels
+            )
+            wandb_images.append(
+                wandb.Image(figure)
+            )
+            plt.close(figure)
+        return wandb_images
+
+    def _log_mean_uncertainty(self, uncertainty):
+        """
+        Get mean uncertainty values.
+        
+        Parameters
+        ----------
+        uncertainty : `` TODO: check type
+        Return
+        ------
+            `dict`
+                Pairs uncertainty metric and its mean value.
+        """
+        mean = dict(uncertainty.mean())
+        return {f"mean_{k}":v for k,v in mean.items()}
+
+    def _log_uncertainty(self, x_true, y_true, 
+                         y_predictive_distribution, y_pred, 
+                         y_predictions_samples, uncertainty):
+        """
+        Display sample and models uncertainty.
+
+        Parameters
+        ----------
+        x_true : `np.ndarray`
+            True classes. (batch, 1)
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        y_predictive_distribution : `np.ndarray`
+            Predicted distribution. (batch, ?, ?)
+        y_pred : `np.ndarray`
+            Predicted classes. (batch, 1)
+        y_predictions_samples : `np.ndarray`
+            Predicted classes samples. (batch, samples, classes)
+        uncertainty : TODO: check type
+        Return
+        ------
+            List of `wandb.Image`
+                Prediction, input image and uncertainty samples.
+        """
+        wandb_images = []
+        length = len(x_true)
+        if length > self.max_plots :
+            choices = np.random.choice(range(length), 
+                        size=self.max_plots , replace=False)
+        else:
+            choices = range(length)
+        for i in choices:
+            figure = display_uncertainty(
+                x = x_true[i],
+                y_pred = y_pred[i],
+                y_true = y_true[i], 
+                predictive_distribution = y_predictive_distribution[i],
+                prediction_samples = y_predictions_samples[i],
+                uncertainty = uncertainty.iloc[i],
+                model_name = self.model_name,
+                labels = self.labels
+            )
+            wandb_images.append(
+                wandb.Image(figure)
+            )
+            plt.close(figure)
+        return wandb_images
+
+    def _log_uncertainty_by_class(self, y_true, uncertainty):
+        """
+        Display uncertainty boxplots.
+
+        Parameters
+        ----------
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        uncertainty : TODO: check type
+        Return
+        ------
+            List of `wandb.Image`
+                uncertainty boxplots.
+        """
+        wandb_images = []
+        for metric in uncertainty.columns:
+            figure = display_uncertainty_by_class(
+                y_true, uncertainty, metric, 
+                model_name=self.model_name,
+                labels = self.labels
+            )
+            wandb_images.append(
+                wandb.Image(figure, caption=f"{metric} by class")
+            )
+            plt.close(figure)
+        return wandb_images
+
+    def _log_uncertainty_highlights(self, x_true, y_true, 
+                                    y_predictive_distribution, y_pred, 
+                                    y_predictions_samples, uncertainty, 
+                                    mode='max'):
+        """
+        Display sample uncertainty with higher or lower uncertainty.
+
+        Parameters
+        ----------
+        x_true : `np.ndarray`
+            True classes. (batch, 1)
+        y_true : `np.ndarray`
+            True classes. (batch, 1)
+        y_predictive_distribution : `np.ndarray`
+            Predicted distribution. (batch, ?, ?)
+        y_pred : `np.ndarray`
+            Predicted classes. (batch, 1)
+        y_predictions_samples : `np.ndarray`
+            Predicted classes samples. (batch, samples, classes)
+        uncertainty : TODO: check type
+        mode :  `str` ['max' | 'min'] (default='max')
+            Select mode for sorted samples.
+        Return
+        ------
+            List of `wandb.Image`
+                Prediction, input image and uncertainty samples.
+        """
+        caption = "higher" if mode == "max" else "lower"
+        highlights = []
+        for metric in uncertainty:
+            if mode == 'max':
+                index = uncertainty[metric].argmax()
+            elif mode == 'min':
+                index = uncertainty[metric].argmin()
+            highlights.append((index, metric))
+        wandb_images = []
+        for i, metric in highlights:
+            figure = display_uncertainty(
+                x = x_true[i],
+                y_pred = y_pred[i],
+                y_true = y_true[i], 
+                predictive_distribution = y_predictive_distribution[i],
+                prediction_samples = y_predictions_samples[i],
+                uncertainty = uncertainty.iloc[i],
+                model_name = self.model_name,
+                labels = self.labels
+            )
+            wandb_images.append(
+                wandb.Image(figure, caption=f"{caption} {metric}")
+            )
+            plt.close(figure)
+        return wandb_images
+
+class UncertaintyCallback(wandb.keras.WandbCallback, WandBLogGenerator):
     """
     WandbCallback extension for include extra plots and summaries.
     """
@@ -342,7 +630,12 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                  log_batch_frequency=None, log_best_prefix="best_",
                  log_confusion_matrix=True, log_predictions=True, 
                  log_uncertainty=True, log_metrics=True, log_roc_curve=True):
-        super().__init__(monitor=monitor,
+        WandBLogGenerator.__init__(self,
+            model_name=model_name,
+            labels=labels,
+        )
+        wandb.keras.WandbCallback.__init__(self,
+                        monitor=monitor,
                         verbose=verbose,
                         mode=mode,
                         save_weights_only=save_weights_only,
@@ -363,7 +656,6 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                         log_batch_frequency=log_batch_frequency,
                         log_best_prefix=log_best_prefix)
         self.tf_Dataset = generator #TF dataset
-        self.model_name = model_name
 
         self.sample_data, self.validation_data = self.setup_validation_data(
             generator, predictions, batch_size, validation_steps
@@ -372,7 +664,6 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         self.generator  = None
 
         # flags
-        self.max_plots            = 35
         self.log_confusion_matrix = log_confusion_matrix
         self.log_predictions      = log_predictions
         self.log_uncertainty      = log_uncertainty
@@ -418,7 +709,6 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         validation_data = (x_test, y_test)
         return sample_data, validation_data
 
-
     def on_epoch_end(self, epoch, logs={}):
         #self.generator  = self.tf_Dataset.as_numpy_iterator()
         if self.log_weights:
@@ -434,12 +724,14 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         if self.log_metrics:
             (_, y_true) = self._get_data(mode="labels")
             _, y_pred, _ = predictions_uncertainty
-            class_stat_table, overall_stat_table, overall_and_class_values = self._log_metrics(y_pred, y_true)
+            _metrics = self._log_metrics(y_pred, y_true)
+            class_stat_table, overall_stat_table, overall_and_class_values = _metrics 
             wandb.log(overall_and_class_values, commit=False)
             wandb.log({
                 "Class Stat": class_stat_table,
                 "Overall Stat": overall_stat_table
             }, commit=False)
+
         if self.log_roc_curve:
             (_, y_true) = self._get_data(mode="labels")
             y_predictive_distribution, _, _ = predictions_uncertainty
@@ -466,13 +758,13 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                 },
                commit=False
             )
+
         if self.log_uncertainty:
             y_predictive_distribution, _, y_predictions_samples = predictions_uncertainty
             uncertainty = self.model.uncertainty(
                 y_predictive_distribution=y_predictive_distribution,
                 y_predictions_samples=y_predictions_samples
             )
-
             wandb.log(
                 self._log_mean_uncertainty(uncertainty),
                 commit=False
@@ -501,7 +793,6 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                 },
                commit=False
             )
-
         wandb.log({"epoch": epoch}, commit=False)
         wandb.log(logs, commit=True)
 
@@ -545,192 +836,32 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         return  (X_test, y_test),\
                 (y_predictive_distribution, y_pred, y_predictions_samples)
 
-    def _log_confusion_matrix(self, y_pred, y_true):
-        cm = confusion_matrix(y_true, y_pred, labels=self.labels)
-        figure = display_confusion_matrix(
-            cm=cm,
-            model_name=self.model_name,
-            labels=self.labels
-        )
-        img_log = wandb.Image(figure)
-        plt.close(figure)
-        return img_log
-
-    def _log_metrics(self, y_pred, y_true):
-        # 
-        class_stat_df = class_stat(y_true, y_pred, labels=self.labels)
-        class_stats_table = wandb.Table(dataframe=class_stat_df)
-        class_stats_dict  = {}
-        for i, row in class_stat_df.iterrows():
-            class_stat_prefix = row["class stat"]
-            for metric,value in row.items():
-                if metric == "class stat": continue
-                class_stats_dict[f"{class_stat_prefix} - Class {metric}"] = value
-        # 
-        overall_stat_df = overall_stat(y_true, y_pred, labels=self.labels)
-        overall_stats_table = wandb.Table(dataframe=overall_stat_df)
-        overall_stat_dict = {row["overall stat"]:row["value"]for i, row in overall_stat_df.iterrows()}
-        #
-        overall_and_class_values = {**overall_stat_dict, **class_stats_dict}
-        return class_stats_table, overall_stats_table, overall_and_class_values
-
-    def _log_roc_curve(self, y_prob, y_true):
-        fpr, tpr, roc_auc = multiclass_roc_curve(y_true, y_prob)
-        figure = display_multiclass_roc_curve(
-            fpr, tpr, roc_auc,
-            model_name=self.model_name,
-            labels=self.labels
-        )
-        img_log = wandb.Image(figure)
-        plt.close(figure)
-        return img_log
-
-    def _log_predictions(self, x_true, y_true, 
-                         y_predictive_distribution, y_pred):
-        """
-        Display sample and models prediction.
-        Parameters
-        ----------
-        Return
-        ------
-        """
-        wandb_images = []
-        length = len(x_true)
-        if length > self.max_plots :
-            choices = np.random.choice(range(length), 
-                                      size=self.max_plots , replace=False)
-        else:
-            choices = range(length)
-        for i in choices:
-            figure = display_prediction(
-                x = x_true[i],
-                y_pred = y_pred[i],
-                y_true = y_true[i], 
-                predictive_distribution = y_predictive_distribution[i],
-                model_name = self.model_name,
-                labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure)
-            )
-            plt.close(figure)
-        return wandb_images
-
-    def _log_mean_uncertainty(self, uncertainty):
-        mean = dict(uncertainty.mean())
-        return {f"mean_{k}":v for k,v in mean.items()}
-
-    def _log_uncertainty(self, x_true, y_true, 
-                         y_predictive_distribution, y_pred, 
-                         y_predictions_samples, uncertainty):
-        """
-        Display sample and models uncertainty.
-        Parameters
-        ----------
-        Return
-        ------
-        """
-        wandb_images = []
-        length = len(x_true)
-        if length > self.max_plots :
-            choices = np.random.choice(range(length), 
-                        size=self.max_plots , replace=False)
-        else:
-            choices = range(length)
-        for i in choices:
-            figure = display_uncertainty(
-                x = x_true[i],
-                y_pred = y_pred[i],
-                y_true = y_true[i], 
-                predictive_distribution = y_predictive_distribution[i],
-                prediction_samples = y_predictions_samples[i],
-                uncertainty = uncertainty.iloc[i],
-                model_name = self.model_name,
-                labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure)
-            )
-            plt.close(figure)
-        return wandb_images
-
-    def _log_uncertainty_by_class(self, y_true, uncertainty):
-        wandb_images = []
-        for metric in uncertainty.columns:
-            figure = display_uncertainty_by_class(
-                            y_true, uncertainty, metric, 
-                            model_name=self.model_name,
-                            labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure, caption=f"{metric} by class")
-            )
-            plt.close(figure)
-        return wandb_images
-
-    def _log_uncertainty_highlights(self, x_true, y_true, 
-                                    y_predictive_distribution, y_pred, 
-                                    y_predictions_samples, uncertainty, 
-                                    mode='max'):
-        """
-        Display sample and models uncertainty.
-        Parameters
-        ----------
-        Return
-        ------
-        """
-        highlights = []
-        for metric in uncertainty:
-            if mode == 'max':
-                index = uncertainty[metric].argmax()
-            elif mode == 'min':
-                index = uncertainty[metric].argmin()
-            highlights.append((index, metric))
-        caption = "higher" if mode == "max" else "lower"
-        wandb_images = []
-        #for i in range(len(x_true)):
-        for i, metric in highlights:
-            figure = display_uncertainty(
-                x = x_true[i],
-                y_pred = y_pred[i],
-                y_true = y_true[i], 
-                predictive_distribution = y_predictive_distribution[i],
-                prediction_samples = y_predictions_samples[i],
-                uncertainty = uncertainty.iloc[i],
-                model_name = self.model_name,
-                labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure, caption=f"{caption} {metric}")
-            )
-            plt.close(figure)
-        return wandb_images
-
 
 def setup_evaluation_logger(test_generator, model_name, batch_size, enable_wandb, labels=None, run_dir="."):
     if enable_wandb:
         pass
     else:
         # This can be implemented later ;)
-        pass
+        raise NotImplementedError()
 
+class EvaluationLogger(WandBLogGenerator):
+    def __init__(self, model_name, labels,
+                log_confusion_matrix=True, log_predictions=True, 
+                log_uncertainty=True, log_metrics=True, log_roc_curve=True,
+                log_classification_map=True, log_uncertainty_map=True
+        ):
+        super().__init__(model_name, labels)
+        self.log_confusion_matrix = log_confusion_matrix,
+        self.log_predictions      = log_predictions,
+        self.log_uncertainty      = log_uncertainty,
+        self.log_metrics          = log_metrics,
+        self.log_roc_curve        = log_roc_curve,
+        self.log_uncertainty_map  = log_uncertainty_map
+        self.log_classification_map = log_classification_map
 
-class EvaluationLogger():
-    def __init__(self, test_generator):
-        pass
+    def __call__(self, *args, **kwargs):
+        return self.log(*args, **kwargs)
 
     def log(self, evaluation, predictive_distribution):
-        pass
+        wandb.log({}, commit=True)
 
-    def _log_uncertainty_map(self):
-        pass
-
-class EvaluationWandBLogger(EvaluationLogger):
-    def __init__(self, test_generator):
-        pass
-
-    def log(self, evaluation, predictive_distribution):
-        pass
-
-    def _log_uncertainty_map(self):
-        pass

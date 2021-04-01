@@ -56,16 +56,28 @@ OPTIMIZERS = {
 Models and Aggregations
 ==========
 """
-from .mcdropout import *
 from .uncertainty import *
 from .metrics import *
 
+from .mcdropout import (
+    SimpleClassifierMCDropout,
+    EfficientNetMCDropout,
+    HEDConvClassifierMCDropout,
+    RGBConvClassifierMCDropout  
+)
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
-    "EfficientNetMCDropout": EfficientNetMCDropout,
     "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout,
     "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout
+    "EfficientNetMCDropout":      EfficientNetMCDropout,
 
 }
+
+from .aggreation import(
+    ThresholdAggregator,
+    MixtureAggregator
+)    
 AGGREGATION_METHODS = {
+    "ThresholdAggregator":  ThresholdAggregator,
+    "MixtureAggregator":    MixtureAggregator
 }

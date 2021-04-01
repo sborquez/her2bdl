@@ -54,14 +54,13 @@
       "justMyCode": true
     },
     {
-      "name": "Train HER2 Classifier (HEDConvClassifier-MC)",
+      "name": "Train HER2 Classifier (CUSTOM)",
       "type": "python",
       "request": "launch",
       "cwd": "${workspaceFolder}/train/",
       "program": "train_model.py",
       "args": [
-        "-c", "experiments/config/wsi_generators/hedconv_classifier_her2_mc.yaml",
-        "--disable_wandb"
+        "-c", "experiments/config/hyperparameters/crossvalidation/hedconv_c77_d02_kfold_1_5.yaml"
       ],
       "console": "integratedTerminal",
       "justMyCode": true

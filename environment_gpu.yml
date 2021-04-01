@@ -1,0 +1,31 @@
+name: her2bdl
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7.8
+  - pip
+  - openslide
+  - h5py
+  - pandas
+  - xlrd
+  - seaborn
+  - matplotlib
+  - scipy
+  - numpy
+  - jupyter
+  - scikit-learn
+  - scikit-image
+  - plotly
+  - pyyaml
+  - pip:
+    - twine
+    - nose
+    - tqdm
+    - wandb
+    - openslide-python
+    - opencv-python
+    - tensorflow-gpu==2.3.0
+    - tensorflow-probability
+    - tensorflow-datasets
+    - pycm==3.0

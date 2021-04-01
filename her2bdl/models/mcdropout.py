@@ -14,16 +14,17 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Input, Activation,
-    Flatten, Dense,
+    Flatten, Dense, Lambda,
     Conv2D, MaxPooling2D, DepthwiseConv2D,
     BatchNormalization, Dropout
 )
+from .uncertainty import predictive_entropy, mutual_information, variation_ratio
 
 
 __all__ = [
     'MCDropoutModel',
     'SimpleClassifierMCDropout', 'EfficientNetMCDropout',
-    'HEDConvClassifierMCDropout'
+    'HEDConvClassifierMCDropout', 'RGBConvClassifierMCDropout'
 ]
 
 class MCDropoutModel(tf.keras.Model):
@@ -73,6 +74,9 @@ class MCDropoutModel(tf.keras.Model):
     @staticmethod
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
         raise NotImplementedError
+
+    #TODO: customize evaluate methods
+    #def evaluate(self, ...):
 
     def predict_distribution(self, x, return_y_pred=True, return_samples=True,
                              sample_size=None, verbose=0, **kwargs):
@@ -125,7 +129,7 @@ class MCDropoutModel(tf.keras.Model):
         y_predictions_samples = np.array([
             self.classifier.predict(
                 np.tile(z_i, (T, 1)),
-                batch_size=batch_size,
+                batch_size=self.mc_dropout_batch_size,
                 verbose=verbose, **kwargs
             )
             for z_i in deterministic_output#_arr
@@ -184,18 +188,8 @@ class MCDropoutModel(tf.keras.Model):
                 **kwargs
             )
             y_predictive_distribution, _, y_predictions_samples = prediction
-        sample_size = y_predictions_samples.shape[1]
-        # Numerical Stability 
-        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps        
-        ## Entropy (batch, classes)
-        y_log_predictive_distribution = np.log(eps + y_predictive_distribution) 
-        H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
-        ## Expected value (batch, classes) 
-        y_log_predictions_samples = np.log(eps + y_predictions_samples)
-        minus_E = np.sum(y_predictions_samples*y_log_predictions_samples, axis=(1,2))
-        minus_E /= sample_size
         ## Mutual Information
-        I = H + minus_E
+        I = mutual_information(y_predictive_distribution, y_predictions_samples)
         return I
 
     def variation_ratio(self, x=None, y_predictions_samples=None, num_classes=None, sample_size=None, **kwargs):
@@ -211,9 +205,6 @@ class MCDropoutModel(tf.keras.Model):
         x : `np.ndarray`  (batch_size, *input_shape) or `None`
             Batch of inputs. If is `None` use precalculated 
             `y_predictive_distribution`.
-        y_predictions_samples : `np.ndarray` (batch_size, classes) or `None`
-            Model's predictive distributions (normalized histogram). Ignore
-            if `x` is not `None`.
         y_predictions_samples : `np.ndarray` (batch_size, sample size, classes)
             Forward pass samples. Ignored if `x` is not `None`.
         num_classes : `int` or `None`
@@ -238,16 +229,8 @@ class MCDropoutModel(tf.keras.Model):
                 sample_size=sample_size, verbose=0, 
                 **kwargs
             )
-        batch_size, sample_size, num_classes = y_predictions_samples.shape
-        # Sample a class for each forward pass
-        cum_dist = y_predictions_samples.cumsum(axis=-1)
-        Y_T = (np.random.rand(batch_size, sample_size, 1) < cum_dist).argmax(-1)
-        # For each batch, get the frecuency of the mode.
-        _, f = stats.mode(Y_T, axis=1)
-        # variation-ratios
-        T = sample_size
-        variation_ratio_values = 1 - (f/T)
-        return variation_ratio_values.flatten()
+        VR = variation_ratio(y_predictions_samples)
+        return VR
 
     def predictive_entropy(self, x=None, y_predictive_distribution=None, 
                             sample_size=None, **kwargs):
@@ -286,11 +269,8 @@ class MCDropoutModel(tf.keras.Model):
                 sample_size=sample_size, verbose=0,
                 **kwargs
             )
-        # Numerical Stability 
-        eps = np.finfo(y_predictive_distribution.dtype).tiny #.eps
-        y_log_predictive_distribution = np.log(eps + y_predictive_distribution)
         # Predictive Entropy
-        H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
+        H = predictive_entropy(y_predictive_distribution)
         return H
 
     def uncertainty(self, x=None, 
@@ -475,7 +455,7 @@ class EfficientNetMCDropout(MCDropoutModel):
 
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficient_net_weights='imagenet',
-                classifier_dense_layers=[256, 128], activation='relu',
+                classifier_dense_layers=[256, 128], dense_activation='relu',
                 mc_dropout_rate=0.5, sample_size=200, mc_dropout_batch_size=16,
                 multual_information=True, variation_ratio=True,
                 predictive_entropy=True):
@@ -501,7 +481,7 @@ class EfficientNetMCDropout(MCDropoutModel):
             num_classes=self.num_classes,
             mc_dropout_rate=self.mc_dropout_rate,
             classifier_dense_layers=classifier_dense_layers,
-            activation=activation
+            activation=dense_activation
         )
 
     @staticmethod
@@ -534,7 +514,7 @@ class EfficientNetMCDropout(MCDropoutModel):
             if mc_dropout_rate > 0:
                 units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
-            #x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
             x = Activation(dense_activation, name=f"head_activation_{i}")(x)
             if mc_dropout_rate > 0:
                 x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
@@ -573,7 +553,7 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
 
 
     def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 
-                encoder_kernel_sizes=[3, 3, 3], conv_activation='swish',
+                encoder_kernel_sizes=[3, 3, 3], conv_activation='swish', ignore_eosin=False,
                 classifier_dense_layers=[256, 128], dense_activation='swish',
                 sample_size=200, mc_dropout_batch_size=16, multual_information=True, 
                 variation_ratio=True, predictive_entropy=True):
@@ -586,8 +566,10 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         self.encoder = self.build_encoder_model(
             input_shape=input_shape,
             encoder_kernel_sizes=encoder_kernel_sizes,
-            activation=conv_activation
+            activation=conv_activation,
+            ignore_eosin=ignore_eosin
         )
+        self.ignore_eosin = ignore_eosin
         ## Stochastic Latent Variables
         latent_variables_shape = self.encoder.output.shape[1:]
         ## Classifier
@@ -604,9 +586,11 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         # Architecture hyperparameters
         activation_fn = kwargs.get("activation", 'relu')
         encoder_kernel_sizes = kwargs.get("encoder_kernel_sizes", [3, 3, 3])
+        ignore_eosin = kwargs.get("ignore_eosin", False)
         ## Input Layers
         x = encoder_input = Input(shape=input_shape)
-        x = Separate_HED_stains(name='stain_separator')(x)
+        x = Separate_HED_stains(name='stain_separator', ignore_eosin=ignore_eosin)(x)
+        x = Lambda(lambda x: (x*2) - 1, name='scaler')(x)
         # Delthwise Conv
         x = DepthwiseConv2D(
             kernel_size=3,
@@ -657,7 +641,7 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
             if mc_dropout_rate > 0:
                 units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
-            #x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
+            x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
             x = Activation(activation_fn, name=f"head_activation_{i}")(x)
             if mc_dropout_rate > 0:
                 x = Dropout(mc_dropout_rate, name=f"head_mc_dropout_{i}")(x, training=True) # MC dropout
@@ -667,3 +651,60 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         classifier_model = tf.keras.Model(clasifier_input, x, name="classifier")
         return classifier_model
 
+class RGBConvClassifierMCDropout(HEDConvClassifierMCDropout):
+    """
+    RGB Classifier with MonteCarlo Dropout.
+
+    Convolutional neural network model with an architecture comparable to 
+    the HEDConvClassifierMCDropout model.
+
+    This model takes input images of any shape, and the input data
+    should range [0, 255].
+    
+    """
+    
+    @staticmethod
+    def build_encoder_model(input_shape, **kwargs):
+        # Architecture hyperparameters
+        activation_fn = kwargs.get("activation", 'relu')
+        encoder_kernel_sizes = kwargs.get("encoder_kernel_sizes", [3, 3, 3])
+        ## Input Layers
+        x = encoder_input = Input(shape=input_shape)
+        x = Lambda(lambda x: 2*(x/255) - 1, name='scaler')(x)
+        
+        # Delthwise Conv
+        x = DepthwiseConv2D(
+            kernel_size=3,
+            depth_multiplier=8,
+            strides=1,
+            padding="valid",
+            use_bias=False,
+            depthwise_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER,
+            name='stain_depthwiseConv2D'
+        )(x)
+        x = BatchNormalization(axis=3, name='depthwiseConv2D_batchnorm')(x)
+        x = Activation(activation_fn, name='depthwiseConv2D_activation')(x)
+        
+        ## initialize the layers in the first (CONV => RELU) * 2 => POOL
+        ### layer set\
+        filters_2 = 4
+        for i, kernel_size in enumerate(encoder_kernel_sizes):
+            x = Conv2D(
+                filters=2**filters_2, kernel_size=kernel_size,
+                padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
+                kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
+            )(x)
+            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_a")(x)
+            x = Activation(activation_fn, name=f"block{i}_activation_a")(x)
+            x = Conv2D(
+                filters=2**filters_2, kernel_size=kernel_size,
+                padding="valid", name=f"block{i}_conv2d_b", use_bias=False,
+                kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
+            )(x)
+            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_b")(x)
+            x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
+            x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
+        ## initialize the layers in our fully-connected layer sets
+        ### layer set
+        x = Flatten(name="head_flatten")(x)
+        return tf.keras.Model(encoder_input, x, name="encoder")

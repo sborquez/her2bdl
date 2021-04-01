@@ -1,0 +1,77 @@
+FROM  nvcr.io/nvidia/l4t-tensorflow:r32.5.0-tf2.3-py3
+# TODO: Check GPU support with nvidia-docker
+LABEL Author, Sebastian Borquez
+
+# Install Miniconda3 (from minconda Dockerfile)
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+RUN apt-get update -q && \
+    apt-get install -q -y \
+        bzip2 \
+        ca-certificates \
+        git \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender1 \
+        mercurial \
+        subversion \
+        wget \
+    && apt-get clean
+
+ENV PATH /opt/conda/bin:$PATH
+RUN alias python=python3 && \
+    alias pip=pip3
+RUN echo "alias python=python3" >> ~/.bashrc && \
+    echo "alias pip=pip3" >> ~/.bashrc
+
+CMD [ "/bin/bash" ]
+
+# Define a variable with an optional default value that can be override at 
+# build-time with docker build.
+ARG HER2BDL_VERSION=dev
+# TODO: change it when merge to master
+#ARG HER2BDL_VERSION=master 
+
+# The environment variables set using ENV will persist when a container is run 
+# from the resulting image. You can view the values using docker inspect, and 
+# change them using docker run --env <key>=<value>.
+ENV WAND_AND_KEY=dryrun
+
+#---------------- Prepare the envirennment ----------------
+RUN apt-get update && \
+    apt-get install -q -y \
+        gcc \
+        ffmpeg \
+        libsm6 \
+        libxext6 \
+        openslide-tools \
+        libhdf5-serial-dev \
+        hdf5-tools \
+        libhdf5-dev \
+        zlib1g-dev zip \
+        libjpeg8-dev \
+        liblapack-dev \
+        libblas-dev \
+        gfortran
+RUN git clone -b ${HER2BDL_VERSION} --single-branch \
+    https://github.com/sborquez/her2bdl 
+ENV APP_HOME /her2bdl
+WORKDIR $APP_HOME
+
+# Dataset folder mounted from host
+ENV APP_DATA /datasets
+RUN mkdir ${APP_DATA}
+# Configurations files and runs
+ENV APP_EXPERIMENTS /experiments
+RUN mkdir ${APP_EXPERIMENTS}
+# Host repository folder mounted from host to local development
+ENV APP_DEV /her2bdl_dev
+RUN mkdir ${APP_DEV}
+
+RUN pip install -r requirements_jetson.txt
+
+
+#CMD 
+# TODO: container commands
+# ENTRYPOINT ["conda", "run", "--name", "her2dbl", "python", "main.py"]

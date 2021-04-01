@@ -96,13 +96,11 @@ training:
       # Save datasets info: source, sizes, etc. 
       log_dataset_description: true
       # Plots and logs
-      log_training_loss_plot: true
       log_training_loss: true
-      log_predictions_plot: false
-      log_predictions: false
-      log_uncertainty_plot: false
-      log_uncertainty: false
-      log_confusion_matrix_plot: false
+      log_predictions: true
+      log_uncertainty: true
+      log_metrics: true
+      log_roc_curve: true
     # Save checkpoints: saved at experiments_folder/experiment/checkpoints
     checkpoints:
       # saved weights format

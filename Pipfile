@@ -30,6 +30,8 @@ twine = "*"
 openslide-python = "*"
 opencv-python = "*"
 pyyaml = "*"
+pycm= "3.0"
+
 
 [dev-packages]
 pytest = "*"

@@ -57,11 +57,14 @@ Models and Aggregations
 ==========
 """
 from .mcdropout import *
+from .uncertainty import *
+from .metrics import *
 
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
     "EfficientNetMCDropout": EfficientNetMCDropout,
-    "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout
+    "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout,
+    "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout
 
 }
 AGGREGATION_METHODS = {

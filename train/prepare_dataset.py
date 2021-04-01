@@ -88,7 +88,7 @@ def prepare_dataset(source, output,
             close_slide(slide)
         objects.loc[filtered_objects, "sampling_map"] = sampling_maps_paths
 
-    # 3. Split train/validation/test
+    # 3. Split train/validation/test #TODO: Remove validation split.
     if split_test is not None:
         train, val, test = split_dataset(dataset, validation_ratio=split_validation, test_ratio=split_test, seed=seed)
     else:

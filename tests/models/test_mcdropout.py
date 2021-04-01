@@ -66,17 +66,23 @@ def predictive_testing_values():
 
 @with_setup(setup=predictive_testing_values)
 def test_MCDropout_predictive_entropy():
-    from her2bdl.models import ModelMCDropout
+    """
+    MCDropoutModel predictive entropy evaluation
+    """
+    from her2bdl.models import MCDropoutModel
     expected = np.array([0.0, 0.693, 0.693])
-    H = ModelMCDropout.predictive_entropy(None, None, y_predictive_distribution)
+    H = MCDropoutModel.predictive_entropy(None, None, y_predictive_distribution)
     H = np.round(H, 3)
     ok_(np.all(expected == H), f"Entropy is not equal to expected value: H={H}")
     
 @with_setup(setup=predictive_testing_values)
 def test_MCDropout_variation_ratio():
-    from her2bdl.models import ModelMCDropout
+    """
+    MCDropoutModel variation ratio evaluation
+    """
+    from her2bdl.models import MCDropoutModel
     vr = np.array([
-        ModelMCDropout.variation_ratio(None, None, y_predictions_samples)
+        MCDropoutModel.variation_ratio(None, None, y_predictions_samples)
          for _ in range(100)
     ])
     vr = np.round(vr.mean(axis=0), 2)
@@ -87,9 +93,12 @@ def test_MCDropout_variation_ratio():
 
 @with_setup(setup=predictive_testing_values)
 def test_MCDropout_mutual_information():
-    from her2bdl.models import ModelMCDropout
+    """
+    MCDropoutModel mutual information evaluation
+    """
+    from her2bdl.models import MCDropoutModel
     expected = np.array([0.0, 0.0, 0.693])
-    I = ModelMCDropout.mutual_information(None, None, y_predictive_distribution, y_predictions_samples)
+    I = MCDropoutModel.mutual_information(None, None, y_predictive_distribution, y_predictions_samples)
     I = np.round(I, 3)
     ok_(np.all(expected == I), f"Mutual Information is not equal to expected value: I={I}")
     
@@ -105,6 +114,9 @@ def build_model(model_constructor, model_parameters):
     return model
 
 def test_SimpleClassifierMCDropout_output():
+    """
+    SimpleClassifierMCDropout forward pass
+    """  
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -116,13 +128,16 @@ def test_SimpleClassifierMCDropout_output():
     )
     # Model Output shape
     global image, label
-    output_1 = model.predict(image, batch_size=8)
+    output_1 = model.predict(image, batch_size=3)
     eq_(output_1.shape, label.shape)
     del model
     K.clear_session()
 
 
 def test_SimpleClassifierMCDropout_stochastic():
+    """
+    SimpleClassifierMCDropout stochastic output
+    """  
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -134,13 +149,16 @@ def test_SimpleClassifierMCDropout_stochastic():
     )
     # Model Stochastic
     global image
-    output_1 = model.predict(image, batch_size=8)
-    output_2 = model.predict(image, batch_size=8)
+    output_1 = model.predict(image, batch_size=3)
+    output_2 = model.predict(image, batch_size=3)
     ok_(np.any(output_1 != output_2), "Models output is deterministic.")
     del model
     K.clear_session()
 
 def test_SimpleClassifierMCDropout_uncertainty():
+    """
+    SimpleClassifierMCDropout uncertainty evaluation
+    """  
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -152,7 +170,7 @@ def test_SimpleClassifierMCDropout_uncertainty():
     )
     # Model Uncertainty
     global image
-    uncertainty = model.uncertainty(x=image, batch_size=8)
+    uncertainty = model.uncertainty(x=image, batch_size=3)
     del model
     K.clear_session()
     expected_columns = ['predictive entropy', 'mutual information', 'variation-ratio']
@@ -162,6 +180,9 @@ def test_SimpleClassifierMCDropout_uncertainty():
 
 
 def test_SimpleClassifierMCDropout_fit():
+    """
+    SimpleClassifierMCDropout fit to dataset
+    """  
     from her2bdl.models import SimpleClassifierMCDropout
     model = build_model(
         model_constructor = SimpleClassifierMCDropout, 
@@ -192,6 +213,9 @@ EfficientNetMCDropout Tests
 """
 
 def test_EfficientNetMCDropout_output():
+    """
+    EfficientNetMCDropout forward pass
+    """  
     from her2bdl.models import EfficientNetMCDropout
     model = build_model(
         model_constructor = EfficientNetMCDropout, 
@@ -205,13 +229,16 @@ def test_EfficientNetMCDropout_output():
     )    
     # Model Output shape
     global image, label
-    output_1 = model.predict(image, batch_size=8)
+    output_1 = model.predict(image, batch_size=3)
     eq_(output_1.shape, label.shape)
     del model
     K.clear_session()
 
 
-def test_EfficientNetMCDropout_output():
+def test_EfficientNetMCDropout_stochastic():
+    """
+    EfficientNetMCDropout stochastic output
+    """  
     from her2bdl.models import EfficientNetMCDropout
     model = build_model(
         model_constructor = EfficientNetMCDropout, 
@@ -225,13 +252,16 @@ def test_EfficientNetMCDropout_output():
     )
     # Model Stochastic
     global image
-    output_1 = model.predict(image, batch_size=8)
-    output_2 = model.predict(image, batch_size=8)
+    output_1 = model.predict(image, batch_size=3)
+    output_2 = model.predict(image, batch_size=3)
     ok_(np.any(output_1 != output_2), "Models output is deterministic.")
     del model
     K.clear_session()
 
 def test_EfficientNetMCDropout_uncertainty():
+    """
+    EfficientNetMCDropout uncertainty evaluation
+    """  
     from her2bdl.models import EfficientNetMCDropout
     model = build_model(
         model_constructor = EfficientNetMCDropout, 
@@ -245,7 +275,7 @@ def test_EfficientNetMCDropout_uncertainty():
     )
     # Model Uncertainty
     global image
-    uncertainty = model.uncertainty(x=image, batch_size=8, sample_size=50)
+    uncertainty = model.uncertainty(x=image, batch_size=3, sample_size=50)
     del model
     K.clear_session()
     expected_columns = ['predictive entropy', 'mutual information', 'variation-ratio']
@@ -255,6 +285,9 @@ def test_EfficientNetMCDropout_uncertainty():
 
 
 def test_EfficientNetMCDropout_fit():
+    """
+    EfficientNetMCDropout fit to dataset
+    """    
     from her2bdl.models import EfficientNetMCDropout
     model = build_model(
         model_constructor = EfficientNetMCDropout, 
@@ -264,6 +297,212 @@ def test_EfficientNetMCDropout_fit():
             "mc_dropout_rate": 0.5,
             "base_model": "B0", 
             "efficient_net_weights": 'imagenet'
+        }
+    )
+    # Fit Model
+    global train_dataset, steps_per_epoch
+    global val_dataset, validation_steps
+    history = model.fit(train_dataset, 
+        steps_per_epoch=steps_per_epoch,
+        validation_data=val_dataset, 
+        validation_steps=validation_steps,
+        epochs=1, 
+        workers=1
+    )
+    evaluation = model.evaluate(val_dataset, steps=validation_steps)
+    del model
+    K.clear_session()
+
+
+
+"""
+HEDConvClassifierMCDropout Tests
+==========================
+"""
+
+def test_HEDConvClassifierMCDropout_output():
+    """
+    HEDConvClassifierMCDropout forward pass
+    """
+    from her2bdl.models import HEDConvClassifierMCDropout
+    model = build_model(
+        model_constructor = HEDConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )    
+    # Model Output shape
+    global image, label
+    output_1 = model.predict(image, batch_size=3)
+    eq_(output_1.shape, label.shape)
+    del model
+    K.clear_session()
+
+
+def test_HEDConvClassifierMCDropout_stochastic():
+    """
+    HEDConvClassifierMCDropout stochastic output
+    """    
+    from her2bdl.models import HEDConvClassifierMCDropout
+    model = build_model(
+        model_constructor = HEDConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )
+    # Model Stochastic
+    global image
+    output_1 = model.predict(image, batch_size=3)
+    output_2 = model.predict(image, batch_size=3)
+    ok_(np.any(output_1 != output_2), "Models output is deterministic.")
+    del model
+    K.clear_session()
+
+def test_HEDConvClassifierMCDropout_uncertainty():
+    """
+    HEDConvClassifierMCDropout uncertainty evaluation
+    """    
+    from her2bdl.models import HEDConvClassifierMCDropout
+    model = build_model(
+        model_constructor = HEDConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )
+    # Model Uncertainty
+    global image
+    uncertainty = model.uncertainty(x=image, batch_size=3, sample_size=50)
+    del model
+    K.clear_session()
+    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratio']
+    expected_shape   = (len(image), len(expected_columns))
+    eq_(expected_columns, list(uncertainty.columns))
+    eq_(expected_shape, uncertainty.shape)
+
+
+def test_HEDConvClassifierMCDropout_fit():
+    """
+    HEDConvClassifierMCDropout fit to dataset
+    """    
+    from her2bdl.models import HEDConvClassifierMCDropout
+    model = build_model(
+        model_constructor = HEDConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )
+    # Fit Model
+    global train_dataset, steps_per_epoch
+    global val_dataset, validation_steps
+    history = model.fit(train_dataset, 
+        steps_per_epoch=steps_per_epoch,
+        validation_data=val_dataset, 
+        validation_steps=validation_steps,
+        epochs=1, 
+        workers=1
+    )
+    evaluation = model.evaluate(val_dataset, steps=validation_steps)
+    del model
+    K.clear_session()
+
+"""
+RGBConvClassifierMCDropout Tests
+==========================
+"""
+
+def test_RGBConvClassifierMCDropout_output():
+    """
+    RGBConvClassifierMCDropout forward pass
+    """
+    from her2bdl.models import RGBConvClassifierMCDropout
+    model = build_model(
+        model_constructor = RGBConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )    
+    # Model Output shape
+    global image, label
+    output_1 = model.predict(image, batch_size=3)
+    eq_(output_1.shape, label.shape)
+    del model
+    K.clear_session()
+
+
+def test_RGBConvClassifierMCDropout_stochastic():
+    """
+    RGBConvClassifierMCDropout stochastic output
+    """
+    from her2bdl.models import RGBConvClassifierMCDropout
+    model = build_model(
+        model_constructor = RGBConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )
+    # Model Stochastic
+    global image
+    output_1 = model.predict(image, batch_size=3)
+    output_2 = model.predict(image, batch_size=3)
+    ok_(np.any(output_1 != output_2), "Models output is deterministic.")
+    del model
+    K.clear_session()
+
+def test_RGBConvClassifierMCDropout_uncertainty():
+    """
+    RGBConvClassifierMCDropout uncertainty evaluation
+    """
+    from her2bdl.models import RGBConvClassifierMCDropout
+    model = build_model(
+        model_constructor = RGBConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
+        }
+    )
+    # Model Uncertainty
+    global image
+    uncertainty = model.uncertainty(x=image, batch_size=3, sample_size=50)
+    del model
+    K.clear_session()
+    expected_columns = ['predictive entropy', 'mutual information', 'variation-ratio']
+    expected_shape   = (len(image), len(expected_columns))
+    eq_(expected_columns, list(uncertainty.columns))
+    eq_(expected_shape, uncertainty.shape)
+
+
+def test_RGBConvClassifierMCDropout_fit():
+    """
+    RGBConvClassifierMCDropout fit to dataset
+    """
+    from her2bdl.models import RGBConvClassifierMCDropout
+    model = build_model(
+        model_constructor = RGBConvClassifierMCDropout, 
+        model_parameters = {
+            "input_shape" : (224, 224, 3),
+            "num_classes": 10,
+            "mc_dropout_rate": 0.5,
+            "ignore_eosin": False 
         }
     )
     # Fit Model

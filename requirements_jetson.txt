@@ -1,0 +1,17 @@
+pandas
+xlrd
+seaborn
+matplotlib
+scipy
+jupyter
+scikit-learn
+scikit-image
+plotly
+pyyaml
+twine
+nose
+tqdm
+wandb
+openslide-python
+opencv-python
+pycm==3.0

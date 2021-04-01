@@ -8,6 +8,9 @@ Collections of variables for datasets and data processing.
 DEBUG = False
 SEED = 42
 
+# Viz
+COLORS = list("rgby")
+
 # Dataset columns roles
 GROUND_TRUTH_FILE = 'groundTruth.xlsx'
 IMAGE_FILES = ("{CaseNo:02d}_HER2.ndpi", "{CaseNo:02d}_HE.ndpi") 

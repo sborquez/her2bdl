@@ -214,8 +214,39 @@ class GridPatchGenerator(keras.utils.Sequence):
         # Prepare dataset
         self.__setup__(dataset)
         self.on_epoch_end()
-        
     
+    def get_partition(self, predictions_results, uncertainty_results, by="CaseNo_label"):
+        """
+        Iterate over dataseta partition corresponding to the same tissue. This is used to 
+        aggregate results from patch predictions to tissue predictions.
+
+        Parameters
+        ----------
+        predictions_results : `dict`
+            Predictions from an uncertainty model.
+        uncertanty_results : `dict`
+            Uncertainty predicted from an uncertainty model.
+        by : `str`
+            Column name from dataset to generate partitions.
+        Yield
+        -----
+            group, group_dataframe, group_predictions_results, group_uncertainty_results
+            A subset of the dataset and results for a group.
+        """
+        if "CaseNo_labels" not in self.dataset.columns:
+            self.dataset["CaseNo_label"] = self.dataset.apply(
+                lambda row: f"{int(row['CaseNo'])}_{int(row['label'])}", axis=1
+            )
+        for group, group_df in self.dataset.groupby(by):
+            index = group_df.index
+            group_predictions_results = {
+                k:v[index] for k,v in predictions_results.items()
+            }
+            group_uncertainty_results = {
+                k:v[index] for k,v in uncertainty_results.items()
+            }
+            yield group, group_df, group_predictions_results, group_uncertainty_results
+  
     def __setup__(self, dataset):
         'Setup dataset for patch extraction.'
         self.slides = {}
@@ -262,9 +293,12 @@ class GridPatchGenerator(keras.utils.Sequence):
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
         self.num_classes = self.dataset[TARGET].nunique()
+        # Use this option for evaluate all samples
         if self.batch_size == -1:
-            self.batch_size = len(self.dataset)
+            self.batch_size = 16 #len(self.dataset)
             self.size = len(self.dataset)
+        # This can ignore some samples that can't fit in the epoch.
+        # TODO: use ceil
         else:
             self.size = self.batch_size * (len(self.dataset)//self.batch_size)
         atexit.register(self.cleanup)
@@ -278,7 +312,7 @@ class GridPatchGenerator(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(self.size//self.batch_size)
+        return int(np.ceil(self.size/self.batch_size))
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -295,7 +329,7 @@ class GridPatchGenerator(keras.utils.Sequence):
             self.indexes = np.random.choice(
                 np.arange(len(self.dataset)), size=self.size, replace=False
             )
-        else: #ignore last rows
+        else: # ignore last rows, TODO: check the other todo in __setup__
             self.indexes = np.arange(self.size)
         if self.patch_vertical_flip:
             self.vertical_flips = np.random.choice((-1, 1), size=self.size)
@@ -312,11 +346,13 @@ class GridPatchGenerator(keras.utils.Sequence):
         batch_rows = self.dataset.iloc[list_indexes]
         batch_patches = np.empty((len(list_indexes), *self.patch_size, 3), dtype=np.float64)
         batch_scores  = np.empty((len(list_indexes), len(TARGET_LABELS)))
+        batch_v_flips = self.vertical_flips[list_indexes]
+        batch_h_flips = self.horizational_flips[list_indexes]
         for i, (_, row) in enumerate(batch_rows.iterrows()):
             case_no = int(row["CaseNo"])
             score   = int(row[TARGET])
             patch = self.load_patch(case_no, int(row["row"]), int(row["col"]))
-            v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
+            v_flip, h_flip = batch_v_flips[i], batch_h_flips[i]
             batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]
         return batch_patches, batch_scores

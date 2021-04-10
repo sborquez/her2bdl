@@ -11,6 +11,8 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import numpy as np
+from tensorflow.random import set_seed
+
 import yaml
 import wandb
 from wandb.keras import WandbCallback
@@ -34,7 +36,7 @@ from .data import TARGET_LABELS_list
 
 __all__ = [
     "load_config_file", "load_run_config",
-    "setup_experiment", "setup_model", "setup_aggregator"
+    "setup_experiment", "setup_model", "setup_aggregator",
     "setup_generators", "setup_callbacks", "setup_evaluation_logger"
 ]
 
@@ -59,7 +61,8 @@ __required = {
     "training":
         ["epochs", "loss", "callbacks"],
     "evaluate":
-        ["metrics"],
+        #["metrics"],
+        [],
     "predict":
         ["save_aggregation", "save_predictions", "save_uncertainty"]
 }
@@ -79,7 +82,11 @@ __default_optional = {
             {"name": "adam", "learning_rate": 0.4, "parameters": None},
         },
     "evaluate":
-        {},
+        {"batch_size": 16, 
+         "experiment_logger": 
+            {"enable_wandb" : False, "patch_metrics": {}, "wsi_metrics": {}, 
+             "uncertainty_metric": {}}
+        },
     "predict":
         {},
     "plugins":
@@ -149,7 +156,8 @@ def setup_experiment(experiment_config, mode="training"):
     # Seed
     seed = experiment_config["experiment"]["seed"]
     if seed is not None:
-        pass #TODO: add seed
+        np.random.seed(seed)
+        set_seed(seed)
     # Weight and Bias
     plugins = experiment_config.get("plugins", {})
     del experiment_config["plugins"]
@@ -182,9 +190,13 @@ def setup_experiment(experiment_config, mode="training"):
         if mode == "training":
             # for consistency
             experiment_config["training"]["callbacks"]["enable_wandb"] = False 
-        else:
-            # TODO: add enable_wandb option for evaluation
             pass
+        elif mode == "evaluate":
+            # TODO: add enable_wandb option for evaluation
+            experiment_config["evaluate"]["experiment_logger"]["enable_wandb"] = False 
+            pass
+        else:
+            raise ValueError(f"mode {mode} not supported yet.")
         experiments_folder = \
             experiment_config['experiment']['experiments_folder']
         run_id = experiment_config["experiment"]["run_id"]
@@ -239,6 +251,7 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
 def setup_aggregator(method, parameters):
     """
     Construct aggregator from configuration.
+    
     Parameters
     ----------
     method : `str`
@@ -282,7 +295,7 @@ def setup_generators(source, num_classes, labels, label_mode, preprocessing,
             #Load train and validation generators 
             generators = get_generator_from_wsi(
                 generator =  dataset_parameters["train_generator"],
-                validation_generator = dataset_parameters["validation_generator"],
+                validation_generator = dataset_parameters.get("validation_generator", None),
                 num_classes=num_classes, label_mode=label_mode,
                 input_shape=input_shape, batch_size=batch_size,
                 preprocessing=preprocessing
@@ -353,6 +366,14 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
         callbacks.append(EarlyStopping(**earlystop))
     return callbacks
 
+
+
+"""
+Callbacks and Evaluation metrics loggers
+----------------------------------------
+"""
+
+
 class WandBLogGenerator():
     """
     WandB plots and metrics formater.
@@ -361,7 +382,7 @@ class WandBLogGenerator():
     def __init__(self, model_name, labels=None, max_plots=35):
         self.model_name = model_name
         self.labels     = labels
-        self.max_plots  = 35
+        self.max_plots  = max_plots
 
     def _log_metrics(self, y_pred, y_true):
         """
@@ -499,7 +520,7 @@ class WandBLogGenerator():
         
         Parameters
         ----------
-        uncertainty : `` TODO: check type
+        uncertainty : `pd.DataFrame`
         Return
         ------
             `dict`
@@ -526,7 +547,7 @@ class WandBLogGenerator():
             Predicted classes. (batch, 1)
         y_predictions_samples : `np.ndarray`
             Predicted classes samples. (batch, samples, classes)
-        uncertainty : TODO: check type
+        uncertainty : `pd.DataFrame`
         Return
         ------
             List of `wandb.Image`
@@ -564,7 +585,8 @@ class WandBLogGenerator():
         ----------
         y_true : `np.ndarray`
             True classes. (batch, 1)
-        uncertainty : TODO: check type
+        uncertainty : `pd.DataFrame`
+
         Return
         ------
             List of `wandb.Image`
@@ -602,7 +624,7 @@ class WandBLogGenerator():
             Predicted classes. (batch, 1)
         y_predictions_samples : `np.ndarray`
             Predicted classes samples. (batch, samples, classes)
-        uncertainty : TODO: check type
+        uncertainty : `pd.DataFrame`
         mode :  `str` ['max' | 'min'] (default='max')
             Select mode for sorted samples.
         Return
@@ -635,6 +657,7 @@ class WandBLogGenerator():
             )
             plt.close(figure)
         return wandb_images
+
 
 class UncertaintyCallback(wandb.keras.WandbCallback, WandBLogGenerator):
     """
@@ -857,31 +880,101 @@ class UncertaintyCallback(wandb.keras.WandbCallback, WandBLogGenerator):
                 (y_predictive_distribution, y_pred, y_predictions_samples)
 
 
-def setup_evaluation_logger(test_generator, model_name, batch_size, enable_wandb, labels=None, run_dir="."):
+def setup_evaluation_logger( model_name, enable_wandb, labels=None,
+                   patch_metrics={}, wsi_metrics={}, uncertainty_metric={},
+                   run_dir="."):
     if enable_wandb:
-        pass
+        return EvaluationLogger(model_name, labels, 
+            patch_metrics=patch_metrics, 
+            wsi_metrics=wsi_metrics, 
+            uncertainty_metric=uncertainty_metric
+        )
     else:
         # This can be implemented later ;)
+        run_dir=run_dir
         raise NotImplementedError()
 
 class EvaluationLogger(WandBLogGenerator):
-    def __init__(self, model_name, labels,
-                log_confusion_matrix=True, log_predictions=True, 
-                log_uncertainty=True, log_metrics=True, log_roc_curve=True,
-                log_classification_map=True, log_uncertainty_map=True
+    def __init__(self, model_name, labels, 
+                 patch_metrics={}, wsi_metrics={}, uncertainty_metric={},
+                max_plots  = 48
         ):
-        super().__init__(model_name, labels)
-        self.log_confusion_matrix = log_confusion_matrix,
-        self.log_predictions      = log_predictions,
-        self.log_uncertainty      = log_uncertainty,
-        self.log_metrics          = log_metrics,
-        self.log_roc_curve        = log_roc_curve,
-        self.log_uncertainty_map  = log_uncertainty_map
-        self.log_classification_map = log_classification_map
+        super().__init__(model_name, labels, max_plots=max_plots)
+        self._patch_metrics = {
+            "log_predictions": patch_metrics.get("log_predictions", False), 
+            "log_uncertainty": patch_metrics.get("log_uncertainty", False), 
+            "log_confusion_matrix": patch_metrics.get("log_confusion_matrix", False), 
+            "log_roc_curve": patch_metrics.get("log_roc_curve", False), 
+            "log_metrics": patch_metrics.get("log_metrics", False)
+        }
+        self._wsi_metrics = {
+            "log_prediction_map": wsi_metrics.get("log_prediction_map", False),
+            "log_confusion_matrix": wsi_metrics.get("log_confusion_matrix", False),
+            "log_roc_curve": wsi_metrics.get("log_roc_curve", False),
+            "log_metrics": wsi_metrics.get("log_metrics", False)
+        }
+        self._uncertainty_metric = {
+            "log_class_uncertainty": uncertainty_metric.get("log_class_uncertainty", False),
+            "log_uncertainty_map": uncertainty_metric.get("log_uncertainty_map", False)
+        }
 
-    def __call__(self, *args, **kwargs):
-        return self.log(*args, **kwargs)
+    def log_patch_metrics(self, X, y_true, y_pred, y_predictive_distribution, 
+                  y_predictions_samples, uncertainty):
+        log_configuration = self._patch_metrics
+        uncertainty = pd.DataFrame(uncertainty) if isinstance(uncertainty, dict) else uncertainty
+        if log_configuration["log_metrics"]:
+            _metrics = self._log_metrics(y_pred, y_true)
+            class_stat_table, overall_stat_table, overall_and_class_values = _metrics 
+            wandb.log(overall_and_class_values, commit=False)
+            wandb.log({
+                "Class Stat": class_stat_table,
+                "Overall Stat": overall_stat_table
+            }, commit=False)
+        if log_configuration["log_roc_curve"]:
+            roc_plot = self._log_roc_curve(y_predictive_distribution, y_true)
+            wandb.log({ "ROC Curve": roc_plot}, commit=False)
 
-    def log(self, evaluation, predictive_distribution):
+        if log_configuration["log_confusion_matrix"]:
+            cm_plot = self._log_confusion_matrix(y_pred, y_true)
+            wandb.log({"Confusion Matrix": cm_plot}, commit=False)
+
+        if log_configuration["log_predictions"]:
+            wandb.log(
+                {"Examples": self._log_predictions(
+                        X, y_true, y_predictive_distribution, y_pred
+                    )},
+                commit=False
+            )
+
+        if log_configuration["log_uncertainty"]:
+            wandb.log(
+                self._log_mean_uncertainty(uncertainty),
+                commit=False
+            ) 
+            wandb.log(
+                {
+                    "Uncertainty": self._log_uncertainty(
+                        X, y_true, 
+                        y_predictive_distribution, y_pred, 
+                        y_predictions_samples, uncertainty
+                    ),
+                    "Uncertainty By Class": self._log_uncertainty_by_class(
+                        y_true, 
+                        uncertainty
+                    ),
+                    "High Uncertainty": self._log_uncertainty_highlights(
+                        X, y_true, 
+                        y_predictive_distribution, y_pred, 
+                        y_predictions_samples, uncertainty,
+                        mode='max'
+                    ),
+                    "Low Uncertainty": self._log_uncertainty_highlights(
+                        X, y_true, 
+                        y_predictive_distribution, y_pred, 
+                        y_predictions_samples, uncertainty,
+                        mode='min'
+                    )
+                },
+               commit=False
+            )
         wandb.log({}, commit=True)
-

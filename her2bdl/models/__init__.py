@@ -68,12 +68,11 @@ from .mcdropout import (
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
     "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout,
-    "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout
-    "EfficientNetMCDropout":      EfficientNetMCDropout,
-
+    "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout,
+    "EfficientNetMCDropout":      EfficientNetMCDropout
 }
 
-from .aggreation import(
+from .aggregation import (
     ThresholdAggregator,
     MixtureAggregator
 )    

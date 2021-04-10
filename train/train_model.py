@@ -7,16 +7,10 @@ from her2bdl import *
 from pathlib import Path
 import logging
 import time
-from tensorflow.random import set_seed
 import numpy as np
 
 
 def train_model(config, quiet=False, run_dir="."):
-    # Seed
-    seed = config["experiment"]["seed"]
-    if seed is not None:
-        np.random.seed(seed)
-        set_seed(seed)
 
     # Experiment paths and indentifiers
     experiments_folder = config["experiment"]["experiments_folder"]
@@ -30,7 +24,9 @@ def train_model(config, quiet=False, run_dir="."):
 
     # Dataset
     data_configuration = config["data"]
-    generators, input_shape, num_classes, labels = setup_generators(batch_size=batch_size, **data_configuration)
+    generators, input_shape, num_classes, labels = setup_generators(
+        batch_size=batch_size, **data_configuration
+    )
     train_, val_ = generators
     (train_dataset, steps_per_epoch) = train_
     (val_dataset, validation_steps)  = val_
@@ -126,7 +122,7 @@ if __name__ == "__main__":
     if args["dryrun"]:
         WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
         os.environ["WANDB_MODE"] = 'dryrun'
-    run_dir = setup_experiment(experiment_config)
+    run_dir = setup_experiment(experiment_config, mode="training")
     
     # Verbosity
     quiet = args["quiet"]

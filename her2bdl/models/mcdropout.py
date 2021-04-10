@@ -11,6 +11,7 @@ Models for Image Classification with  predictive distributions and uncertainty m
 import numpy as np
 from scipy import stats
 import pandas as pd
+from tqdm import tqdm
 import tensorflow as tf
 from tensorflow.keras.layers import (
     Input, Activation,
@@ -75,8 +76,66 @@ class MCDropoutModel(tf.keras.Model):
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
         raise NotImplementedError
 
-    #TODO: customize evaluate methods
-    #def evaluate(self, ...):
+    def predict_with_epistemic_uncertainty(self, dataset, include_data=False, verbose=0, **kwargs):
+        """
+        Prediction and uncertainty results for x dataset.
+        Parameters
+        ----------
+        dataset : `np.ndarray`  (batch_size, *input_shape)
+            Data generator.
+        include_data    : `bool``
+            Returns x and y_true from dataset.
+        kwargs : 
+            keras.Model.predict kwargs.
+        Return
+        ------
+            (`dict`, `dict`)
+                Prediction and uncertainty results for x dataset.
+        """
+        predictions_results = None
+        uncertainty_results = None
+        pbar = tqdm(range(len(dataset))) if verbose >= 0 else range(len(dataset))
+        for i in pbar:
+            (X_batch, y_batch) = dataset[i]
+            y_true_batch = y_batch.argmax(axis=1)
+            predictions_batch = self.predict_distribution(
+                x=X_batch, verbose=verbose, **kwargs
+            )
+            y_predictive_distribution_batch, y_pred_batch, y_predictions_samples_batch = predictions_batch
+            uncertainty_batch = self.uncertainty(
+                y_predictive_distribution=y_predictive_distribution_batch,
+                y_predictions_samples=y_predictions_samples_batch,
+                return_dict=True
+            )
+            if i == 0:
+                predictions_results = {
+                    "y_pred": y_pred_batch,
+                    "y_predictions_samples":y_predictions_samples_batch,
+                    "y_predictive_distribution": y_predictive_distribution_batch
+                }
+                uncertainty_results = uncertainty_batch
+                if include_data:
+                    data = {
+                        "X": X_batch,
+                        "y_true": y_true_batch
+                    }
+            else:
+                predictions_results = {
+                    "y_pred": np.hstack((predictions_results["y_pred"], y_pred_batch)),
+                    "y_predictions_samples": np.vstack((predictions_results["y_predictions_samples"], y_predictions_samples_batch)),
+                    "y_predictive_distribution": np.vstack((predictions_results["y_predictive_distribution"], y_predictive_distribution_batch))
+                }
+                uncertainty_results = {
+                    k: np.hstack((uncertainty_results[k], v)) 
+                    for (k,v) in uncertainty_batch.items()
+                }
+                if include_data:
+                    data = {
+                        "X": np.vstack((data["X"], X_batch)),
+                        "y_true": np.hstack((data["y_true"], y_true_batch)),
+                    }
+        if include_data: return data, predictions_results, uncertainty_results
+        return predictions_results, uncertainty_results
 
     def predict_distribution(self, x, return_y_pred=True, return_samples=True,
                              sample_size=None, verbose=0, **kwargs):
@@ -276,7 +335,8 @@ class MCDropoutModel(tf.keras.Model):
     def uncertainty(self, x=None, 
                     y_predictive_distribution=None, y_predictions_samples=None, 
                     get_predictive_entropy=None, get_multual_information=None,
-                    get_variation_ratio=None, sample_size=None, verbose=0, **kwargs):
+                    get_variation_ratio=None, sample_size=None, verbose=0, return_dict=False,
+                    **kwargs):
         assert not (x is None and ( y_predictive_distribution is None\
                                    and y_predictions_samples is None)),\
             "Must have an input x or a predictictions"
@@ -324,6 +384,7 @@ class MCDropoutModel(tf.keras.Model):
             uncertainty["variation-ratio"] = vr
         # Return DataFrame, where each column is a uncertainty metric
         # and each row is a image
+        if return_dict: return uncertainty
         return pd.DataFrame(uncertainty)
 
 class SimpleClassifierMCDropout(MCDropoutModel):

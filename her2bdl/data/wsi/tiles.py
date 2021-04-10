@@ -28,7 +28,7 @@ import os
 from PIL import Image, ImageDraw, ImageFont
 from enum import Enum
 from . import util
-from . import filter
+from . import filters
 from . import slide
 from .util import Time
 

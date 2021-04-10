@@ -43,13 +43,25 @@ DEFAULT_OVERALL_METRICS = [
     "ERR Macro", # Error rate
 ]
 
+def _filter_and_validate_stats(stats, metrics):
+    filtered_stats = {}
+    for m in metrics:
+        if isinstance(stats[m], dict):
+            filtered_stats[m] = { 
+                k:v if v != "None" else None for k,v in stats[m].items()
+            }
+        else:
+            filtered_stats[m] = stats[m] if stats[m] != "None" else None
+    return filtered_stats
+
 def class_stat(y_true, y_pred, labels=None, metrics=DEFAULT_CLASS_METRICS):
     cm = pycm.ConfusionMatrix(actual_vector=y_true, predict_vector=y_pred)
     if labels is not None:
         if isinstance(labels, list):
             labels = {i:str(l) for i, l in enumerate(labels)}
         cm.relabel(mapping=labels)
-    stats = pd.DataFrame(cm.class_stat)[metrics]
+    stats = _filter_and_validate_stats(cm.class_stat, metrics)
+    stats = pd.DataFrame(stats)
     stats = stats.T.reset_index().rename(columns={"index": "class stat"})
     return stats
 
@@ -62,8 +74,9 @@ def overall_stat(y_true, y_pred, labels=None, metrics=DEFAULT_OVERALL_METRICS):
     stats = cm.overall_stat
     #add error rate
     stats["ERR Macro"] = sum(cm.ERR.values())/len(cm.ERR)
-    stats = pd.DataFrame(stats)[metrics]
-    stats = stats.T.drop(columns=[1]).reset_index().rename(columns={"index": "overall stat", 0: "value"})
+    stats = _filter_and_validate_stats(stats, metrics)
+    stats = pd.DataFrame({0: stats})
+    stats = stats.reset_index().rename(columns={"index": "overall stat", 0: "value"})
     return stats
 
 def multiclass_roc_curve(y_true, y_prob):

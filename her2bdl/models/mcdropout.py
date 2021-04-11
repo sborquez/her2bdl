@@ -426,6 +426,18 @@ class AleatoricModel(tf.keras.Model):
         self.build_from_mcmodel(mc_model)
 
     def build_from_mcmodel(self, mc_model):
+        """
+        Build a new aleatoric model using the architecture defined for `mc_model`.
+        The encoder submodel is cloned and reused the same weights. The new
+        aleatoric classifier reuse the same architecture from the `mc_model` classifier
+        but removing the mc dropout layers, in consecuence, new weights are 
+        initialized.
+
+        Parameters
+        ----------
+        mc_model : `her2bdl.models.MCDropoutModel` 
+            Base model to copy its architecture.
+        """
         encoder, classifier = mc_model.layers
         # Clone Encoder Deterministic Model
         encoder_copy =  clone_model(encoder)
@@ -433,7 +445,7 @@ class AleatoricModel(tf.keras.Model):
         self.encoder = encoder_copy
 
         # Build Aleatoric Classifier Model
-        layers = [l for l in classifier.layers]
+        layers = list(classifier.layers)
         input_layer = layers.pop(0)
         x = input_layer.output
         # Copy architecture except classifier head and mc dropouts
@@ -444,16 +456,16 @@ class AleatoricModel(tf.keras.Model):
             elif isinstance(layer, Dropout) and (mc_model.mc_dropout_rate > 0):
                 continue
             x = type(layer)(**config)(x)
-
+        # New Aleatoric head layers
         logits = Dense(num_classes, name="head_logits_classifier")(x)
         variance = Dense(1, activation="softplus", name='variance')(x)
         logits_variance = Concatenate(name='logits_variance')([logits, variance])
         head_classifier = Activation("softmax", name="head_classifier")(logits)
-        classifier_copy =  tf.keras.Model(
+        aleatoric_classifier =  tf.keras.Model(
             input_layer.output, [logits_variance, head_classifier],
             name="aleatoric_classifier"
         )
-        self.aleatoric_classifier = classifier_copy
+        self.aleatoric_classifier = aleatoric_classifier
 
     def call(self, inputs):
         # Encode and extract features from input

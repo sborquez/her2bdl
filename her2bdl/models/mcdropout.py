@@ -6,6 +6,9 @@ Models for Image Classification with  predictive distributions and uncertainty m
 
 [1] GAL, Yarin. Uncertainty in deep learning. University of Cambridge, 2016, vol. 1, no 3.
 
+[2] KENDALL, Alex; GAL, Yarin. What uncertainties do we need in bayesian deep learning 
+    for computer vision?. arXiv preprint arXiv:1703.04977, 2017.
+
 """
 #%%
 import numpy as np
@@ -13,9 +16,10 @@ from scipy import stats
 import pandas as pd
 from tqdm import tqdm
 import tensorflow as tf
+from tensorflow.keras.models import clone_model
 from tensorflow.keras.layers import (
     Input, Activation,
-    Flatten, Dense, Lambda,
+    Concatenate, Flatten, Dense, Lambda,
     Conv2D, MaxPooling2D, DepthwiseConv2D,
     BatchNormalization, Dropout
 )
@@ -23,7 +27,7 @@ from .uncertainty import predictive_entropy, mutual_information, variation_ratio
 
 
 __all__ = [
-    'MCDropoutModel',
+    'MCDropoutModel', 'AleatoricModel',
     'SimpleClassifierMCDropout', 'EfficientNetMCDropout',
     'HEDConvClassifierMCDropout', 'RGBConvClassifierMCDropout'
 ]
@@ -32,9 +36,13 @@ class MCDropoutModel(tf.keras.Model):
     """
     MonteCarlo Dropout base model. 
     
-    MCDropoutModel has basics methods from `tf.keras.Model`, but also include 
-    methods for GPU efficient stochastics forward passes, predictive distribution
-    and uncertainty estimation.
+    MCDropoutModel is a abstract model for building new classification models
+    and measure epistemic uncertainty using the method Monte-Carlo Dropout, defined
+    by the author in [1].
+
+    This implementation has methods from `tf.keras.Model` for training and predict,
+    but also includes a method for GPU efficient stochastics forward passes, 
+    predictive distribution and uncertainty estimation. 
 
     Develop new MonteCarlo Dropout models by inheriting from this class. These 
     new models must implement `build_encoder_model` and `build_classifier_model`
@@ -185,6 +193,7 @@ class MCDropoutModel(tf.keras.Model):
         #deterministic_output_arr = deterministic_output.numpy()
         #del deterministic_output
         # T stochastics forward passes 
+        # TODO: Use RepeatVector
         y_predictions_samples = np.array([
             self.classifier.predict(
                 np.tile(z_i, (T, 1)),
@@ -386,6 +395,93 @@ class MCDropoutModel(tf.keras.Model):
         # and each row is a image
         if return_dict: return uncertainty
         return pd.DataFrame(uncertainty)
+
+
+class AleatoricModel(tf.keras.Model):
+    """
+    Aleatoric Data Modeling. 
+    
+    AleatoricModel has basics methods from `tf.keras.Model` for training, the 
+    model architecture is defined from a predefined MCDropoutModel.
+
+    This model is used to evaluate the aleatoric uncertainty from data as explained
+    in by the author in [2]. As this model requires a MCDropoutModel, it can use
+    the trained weights of the Encoder submodel, but as the MC dropout layers
+    are not required and it needs to learn the variance, Classifier's weights
+    are ignored.
+
+    Implemntation inspired by:
+    https://towardsdatascience.com/building-a-bayesian-deep-learning-classifier-ece1845bc09
+    """
+    def __init__(self, mc_model):
+        # Model parameters
+        #self.mc_dropout_rate = mc_model.mc_dropout_rate
+        self.image_shape = mc_model.input_shape
+        self.batch_dim  = mc_model.batch_dim
+        self.num_classes = mc_model.num_classes
+        # Predictive distribution parameters
+        self.sample_size = mc_model.sample_size
+        self.encoder = None
+        self.aleatoric_classifier = None
+        self.build_from_mcmodel(mc_model)
+
+    def build_from_mcmodel(self, mc_model):
+        encoder, classifier = mc_model.layers
+        # Clone Encoder Deterministic Model
+        encoder_copy =  clone_model(encoder)
+        encoder_copy.set_weights(encoder.get_weights())
+        self.encoder = encoder_copy
+
+        # Build Aleatoric Classifier Model
+        layers = [l for l in classifier.layers]
+        input_layer = layers.pop(0)
+        x = input_layer.output
+        # Copy architecture except classifier head and mc dropouts
+        for layer in layers[:-1]:
+            config = layer.get_config()
+            if isinstance(layer, Dense) and (mc_model.mc_dropout_rate > 0):
+                config["units"] = int(mc_model.mc_dropout_rate * config["units"])
+            elif isinstance(layer, Dropout) and (mc_model.mc_dropout_rate > 0):
+                continue
+            x = type(layer)(**config)(x)
+
+        logits = Dense(num_classes, name="head_logits_classifier")(x)
+        variance = Dense(1, activation="softplus", name='variance')(x)
+        logits_variance = Concatenate(name='logits_variance')([logits, variance])
+        head_classifier = Activation("softmax", name="head_classifier")(logits)
+        classifier_copy =  tf.keras.Model(
+            input_layer.output, [logits_variance, head_classifier],
+            name="aleatoric_classifier"
+        )
+        self.aleatoric_classifier = classifier_copy
+
+    def call(self, inputs):
+        # Encode and extract features from input
+        z = self.encoder(inputs)
+        # Classify 
+        return self.aleatoric_classifier(z)
+
+    def predict_with_aleatoric_uncertainty(self, dataset, include_data=False, verbose=0, **kwargs):
+        raise NotImplementedError
+
+
+"""
+Custom Models
+-------------
+
+User defined architecture inheriting from MCDropoutModel.
+
+These new models required two methods:
+
+- build_encoder_model(input_shape, **kwargs)
+    Defining the deterministic encoder model architecture. This model is used for
+    extract features from image input.
+
+- build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs)
+    Defining the classifier stochastic model architecture. This model is used for
+    generate the class prediction, and require the use of dropout layes with 
+    training set True. 
+"""
 
 class SimpleClassifierMCDropout(MCDropoutModel):
     """

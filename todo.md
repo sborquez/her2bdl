@@ -25,10 +25,11 @@
 # Milestone 5
 - [x] HPC Training (Binary tests)
 - [x] Load WSI images
-- [ ] Train EfficientNets B0-B7 (wsi)
+- [x] Train EfficientNets B0-B7 (wsi)
 - [ ] Aggregation
 
 # Milestone 6
+- [x] Model Aleatoric
 - [ ] Evaluation
 - [ ] Model Consumption
 

@@ -105,7 +105,7 @@ def plot_sample(x, y_true=None, y_pred=None, labels=None, axis=None):
     axis.set_title(title, y=-0.3)
     return axis
 
-def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
+def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples=None,
                         model_name=None, labels=None, y_true=None, 
                         uncertainty=None, show=False, save_to=None):
     """
@@ -120,8 +120,8 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
         Predicted label.
     predictive_distribution : `np.ndarray`
         Predicted distribution (n_classes)
-    prediction_samples : `np.ndarray`
-        Predicted samples (samples, n_classes)
+    prediction_samples : `np.ndarray` or `None`
+        Predicted samples (samples, n_classes). Ignore second row plot if is `None`.
     model_name : `str`
         Model name.
     labels : `list`
@@ -139,6 +139,13 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
         `matplotlib.figure.Figure`.
     """
     # Create new Figure
+    if prediction_samples is None:
+        ax1_subplot = 121
+        ax2_subplot = 122
+    else:
+        ax1_subplot = 221
+        ax2_subplot = 222
+
     fig = plt.figure(figsize=(8, 6))
     ax1 = plt.subplot(221)
     plot_sample(x, y_true=y_true, y_pred=y_pred, labels=labels, axis=ax1)
@@ -152,8 +159,9 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
         # place a text box in upper left in axes coords
         ax2.text(0.05, 0.95, textstr, transform=ax2.transAxes, fontsize=10, 
                 verticalalignment='top', bbox=props)
-    ax3 = plt.subplot(212)
-    plot_forward_pass_samples(prediction_samples, y_true=y_true, labels=labels, axis=ax3)
+    if prediction_samples is not None:
+        ax3 = plt.subplot(212)
+        plot_forward_pass_samples(prediction_samples, y_true=y_true, labels=labels, axis=ax3)
     # Style
     title = f"Uncertainty\n{model_name}" if model_name is not None else "Uncertainty"
     plt.suptitle(title, fontsize=16)

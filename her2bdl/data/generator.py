@@ -346,13 +346,15 @@ class GridPatchGenerator(keras.utils.Sequence):
         batch_rows = self.dataset.iloc[list_indexes]
         batch_patches = np.empty((len(list_indexes), *self.patch_size, 3), dtype=np.float64)
         batch_scores  = np.empty((len(list_indexes), len(TARGET_LABELS)))
-        batch_v_flips = self.vertical_flips[list_indexes]
-        batch_h_flips = self.horizational_flips[list_indexes]
+        # TODO: fix index out of range
+        #batch_v_flips = self.vertical_flips[list_indexes]
+        #batch_h_flips = self.horizational_flips[list_indexes]
         for i, (_, row) in enumerate(batch_rows.iterrows()):
             case_no = int(row["CaseNo"])
             score   = int(row[TARGET])
             patch = self.load_patch(case_no, int(row["row"]), int(row["col"]))
-            v_flip, h_flip = batch_v_flips[i], batch_h_flips[i]
+            #v_flip, h_flip = batch_v_flips[i], batch_h_flips[i]
+            v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
             batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]
         return batch_patches, batch_scores

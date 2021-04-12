@@ -6,6 +6,9 @@ Models for Image Classification with  predictive distributions and uncertainty m
 
 [1] GAL, Yarin. Uncertainty in deep learning. University of Cambridge, 2016, vol. 1, no 3.
 
+[2] KENDALL, Alex; GAL, Yarin. What uncertainties do we need in bayesian deep learning 
+    for computer vision?. arXiv preprint arXiv:1703.04977, 2017.
+
 """
 #%%
 import numpy as np
@@ -13,9 +16,11 @@ from scipy import stats
 import pandas as pd
 from tqdm import tqdm
 import tensorflow as tf
+import tensorflow_probability as tfp
+from tensorflow.keras.models import clone_model
 from tensorflow.keras.layers import (
     Input, Activation,
-    Flatten, Dense, Lambda,
+    Concatenate, Flatten, Dense, Lambda,
     Conv2D, MaxPooling2D, DepthwiseConv2D,
     BatchNormalization, Dropout
 )
@@ -23,7 +28,7 @@ from .uncertainty import predictive_entropy, mutual_information, variation_ratio
 
 
 __all__ = [
-    'MCDropoutModel',
+    'MCDropoutModel', 'AleatoricModel',
     'SimpleClassifierMCDropout', 'EfficientNetMCDropout',
     'HEDConvClassifierMCDropout', 'RGBConvClassifierMCDropout'
 ]
@@ -32,9 +37,13 @@ class MCDropoutModel(tf.keras.Model):
     """
     MonteCarlo Dropout base model. 
     
-    MCDropoutModel has basics methods from `tf.keras.Model`, but also include 
-    methods for GPU efficient stochastics forward passes, predictive distribution
-    and uncertainty estimation.
+    MCDropoutModel is a abstract model for building new classification models
+    and measure epistemic uncertainty using the method Monte-Carlo Dropout, defined
+    by the author in [1].
+
+    This implementation has methods from `tf.keras.Model` for training and predict,
+    but also includes a method for GPU efficient stochastics forward passes, 
+    predictive distribution and uncertainty estimation. 
 
     Develop new MonteCarlo Dropout models by inheriting from this class. These 
     new models must implement `build_encoder_model` and `build_classifier_model`
@@ -55,6 +64,7 @@ class MCDropoutModel(tf.keras.Model):
         self.sample_size = sample_size
         self.encoder = None
         self.classifier = None
+        self.aleatoric_model = None
         # Uncertainty measures
         self.get_multual_information = multual_information
         self.get_variation_ratio = variation_ratio
@@ -68,6 +78,10 @@ class MCDropoutModel(tf.keras.Model):
         # Classify 
         return self.classifier(z)
 
+    def get_aleatoric_model(self):
+        self.aleatoric_model = self.aleatoric_model or AleatoricModel(self)
+        return self.aleatoric_model
+
     @staticmethod
     def build_encoder_model(input_shape, **kwargs):
         raise NotImplementedError
@@ -78,7 +92,7 @@ class MCDropoutModel(tf.keras.Model):
 
     def predict_with_epistemic_uncertainty(self, dataset, include_data=False, verbose=0, **kwargs):
         """
-        Prediction and uncertainty results for x dataset.
+        Prediction and epistemic uncertainty results for x dataset.
         Parameters
         ----------
         dataset : `np.ndarray`  (batch_size, *input_shape)
@@ -185,6 +199,7 @@ class MCDropoutModel(tf.keras.Model):
         #deterministic_output_arr = deterministic_output.numpy()
         #del deterministic_output
         # T stochastics forward passes 
+        # TODO: Use RepeatVector
         y_predictions_samples = np.array([
             self.classifier.predict(
                 np.tile(z_i, (T, 1)),
@@ -386,6 +401,280 @@ class MCDropoutModel(tf.keras.Model):
         # and each row is a image
         if return_dict: return uncertainty
         return pd.DataFrame(uncertainty)
+
+
+class AleatoricModel(tf.keras.Model):
+    """
+    Aleatoric Data Modeling. 
+    
+    AleatoricModel has basics methods from `tf.keras.Model` for training, the 
+    model architecture is defined from a predefined MCDropoutModel.
+
+    This model is used to evaluate the aleatoric uncertainty from data as explained
+    in by the author in [2]. As this model requires a MCDropoutModel, it can use
+    the trained weights of the Encoder submodel, but as the MC dropout layers
+    are not required and it needs to learn the variance, Classifier's weights
+    are ignored.
+
+    Implemntation inspired by:
+    https://towardsdatascience.com/building-a-bayesian-deep-learning-classifier-ece1845bc09
+    https://github.com/ShellingFord221/My-implementation-of-What-Uncertainties-Do-We-Need-in-Bayesian-Deep-Learning-for-Computer-Vision/blob/master/classification_aleatoric.py
+    """
+    def __init__(self, mc_model):
+        super(AleatoricModel, self).__init__()
+        # Model parameters
+        #self.mc_dropout_rate = mc_model.mc_dropout_rate
+        self.image_shape = mc_model.image_shape
+        self.batch_dim  = mc_model.batch_dim
+        self.num_classes = mc_model.num_classes
+        # Predictive distribution parameters
+        self.sample_size = mc_model.sample_size
+        self.encoder = None
+        self.aleatoric_classifier = None
+        self.build_from_mcmodel(mc_model)
+
+    def build_from_mcmodel(self, mc_model):
+        """
+        Build a new aleatoric model using the architecture defined for `mc_model`.
+        The encoder submodel is cloned and reused the same weights. The new
+        aleatoric classifier reuse the same architecture from the `mc_model` classifier
+        but removing the mc dropout layers, in consecuence, new weights are 
+        initialized.
+
+        Parameters
+        ----------
+        mc_model : `her2bdl.models.MCDropoutModel` 
+            Base model to copy its architecture.
+        """
+        encoder, classifier = mc_model.layers
+        # Clone Encoder Deterministic Model
+        encoder_copy =  clone_model(encoder)
+        encoder_copy.set_weights(encoder.get_weights())
+        self.encoder = encoder_copy
+        # Build Aleatoric Classifier Model
+        layers = list(classifier.layers)
+        input_layer = layers.pop(0)
+        x = input_layer.output
+        ## Copy architecture except classifier head and mc dropouts
+        for layer in layers[:-1]:
+            config = layer.get_config()
+            if isinstance(layer, Dense) and (mc_model.mc_dropout_rate > 0):
+                config["units"] = int(mc_model.mc_dropout_rate * config["units"])
+            elif isinstance(layer, Dropout) and (mc_model.mc_dropout_rate > 0):
+                continue
+            x = type(layer)(**config)(x)
+        ## New Aleatoric head layers
+        logits = Dense(self.num_classes, name="head_logits_classifier")(x)
+        variance = Dense(1, activation="softplus", name='variance')(x)
+        logits_variance = Concatenate(name='logits_variance')([logits, variance])
+        aleatoric_classifier =  tf.keras.Model(
+            input_layer.output, logits_variance,
+            name="aleatoric_classifier"
+        )
+        self.aleatoric_classifier = aleatoric_classifier
+
+    def call(self, inputs):
+        # Encode and extract features from input
+        z = self.encoder(inputs)
+        # Classify 
+        return self.aleatoric_classifier(z)
+
+    def build_aleatoric_loss(self, T=None):
+        """
+        Build the Negative Log Likehood loss with Monte-Carlo Sampling from [2].
+        
+        Parameters
+        ----------
+         T : `int` or `None` 
+            Number of Monte-Carlo samples, if is `None`, it use models `sample_size`.
+    	Return
+        ------
+            `function` with arguments (y_true, y_pred)
+            Negative Log Likehood loss
+        """
+        T = T or self.sample_size
+        num_classes = self.num_classes
+        eps = tf.keras.backend.epsilon()
+        def neg_log_likehood(y_true, y_pred):
+            # Split prediction into variance and logits
+            y_pred_std = tf.math.sqrt(y_pred[:,-1])
+            y_pred_logits = y_pred[:,:-1]
+            # Get Monte-Carlo samples and corrupt logits
+            sample = tf.transpose(
+                tfp.distributions.Normal(loc=tf.zeros_like(y_pred_std), scale=y_pred_std)
+                .sample((T, num_classes))
+            )
+            x_t = tf.expand_dims(y_pred_logits, -1) + sample
+            # Transform to probabilities
+            batch_softmax_samples = tf.exp(x_t - tf.reduce_logsumexp(x_t, axis=1, keepdims=True))
+            # Monte-Carlo Integration of softmax samples
+            batch_softmax = tf.reduce_mean(batch_softmax_samples, 2, keepdims=True)
+            # Negative Log Likehood
+            loss_x = -1*tf.math.log(eps + tf.matmul(tf.expand_dims(y_true, 1), batch_softmax))
+            return tf.squeeze(loss_x)
+        return neg_log_likehood
+
+    def predict_variance(self, x, return_y_pred=True, return_variance=True,
+                          verbose=0, **kwargs):
+        """
+        Calculate predictive distrution and variance.
+        See [2]
+        This method returns the following `np.ndarray`:
+        - `y_predictive_distribution` is a normalized histogram with shape:
+          (batch_size, classes)
+        - `y_pred` is the class predicted with shape: (batch_size,)
+        - `y_predictions_variance` is the predictive variation,
+          with shape: (batch_size,)
+        Parameters
+        ----------
+        x : `np.ndarray`  (batch_size, *input_shape)
+            Batch of inputs, if is one input, automatically it's converted to
+            a batch.
+        return_y_pred : `bool`
+            Return argmax y_predictive_distribution. If is `False`
+            `y_pred` is `None`.
+        return_variance : `bool`
+            Return predictive variation.
+            If is `False` `y_predictions_variance` is `None`.
+        kwargs : 
+            keras.Model.predict kwargs.
+        Return
+        ------
+            `tuple` of `np.ndarray` with length batch_size.
+                Return 3 arrays with the model's predictive distributions.
+        """
+        if x.ndim == 3: x = np.array([x])
+        assert x.ndim == 4, "Invalid x dimensions."
+        if "batch_size" in kwargs:
+            batch_size = kwargs["batch_size"]
+            del kwargs["batch_size"]
+        else:
+            batch_size = 32
+        logits_and_var_output = self.predict(x,
+            batch_size=batch_size, verbose=verbose,**kwargs
+        )
+        logits = logits_and_var_output[:,:-1]
+        e_x = np.exp(logits - np.max(logits, axis=1, keepdims=True))
+        y_predictive_distribution = (e_x / e_x.sum(axis=1, keepdims=True))
+        y_predictions_variance = logits_and_var_output[:,-1]
+        # class predictions
+        y_pred = None
+        if return_y_pred:
+            y_pred = y_predictive_distribution.argmax(axis=1)
+        if not return_variance:
+            y_predictions_variance = None
+        return y_predictive_distribution, y_pred, y_predictions_variance
+
+
+    def predict_with_aleatoric_uncertainty(self, dataset, include_data=False, verbose=0, **kwargs):
+        """
+        Prediction and aleatoric uncertainty results for x dataset.
+        Parameters
+        ----------
+        dataset : `np.ndarray`  (batch_size, *input_shape)
+            Data generator.
+        include_data    : `bool``
+            Returns x and y_true from dataset.
+        kwargs : 
+            keras.Model.predict kwargs.
+        Return
+        ------
+            (`dict`, `dict`)
+                Prediction and uncertainty results for x dataset.
+        """
+        predictions_results = None
+        uncertainty_results = None
+        pbar = tqdm(range(len(dataset))) if verbose >= 0 else range(len(dataset))
+        for i in pbar:
+            (X_batch, y_batch) = dataset[i]
+            y_true_batch = y_batch.argmax(axis=1)
+            predictions_batch = self.predict(
+                x=X_batch, verbose=verbose, **kwargs
+            )
+            y_predictive_distribution_batch = predictions_batch[:,:-1]
+            y_pred_batch = y_predictive_distribution_batch.argmax(axis=1)
+            predictive_variance = predictions_batch[:,-1]
+            if i == 0:
+                predictions_results = {
+                    "y_pred": y_pred_batch,
+                    "y_predictive_distribution": y_predictive_distribution_batch
+                }
+                uncertainty_results = {
+                    "predictive_variance": predictive_variance
+                }
+                if include_data:
+                    data = {
+                        "X": X_batch,
+                        "y_true": y_true_batch
+                    }
+            else:
+                predictions_results = {
+                    "y_pred": np.hstack(
+                        (predictions_results["y_pred"], y_pred_batch)
+                    ),
+                    "y_predictive_distribution": np.vstack((
+                        predictions_results["y_predictive_distribution"], 
+                        y_predictive_distribution_batch
+                    ))
+                }
+                uncertainty_results = {
+                    "predictive_variance": np.hstack((
+                        uncertainty_results["predictive_variance"], 
+                        predictive_variance
+                    ))
+                }
+                if include_data:
+                    data = {
+                        "X": np.vstack((data["X"], X_batch)),
+                        "y_true": np.hstack((data["y_true"], y_true_batch)),
+                    }
+        if include_data: return data, predictions_results, uncertainty_results
+        return predictions_results, uncertainty_results
+
+    def uncertainty(self, x=None, y_predictive_variance=None, 
+                    get_std=False,
+                    verbose=0, return_dict=False, **kwargs):
+        assert not (x is None and  y_predictive_variance is None),\
+            "Must have an input x or a prediction"
+        # Get predictions
+        if x is not None:
+            prediction = self.predict_variance(
+                x, 
+                return_y_pred=False, return_variance=True, verbose=verbose,
+                **kwargs
+            )
+            y_predictive_distribution, _, y_predictive_variance= prediction
+        # Uncertainty metrics
+        uncertainty = {}
+        ## Predictive Variance
+        uncertainty["predictive variance"] = y_predictive_variance
+        ## STD
+        if get_std:
+            uncertainty["predictive std"] = np.sqrt(y_predictive_variance)
+
+        # Return DataFrame, where each column is a uncertainty metric
+        # and each row is a image
+        if return_dict: return uncertainty
+        return pd.DataFrame(uncertainty)
+
+
+"""
+Custom Models
+-------------
+
+User defined architecture inheriting from MCDropoutModel.
+
+These new models required two methods:
+
+- build_encoder_model(input_shape, **kwargs)
+    Defining the deterministic encoder model architecture. This model is used for
+    extract features from image input.
+
+- build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs)
+    Defining the classifier stochastic model architecture. This model is used for
+    generate the class prediction, and require the use of dropout layes with 
+    training set True. 
+"""
 
 class SimpleClassifierMCDropout(MCDropoutModel):
     """

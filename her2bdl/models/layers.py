@@ -78,3 +78,8 @@ class Separate_HED_stains(keras.layers.Layer):
         x = tf.nn.conv2d(-tf.math.log(x)/self.log_adjust, self.kernel, 1, "VALID")
         x = (x - self.min_values)/(self.max_values - self.min_values) # range (0,1)
         return x
+
+    def get_config(self):
+        config = super(Separate_HED_stains, self).get_config()
+        config["ignore_eosin"] = self.ignore_eosin
+        return config

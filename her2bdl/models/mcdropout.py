@@ -382,19 +382,13 @@ class SimpleClassifierMCDropout(MCDropoutModel):
     def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
         mc_dropout_rate = mc_dropout_rate or 0.0
         x = clasifier_input = Input(shape=latent_variables_shape)
-        if mc_dropout_rate > 0:
-            x = Dense(int(512/mc_dropout_rate), name="head_dense_1")(x)
-        else:
-            x = Dense(512, name="head_dense_1")(x)
+        x = Dense(512, name="head_dense_1")(x)
         x = BatchNormalization(name="head_batchnorm_1")(x)
         x = Activation("relu", name="head_relu_1")(x)
         if mc_dropout_rate > 0:
             x = Dropout(mc_dropout_rate, name="head_mc_dropout_1")(x, training=True) # MC dropout
         ### layer set
-        if mc_dropout_rate > 0:
-            x = Dense(int(512/mc_dropout_rate), name="head_dense_2")(x)
-        else:
-            x = Dense(512, name="head_dense_2")(x)
+        x = Dense(512, name="head_dense_2")(x)
         x = BatchNormalization(name="head_batchnorm_2")(x)
         x = Activation("relu", name="head_relu_2")(x)
         if mc_dropout_rate > 0:
@@ -455,8 +449,8 @@ class EfficientNetMCDropout(MCDropoutModel):
 
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficient_net_weights='imagenet',
-                classifier_dense_layers=[256, 128], dense_activation='relu',
-                mc_dropout_rate=0.5, sample_size=200, mc_dropout_batch_size=16,
+                classifier_dense_layers=[128, 128, 128], dense_activation='relu',
+                mc_dropout_rate=0.2, sample_size=200, mc_dropout_batch_size=32,
                 multual_information=True, variation_ratio=True,
                 predictive_entropy=True):
         super(EfficientNetMCDropout, self).__init__(
@@ -502,17 +496,15 @@ class EfficientNetMCDropout(MCDropoutModel):
         return encoder_model
 
     @staticmethod
-    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.2, **kwargs):
         # Architecture hyperparameters
-        classifier_dense_layers = kwargs.get("classifier_dense_layers", [256, 128])
+        classifier_dense_layers = kwargs.get("classifier_dense_layers", [128, 128, 128])
         dense_activation = kwargs.get("activation", 'relu')
         mc_dropout_rate = mc_dropout_rate or 0.0
         ## Input layer
         x = clasifier_input = Input(shape=latent_variables_shape)
         ## Dense layers
         for i, units in enumerate(classifier_dense_layers, start=1):
-            if mc_dropout_rate > 0:
-                units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
             x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
             x = Activation(dense_activation, name=f"head_activation_{i}")(x)
@@ -552,10 +544,10 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
     }
 
 
-    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.5, 
+    def __init__(self, input_shape, num_classes, mc_dropout_rate=0.2, 
                 encoder_kernel_sizes=[3, 3, 3], conv_activation='swish', ignore_eosin=False,
-                classifier_dense_layers=[256, 128], dense_activation='swish',
-                sample_size=200, mc_dropout_batch_size=16, multual_information=True, 
+                classifier_dense_layers=[128, 128, 128], dense_activation='swish',
+                sample_size=200, mc_dropout_batch_size=32, multual_information=True, 
                 variation_ratio=True, predictive_entropy=True):
         super(HEDConvClassifierMCDropout, self).__init__(
             input_shape, num_classes, mc_dropout_rate, sample_size, 
@@ -591,55 +583,53 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         x = encoder_input = Input(shape=input_shape)
         x = Separate_HED_stains(name='stain_separator', ignore_eosin=ignore_eosin)(x)
         x = Lambda(lambda x: (x*2) - 1, name='scaler')(x)
-        # Delthwise Conv
+        # Depthwise Conv
         x = DepthwiseConv2D(
-            kernel_size=3,
-            depth_multiplier=8,
-            strides=1,
-            padding="valid",
+            kernel_size=5, depth_multiplier=8, strides=2, padding="valid", 
             use_bias=False,
             depthwise_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER,
             name='stain_depthwiseConv2D'
         )(x)
-        x = BatchNormalization(axis=3, name='depthwiseConv2D_batchnorm')(x)
+        x = BatchNormalization(name='depthwiseConv2D_batchnorm')(x)
         x = Activation(activation_fn, name='depthwiseConv2D_activation')(x)
-        
         ## initialize the layers in the first (CONV => RELU) * 2 => POOL
-        ### layer set\
-        filters_2 = 4
+        ### layer set
+        filters_2 = 5
         for i, kernel_size in enumerate(encoder_kernel_sizes):
             x = Conv2D(
-                filters=2**filters_2, kernel_size=kernel_size,
+                filters=2**(filters_2-1), kernel_size=kernel_size,
                 padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
                 kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
             )(x)
-            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_a")(x)
+            x = BatchNormalization(name=f"block{i}_batchnorm_a")(x)
             x = Activation(activation_fn, name=f"block{i}_activation_a")(x)
             x = Conv2D(
                 filters=2**filters_2, kernel_size=kernel_size,
                 padding="valid", name=f"block{i}_conv2d_b", use_bias=False,
                 kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
             )(x)
-            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_b")(x)
+            x = BatchNormalization(name=f"block{i}_batchnorm_b")(x)
             x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
             x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
+            filters_2 += 1
+        x = Conv2D( filters=2**(filters_2//2), kernel_size=1,
+                    name=f"feature_reduction_conv2d_k1")(x)
+        x = Activation(activation_fn, name=f"feature_reduction_activation")(x)
         ## initialize the layers in our fully-connected layer sets
         ### layer set
         x = Flatten(name="head_flatten")(x)
         return tf.keras.Model(encoder_input, x, name="encoder")
 
     @staticmethod
-    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.5, **kwargs):
+    def build_classifier_model(latent_variables_shape, num_classes, mc_dropout_rate=0.2, **kwargs):
         # Architecture hyperparameters
-        classifier_dense_layers = kwargs.get("classifier_dense_layers", [256, 128])
+        classifier_dense_layers = kwargs.get("classifier_dense_layers", [128, 128, 128])
         activation_fn = kwargs.get("activation", 'relu')
         mc_dropout_rate = mc_dropout_rate or 0.0
         ## Input layer
         x = clasifier_input = Input(shape=latent_variables_shape)
         ## Dense layers
         for i, units in enumerate(classifier_dense_layers, start=1):
-            if mc_dropout_rate > 0:
-                units = int(units/mc_dropout_rate)
             x = Dense(units, name=f"head_dense_{i}")(x)
             x = BatchNormalization(name=f"head_batchnorm_{i}")(x)
             x = Activation(activation_fn, name=f"head_activation_{i}")(x)
@@ -662,7 +652,7 @@ class RGBConvClassifierMCDropout(HEDConvClassifierMCDropout):
     should range [0, 255].
     
     """
-    
+
     @staticmethod
     def build_encoder_model(input_shape, **kwargs):
         # Architecture hyperparameters
@@ -671,39 +661,38 @@ class RGBConvClassifierMCDropout(HEDConvClassifierMCDropout):
         ## Input Layers
         x = encoder_input = Input(shape=input_shape)
         x = Lambda(lambda x: 2*(x/255) - 1, name='scaler')(x)
-        
-        # Delthwise Conv
+        # Depthwise Conv
         x = DepthwiseConv2D(
-            kernel_size=3,
-            depth_multiplier=8,
-            strides=1,
-            padding="valid",
+            kernel_size=5, depth_multiplier=8, strides=2, padding="valid",
             use_bias=False,
             depthwise_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER,
             name='stain_depthwiseConv2D'
         )(x)
-        x = BatchNormalization(axis=3, name='depthwiseConv2D_batchnorm')(x)
+        x = BatchNormalization(name='depthwiseConv2D_batchnorm')(x)
         x = Activation(activation_fn, name='depthwiseConv2D_activation')(x)
-        
         ## initialize the layers in the first (CONV => RELU) * 2 => POOL
-        ### layer set\
-        filters_2 = 4
+        ### layer set
+        filters_2 = 5
         for i, kernel_size in enumerate(encoder_kernel_sizes):
             x = Conv2D(
-                filters=2**filters_2, kernel_size=kernel_size,
+                filters=2**(filters_2-1), kernel_size=kernel_size,
                 padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
                 kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
             )(x)
-            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_a")(x)
+            x = BatchNormalization(name=f"block{i}_batchnorm_a")(x)
             x = Activation(activation_fn, name=f"block{i}_activation_a")(x)
             x = Conv2D(
                 filters=2**filters_2, kernel_size=kernel_size,
                 padding="valid", name=f"block{i}_conv2d_b", use_bias=False,
                 kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
             )(x)
-            x = BatchNormalization(axis=3, name=f"block{i}_batchnorm_b")(x)
+            x = BatchNormalization(name=f"block{i}_batchnorm_b")(x)
             x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
             x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
+            filters_2 += 1
+        x = Conv2D( filters=2**(filters_2//2), kernel_size=1,
+                    name=f"feature_reduction_conv2d_k1")(x)
+        x = Activation(activation_fn, name=f"feature_reduction_activation")(x)            
         ## initialize the layers in our fully-connected layer sets
         ### layer set
         x = Flatten(name="head_flatten")(x)

@@ -5,12 +5,13 @@ experiment:
   name: Simple classifier
   notes: CNN for testing Binary Classification.
   tags: 
-    - test
     - simple
     - binary
+    - catsvsdogs
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Google Drive/Projects/her2bdl/train/experiments/runs
-  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -69,7 +70,7 @@ training:
   # Training epochs
   epochs: 50
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 16 
+  batch_size: 128 
   # (Optional, default=0.2) Train and validation split.
   validation_split: 0.1
   # Models loss function
@@ -121,4 +122,5 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret

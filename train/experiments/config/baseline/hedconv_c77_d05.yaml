@@ -7,15 +7,14 @@ experiment:
   tags:
     - hedconv
     - hed
-    - C77
-    - mcdropout
+    - C777
     - dropout_rate=0.5
     - her2
     - MCPatchGenerator
-    - training
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -35,17 +34,18 @@ model:
     mc_dropout_rate: 0.5
     encoder_kernel_sizes:
       - 3
-      - 5
+      - 3
       - 3
     conv_activation: swish
     classifier_dense_layers: 
+      - 128
       - 128
       - 128
     dense_activation: swish
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
-    mc_dropout_batch_size: 8
+    mc_dropout_batch_size: 32
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -68,7 +68,8 @@ data:
         generator: 'MCPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/train.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/training.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/train.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/training.csv'
           patch_level: 3
           samples_per_tissue: 200
           patch_vertical_flip: true
@@ -78,7 +79,8 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/validation.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/validation.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/train.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/validation.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -87,14 +89,15 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/test.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/test.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/train.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/test.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 300
-  img_width: 300
+  img_height: 200
+  img_width: 200
   img_channels: 3
   preprocessing:
     rescale: null
@@ -111,9 +114,9 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 75
+  epochs: 100
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 32
+  batch_size: 128
   # (Optional, default=0.2) Train and validation split.
   validation_split: null
   # Models loss function
@@ -122,7 +125,7 @@ training:
     parameters: null
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
-    name: sgd
+    name: rmsprop
     learning_rate: 1e-4
     parameters: null
   # Training callbacks
@@ -166,4 +169,5 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret

@@ -98,8 +98,8 @@ data:
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 200
-  img_width: 200
+  img_height: 240
+  img_width: 240
   img_channels: 3
   preprocessing:
     rescale: null
@@ -116,9 +116,9 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 75
+  epochs: 100
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 128
+  batch_size: 64
   # (Optional, default=0.2) Train and validation split.
   validation_split: null
   # Models loss function
@@ -128,8 +128,9 @@ training:
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
     name: rmsprop
-    learning_rate: 1e-4
-    parameters: null
+    learning_rate: 1e-3
+    parameters: 
+      - centered: True
   # Training callbacks
   callbacks:
     # Connect to weight and bias *Requiere plugins and env variable.* 

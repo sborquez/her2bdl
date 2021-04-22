@@ -41,7 +41,7 @@ model:
     conv_activation: swish
     classifier_dense_layers: 
       - 128
-      - 128
+      - 256
       - 128
     dense_activation: swish
   # Model uncertainty hyperparameters
@@ -98,8 +98,8 @@ data:
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 200
-  img_width: 200
+  img_height: 240
+  img_width: 240
   img_channels: 3
   preprocessing:
     rescale: null
@@ -116,7 +116,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 75
+  epochs: 100
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 128
   # (Optional, default=0.2) Train and validation split.
@@ -127,7 +127,7 @@ training:
     parameters: null
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
-    name: rmsprop
+    name: sgd
     learning_rate: 1e-4
     parameters: null
   # Training callbacks

@@ -99,8 +99,8 @@ data:
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 200
-  img_width: 200
+  img_height: 240
+  img_width: 240
   img_channels: 3
   preprocessing:
     rescale: null

@@ -67,9 +67,9 @@ data:
       train_generator:
         generator: 'MCPatchGenerator'
         generator_parameters:
-          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/split/training.csv'
-          dataset: '/home/asuka/projects/her2bdl/train/datasets/split/training.csv'
-          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/training.csv'
+          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/best_parameters/training.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/best_parameters/training.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/datasets/best_parameters/training.csv'
           patch_level: 3
           samples_per_tissue: 200
           patch_vertical_flip: true
@@ -78,9 +78,9 @@ data:
       validation_generator:
         generator: 'GridPatchGenerator'
         generator_parameters:
-          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/split/validation.csv'
-          dataset: '/home/asuka/projects/her2bdl/train/datasets/split/validation.csv'
-          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/validation.csv'
+          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/best_parameters/validation.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/best_parameters/validation.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/best_parameters/validation.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -96,8 +96,8 @@ data:
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 200
-  img_width: 200
+  img_height: 240
+  img_width: 240
   img_channels: 3
   preprocessing:
     rescale: null

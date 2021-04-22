@@ -241,7 +241,6 @@ if __name__ == "__main__":
     import os
     os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
     os.environ['CUDA_DISABLE_PTX_JIT'] = "1"
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
     import argparse
     ap = argparse.ArgumentParser(
         description="Profiling and debuging tools to find bottlenecks in the architecture and other checks."

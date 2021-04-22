@@ -228,7 +228,7 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
     return model
 
 def setup_generators(source, num_classes, labels, label_mode, preprocessing, 
-                     img_height=300, img_width=300, img_channels=3, 
+                     img_height=240, img_width=240, img_channels=3, 
                      validation_split=None, batch_size=16, test_dataset=False):
     # Parameters
     input_shape = (img_height, img_width, img_channels)
@@ -365,7 +365,7 @@ class UncertantyCallback(wandb.keras.WandbCallback):
         self.generator  = None
 
         # flags
-        self.max_plots            = 35
+        self.max_plots            = 8
         self.log_confusion_matrix = log_confusion_matrix
         self.log_predictions      = log_predictions
         self.log_uncertainty      = log_uncertainty

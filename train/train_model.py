@@ -86,6 +86,9 @@ def train_model(config, quiet=False, run_dir="."):
     return model
 
 if __name__ == "__main__":
+    import os
+    os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+    os.environ['CUDA_DISABLE_PTX_JIT'] = "1"
     import argparse
     ap = argparse.ArgumentParser(description="Train a model.")
     ap.add_argument("-c", "--config", type=str, required=True, 
@@ -122,7 +125,7 @@ if __name__ == "__main__":
         experiment_config["training"]["callbacks"]["enable_wandb"] = False
         experiment_config["plugins"]["wandb"] = None
     if args["dryrun"]:
-        WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
+        WANDB_MODE_bck = os.environ.get("WANDB_MODE", "")
         os.environ["WANDB_MODE"] = 'dryrun'
     run_dir = setup_experiment(experiment_config)
     

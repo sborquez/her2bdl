@@ -597,8 +597,8 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
         filters_2 = 5
         for i, kernel_size in enumerate(encoder_kernel_sizes):
             x = Conv2D(
-                filters=2**(filters_2-1), kernel_size=kernel_size,
-                padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
+                filters=2**(filters_2), kernel_size=kernel_size,
+                padding="same", name=f"block{i}_conv2d_a", use_bias=False,
                 kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
             )(x)
             x = BatchNormalization(name=f"block{i}_batchnorm_a")(x)
@@ -612,7 +612,7 @@ class HEDConvClassifierMCDropout(MCDropoutModel):
             x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
             x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
             filters_2 += 1
-        x = Conv2D( filters=2**(filters_2//2), kernel_size=1,
+        x = Conv2D( filters=2**(filters_2-2), kernel_size=1,
                     name=f"feature_reduction_conv2d_k1")(x)
         x = Activation(activation_fn, name=f"feature_reduction_activation")(x)
         ## initialize the layers in our fully-connected layer sets
@@ -675,8 +675,8 @@ class RGBConvClassifierMCDropout(HEDConvClassifierMCDropout):
         filters_2 = 5
         for i, kernel_size in enumerate(encoder_kernel_sizes):
             x = Conv2D(
-                filters=2**(filters_2-1), kernel_size=kernel_size,
-                padding="valid", name=f"block{i}_conv2d_a", use_bias=False,
+                filters=2**(filters_2), kernel_size=kernel_size,
+                padding="same", name=f"block{i}_conv2d_a", use_bias=False,
                 kernel_initializer=HEDConvClassifierMCDropout.CONV_KERNEL_INITIALIZER
             )(x)
             x = BatchNormalization(name=f"block{i}_batchnorm_a")(x)
@@ -690,7 +690,7 @@ class RGBConvClassifierMCDropout(HEDConvClassifierMCDropout):
             x = Activation(activation_fn, name=f"block{i}_activation_b")(x)
             x = MaxPooling2D(pool_size=(2, 2), name=f"block{i}_maxpool")(x)
             filters_2 += 1
-        x = Conv2D( filters=2**(filters_2//2), kernel_size=1,
+        x = Conv2D( filters=2**(filters_2-2), kernel_size=1,
                     name=f"feature_reduction_conv2d_k1")(x)
         x = Activation(activation_fn, name=f"feature_reduction_activation")(x)            
         ## initialize the layers in our fully-connected layer sets

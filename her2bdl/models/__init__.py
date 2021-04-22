@@ -44,11 +44,12 @@ CUSTOM_OBJECTS = {
 Optimizers
 ==========
 """
-from tensorflow.keras.optimizers import (Adam, SGD, RMSprop)
+from tensorflow.keras.optimizers import (Adam, SGD, RMSprop, Adadelta)
 OPTIMIZERS = {
     "adam"    : Adam,
     "sgd"     : SGD,
-    "rmsprop" : RMSprop  
+    "rmsprop" : RMSprop,
+    "adadelta": Adadelta
 }
 
 

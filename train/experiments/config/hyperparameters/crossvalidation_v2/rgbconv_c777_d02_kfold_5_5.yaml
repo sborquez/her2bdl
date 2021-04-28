@@ -46,7 +46,7 @@ model:
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
-    mc_dropout_batch_size: 128
+    mc_dropout_batch_size: 64
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -117,7 +117,7 @@ training:
   # Training epochs
   epochs: 100
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 64
+  batch_size: 80
   # (Optional, default=0.2) Train and validation split.
   validation_split: null
   # Models loss function
@@ -129,14 +129,19 @@ training:
     name: rmsprop
     learning_rate: 1e-3
     parameters: 
-      - centered: True
+      centered: True
+  class_weight:
+    - 1
+    - 5
+    - 5
+    - 1
   # Training callbacks
   callbacks:
     # Connect to weight and bias *Requiere plugins and env variable.* 
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 20
+      patience: 50
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:

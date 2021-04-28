@@ -2,7 +2,7 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: HDXConvClassifier-McDropout05-C8776
+  name: HDXConvClassifier-McDropout05-C876
   notes: HDXConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
     - hedconv
@@ -14,8 +14,8 @@ experiment:
     - baseline
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -130,8 +130,6 @@ training:
     name: rmsprop
     parameters: 
        centered: True
-    #name: adadelta
-    #parameters:
   class_weight:
     - 1
     - 5
@@ -148,11 +146,11 @@ training:
     # Experiments results while training
     experiment_tracker:
       # Save model architecture summary
-      log_model_summary: true
+      #log_model_summary: true
       # Save datasets info: source, sizes, etc. 
-      log_dataset_description: true
+      #log_dataset_description: true
       # Plots and logs
-      log_training_loss: true
+      #log_training_loss: true
       log_predictions: true
       log_uncertainty: true
       log_confusion_matrix: true
@@ -178,5 +176,6 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    #apikey: D:/sebas/Projects/her2bdl/.wandb_secret
     apikey: /home/asuka/projects/her2bdl/.wandb_secret
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret

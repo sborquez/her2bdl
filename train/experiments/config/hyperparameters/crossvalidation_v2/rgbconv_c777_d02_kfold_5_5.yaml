@@ -2,7 +2,7 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: RGBConvClassifier-McDropout
+  name: RGBConvClassifier-McDropout-C777
   notes: RGBConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
     - rgbconv

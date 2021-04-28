@@ -2,19 +2,18 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: HEDConvClassifier-McDropout
-  notes: HEDConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
+  name: RGBConvClassifier-McDropout-C876
+  notes: RGBConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
-    - hedconv
-    - hed
-    - C77
-    - mcdropout
-    - dropout_rate=0.5
+    - rgbconv
+    - rgb
+    - C876
     - her2
     - MCPatchGenerator
-    - training
+    - aleatoric
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
+  #experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
   experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
@@ -28,24 +27,25 @@ model:
   # Model Class implemented in her2bdl.models
   architecture: HEDConvClassifierMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
-  weights: null
+  weights: /user/s/sborquez/her2bdl-files/RGB-cv-best.h5
   # Model architecture hyperparameters
   hyperparameters: 
     ignore_eosin: false
-    mc_dropout_rate: 0.5
+    mc_dropout_rate: 0.2
     encoder_kernel_sizes:
       - 3
-      - 5
+      - 3
       - 3
     conv_activation: swish
     classifier_dense_layers: 
+      - 256
       - 128
-      - 128
+      - 64
     dense_activation: swish
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
-    mc_dropout_batch_size: 8
+    mc_dropout_batch_size: 64
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -67,8 +67,9 @@ data:
       train_generator:
         generator: 'MCPatchGenerator'
         generator_parameters:
-          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/train.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/training.csv'
+          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/best_parameters/training.csv'
+          #dataset: '/home/asuka/projects/her2bdl/train/datasets/best_parameters/training.csv'
+          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/best_parameters/training.csv'
           patch_level: 3
           samples_per_tissue: 200
           patch_vertical_flip: true
@@ -77,8 +78,9 @@ data:
       validation_generator:
         generator: 'GridPatchGenerator'
         generator_parameters:
-          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/validation.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/split/validation.csv'
+          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/best_parameters/training.csv'
+          #dataset: '/home/asuka/projects/her2bdl/train/datasets/best_parameters/validation.csv'
+          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/best_parameters/training.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -87,14 +89,15 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/test.csv'
+          #dataset: '/home/asuka/projects/her2bdl/train/datasets/test.csv'
           dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/test.csv'
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
           shuffle: true
   # Input
-  img_height: 300
-  img_width: 300
+  img_height: 240
+  img_width: 240
   img_channels: 3
   preprocessing:
     rescale: null
@@ -111,7 +114,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 75
+  epochs: 200
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 32
   # (Optional, default=0.2) Train and validation split.
@@ -122,25 +125,26 @@ training:
     parameters: null
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
-    name: sgd
     learning_rate: 1e-4
-    parameters: null
+    name: rmsprop
+    parameters: 
+       centered: True
   # Training callbacks
   callbacks:
     # Connect to weight and bias *Requiere plugins and env variable.* 
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 6
+      patience: 50
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:
       # Save model architecture summary
-      log_model_summary: true
+      #log_model_summary: true
       # Save datasets info: source, sizes, etc. 
-      log_dataset_description: true
+      #log_dataset_description: true
       # Plots and logs
-      log_training_loss: true
+      #log_training_loss: true
       log_predictions: true
       log_uncertainty: true
       log_confusion_matrix: true
@@ -166,4 +170,6 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    #apikey: D:/sebas/Projects/her2bdl/.wandb_secret
+    #apikey: /home/asuka/projects/her2bdl/.wandb_secret
+    apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret

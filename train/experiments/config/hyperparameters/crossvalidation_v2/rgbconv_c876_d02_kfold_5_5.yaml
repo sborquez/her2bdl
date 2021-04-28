@@ -2,7 +2,7 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: RGBConvClassifier-McDropout
+  name: RGBConvClassifier-McDropout-C876
   notes: RGBConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
     - rgbconv
@@ -15,8 +15,8 @@ experiment:
     - fold_5
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.

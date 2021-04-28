@@ -107,8 +107,8 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
     else:
         split = f'train[:{2*batch_size}]' if dataset_target == "simple" else "train" 
         ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
-        steps_per_epoch = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        steps_per_epoch = len(steps_per_epoch)
+        train_dataset = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        steps_per_epoch = len(train_dataset)
         return (train_dataset, steps_per_epoch)
 
 

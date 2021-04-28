@@ -61,6 +61,7 @@ data:
     parameters:
       dataset_target: binary
       data_dir: null
+  validation_split: 0.1
   # Input
   img_height: 300
   img_width: 300

@@ -414,6 +414,7 @@ class UncertantyCallback(wandb.keras.WandbCallback):
 
     def on_epoch_end(self, epoch, logs={}):
         #self.generator  = self.tf_Dataset.as_numpy_iterator()
+        _best = {}
         if self.log_weights:
             wandb.log(self._log_weights(), commit=False)
 
@@ -433,6 +434,10 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                 "Class Stat": class_stat_table,
                 "Overall Stat": overall_stat_table
             }, commit=False)
+            for k,v in overall_and_class_values.items(): _best[k] = v
+            _best["Class Stat"] = class_stat_table
+            _best["Overall Stat"] = overall_stat_table
+
         if self.log_roc_curve:
             (_, y_true) = self._get_data(mode="labels")
             y_predictive_distribution, _, _ = predictions_uncertainty
@@ -440,6 +445,7 @@ class UncertantyCallback(wandb.keras.WandbCallback):
             wandb.log(
                { "ROC Curve": roc_plot}, commit=False
             )
+            _best["ROC Curve"] = roc_plot
 
         if self.log_confusion_matrix:
             _, y_true = self._get_data(mode="labels")
@@ -448,30 +454,33 @@ class UncertantyCallback(wandb.keras.WandbCallback):
             wandb.log(
                { "Confusion Matrix": cm_plot}, commit=False
             )
+            _best["Confusion Matrix"] = cm_plot
 
         if self.log_predictions:
             y_predictive_distribution, y_pred, _ = predictions_uncertainty
-            wandb.log(
-                {
-                    "Examples": self._log_predictions(
+            examples = self._log_predictions(
                         *validation_data, y_predictive_distribution, y_pred
                     )
+            wandb.log(
+                {
+                    "Examples": examples
                 },
                commit=False
             )
+            _best["Examples"] = examples
+
         if self.log_uncertainty:
             y_predictive_distribution, _, y_predictions_samples = predictions_uncertainty
             uncertainty = self.model.uncertainty(
                 y_predictive_distribution=y_predictive_distribution,
                 y_predictions_samples=y_predictions_samples
             )
-
+            _mean_uncertainty = self._log_mean_uncertainty(uncertainty)
             wandb.log(
-                self._log_mean_uncertainty(uncertainty),
+                _mean_uncertainty,
                 commit=False
-            ) 
-            wandb.log(
-                {
+            )
+            _uncertainty = {
                     "Uncertainty": self._log_uncertainty(
                         *validation_data, 
                         *predictions_uncertainty,
@@ -491,9 +500,13 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                         *predictions_uncertainty,
                         uncertainty, mode='min'
                     )
-                },
+            }
+            wandb.log(
+               _uncertainty, 
                commit=False
             )
+            for k,v in _mean_uncertainty.items(): _best[k] = v
+            for k,v in _uncertainty.items(): _best[k] = v
 
         wandb.log({"epoch": epoch}, commit=False)
         wandb.log(logs, commit=True)
@@ -507,6 +520,10 @@ class UncertantyCallback(wandb.keras.WandbCallback):
                 wandb.run.summary[
                     "%s%s" % (self.log_best_prefix, "epoch")
                 ] = epoch
+                for k,v in _best.items():
+                    wandb.run.summary[
+                        "%s%s" % (self.log_best_prefix, k)
+                    ] = v 
                 if self.verbose and not self.save_model:
                     print(
                         "Epoch %05d: %s improved from %0.5f to %0.5f"

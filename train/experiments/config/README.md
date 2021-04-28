@@ -166,7 +166,7 @@ training:
   # Training epochs
   epochs: 5
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 8 
+  batch_size: 64 
   # (Optional, default=0.2) Train and validation split.
   validation_split: "sample"
   # Models loss function
@@ -220,7 +220,8 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret
 ```
 
 
@@ -286,7 +287,7 @@ model:
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
-    mc_dropout_batch_size: 8
+    mc_dropout_batch_size: 32
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -405,7 +406,8 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret
 ```
 
 

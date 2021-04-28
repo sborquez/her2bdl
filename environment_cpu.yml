@@ -1,9 +1,10 @@
 name: her2bdl
 channels:
   - conda-forge
+  - sdvillal
   - defaults
 dependencies:
-  - python=3.7.8
+  - python=3
   - pip
   - openslide
   - h5py
@@ -18,14 +19,14 @@ dependencies:
   - scikit-image
   - plotly
   - pyyaml
+  - openslide-python
   - pip:
+    - tensorflow-cpu==2.4.1
     - twine
     - nose
     - tqdm
     - wandb
     - opencv-python
-    - openslide-python
-    - tensorflow-cpu==2.3.0
     - tensorflow-probability
     - tensorflow-datasets
     - pycm==3.0

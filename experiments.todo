@@ -1,0 +1,59 @@
+Binary Classification:
+    ☐ Aleatoric Model
+    ☐ Efficientnet b0
+    ☐ Efficientnet b1
+    ☐ Efficientnet b2
+    ☐ Efficientnet b3
+Hyperparameters:
+    ✔ HED - fold1 @done (4/27/2021, 9:16:57 PM)
+    ✔ HED - fold2 @done (4/27/2021, 9:17:35 PM)
+    ✔ HED - fold3 @done (4/27/2021, 9:17:34 PM)
+    ✔ HED - fold4 @done (4/27/2021, 9:17:34 PM)
+    ✔ HED - fold5 @done (4/27/2021, 9:17:33 PM)
+    ✔ HED - fold1 @done (4/27/2021, 9:17:32 PM)
+    ✔ HED - fold2 @done (4/27/2021, 9:17:31 PM)
+    ✔ HED - fold3 @done (4/27/2021, 9:17:30 PM)
+    ✔ HED - fold4 @done (4/27/2021, 9:17:28 PM)
+    ✔ HED - fold5 @done (4/27/2021, 9:17:27 PM)
+    ✔ HDX - fold1 @done (4/27/2021, 9:17:26 PM)
+    ✔ HDX - fold2 @done (4/27/2021, 9:17:25 PM)
+    ✔ HDX - fold3 @done (4/27/2021, 9:17:25 PM)
+    ✔ HDX - fold4 @done (4/27/2021, 9:17:24 PM)
+    ✔ HDX - fold5 @done (4/27/2021, 9:17:23 PM)
+    ✔ RGB - fold1 @done (4/27/2021, 9:17:22 PM)
+    ✔ RGB - fold2 @done (4/27/2021, 9:17:15 PM)
+    ✔ RGB - fold3 @done (4/27/2021, 9:17:20 PM)
+    ✔ RGB - fold4 @done (4/27/2021, 9:17:13 PM)
+    ✔ RGB - fold5 @done (4/27/2021, 9:17:12 PM)
+Baseline:
+    ☐ Aleatoric Model
+    ☐ dropout 0.2 - job 1
+    ☐ dropout 0.2 - job 2
+    ☐ dropout 0.2 - job 3
+    ☐ dropout 0.2 - job 4
+    ☐ dropout 0.2 - job 5
+    ☐ dropout 0.2 - job 6
+    ☐ dropout 0.2 - job 7
+    ☐ dropout 0.2 - job 8
+    ☐ dropout 0.2 - job 9
+    ☐ dropout 0.2 - job 10
+    ☐ dropout 0.5 - job 1
+    ☐ dropout 0.5 - job 2
+    ☐ dropout 0.5 - job 3
+    ☐ dropout 0.5 - job 4
+    ☐ dropout 0.5 - job 5
+    ☐ dropout 0.5 - job 6
+    ☐ dropout 0.5 - job 7
+    ☐ dropout 0.5 - job 8
+    ☐ dropout 0.5 - job 9
+    ☐ dropout 0.5 - job 10
+    ☐ dropout 0.8 - job 1
+    ☐ dropout 0.8 - job 2
+    ☐ dropout 0.8 - job 3
+    ☐ dropout 0.8 - job 4
+    ☐ dropout 0.8 - job 5
+    ☐ dropout 0.8 - job 6
+    ☐ dropout 0.8 - job 7
+    ☐ dropout 0.8 - job 8
+    ☐ dropout 0.8 - job 9
+    ☐ dropout 0.8 - job 10

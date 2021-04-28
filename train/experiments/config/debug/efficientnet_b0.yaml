@@ -7,15 +7,15 @@ experiment:
   tags:
     - efficientnet
     - b0
-    - C77
-    - mcdropout
+    - C777
     - dropout_rate=0.2
     - her2
     - MCPatchGenerator
-    - test
+    - debug
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -35,6 +35,7 @@ model:
     base_model: B0
     efficient_net_weights: imagenet
     classifier_dense_layers: 
+      - 128
       - 128
       - 128
   # Model uncertainty hyperparameters
@@ -79,7 +80,7 @@ training:
   # Training epochs
   epochs: 5
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 8
+  batch_size: 64
   # (Optional, default=0.2) Train and validation split.
   validation_split: 0.1
   # Models loss function
@@ -132,4 +133,5 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret

@@ -168,7 +168,7 @@ def setup_experiment(experiment_config, mode="training"):
         if wand_config["apikey"]  == 'WANDB_API_KEY':
             assert wand_config["apikey"] in os.environ,\
                 "Requiere enviroment variable 'WANDB_API_KEY' defined."
-        if Path(wand_config["apikey"]).is_file() and \
+        elif Path(wand_config["apikey"]).is_file() and \
                 Path(wand_config["apikey"]).stem == '.wandb_secret':
             with open(wand_config["apikey"]) as secret:
                 os.environ["WANDB_API_KEY"] = secret.read().strip()
@@ -271,7 +271,7 @@ def setup_aggregator(method, parameters):
     return aggregator
 
 def setup_generators(source, num_classes, labels, label_mode, preprocessing, 
-                     img_height=300, img_width=300, img_channels=3, 
+                     img_height=240, img_width=240, img_channels=3, 
                      validation_split=None, batch_size=16, test_dataset=False):
     # Parameters
     input_shape = (img_height, img_width, img_channels)
@@ -369,7 +369,6 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
     return callbacks
 
 
-
 """
 Callbacks and Evaluation metrics loggers
 ----------------------------------------
@@ -381,7 +380,7 @@ class WandBLogGenerator():
     WandB plots and metrics formater.
     """
 
-    def __init__(self, model_name, labels=None, max_plots=35):
+    def __init__(self, model_name, labels=None, max_plots=8):
         self.model_name = model_name
         self.labels     = labels
         self.max_plots  = max_plots
@@ -634,6 +633,7 @@ class WandBLogGenerator():
             List of `wandb.Image`
                 Prediction, input image and uncertainty samples.
         """
+        # TODO: Merge this with the epistemic highlight, to dont repeat code
         caption = "higher" if mode == "max" else "lower"
         highlights = []
         for metric in uncertainty:
@@ -705,7 +705,6 @@ class WandBLogGenerator():
             plt.close(figure)
         return wandb_images
 
-
     def _log_aleatoric_uncertainty_highlights(self, x_true, y_true, 
                                     y_predictive_distribution, y_pred, uncertainty, 
                                     mode='max'):
@@ -730,6 +729,7 @@ class WandBLogGenerator():
             List of `wandb.Image`
                 Prediction, input image and uncertainty samples.
         """
+        # TODO: Merge this with the epistemic highlight, to dont repeat code
         caption = "higher" if mode == "max" else "lower"
         highlights = []
         for metric in uncertainty:
@@ -772,7 +772,7 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
                  log_uncertainty=True, log_metrics=True, log_roc_curve=True, **kwawgs):
         WandBLogGenerator.__init__(self,
             model_name=model_name,
-            labels=labels,
+            labels=labels
         )
         wandb.keras.WandbCallback.__init__(self,
                         monitor=monitor,
@@ -851,6 +851,7 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
 
     def on_epoch_end(self, epoch, logs={}):
         #self.generator  = self.tf_Dataset.as_numpy_iterator()
+        _best = {}
         if self.log_weights:
             wandb.log(self._log_weights(), commit=False)
 
@@ -871,6 +872,9 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
                 "Class Stat": class_stat_table,
                 "Overall Stat": overall_stat_table
             }, commit=False)
+            for k,v in overall_and_class_values.items(): _best[k] = v
+            _best["Class Stat"] = class_stat_table
+            _best["Overall Stat"] = overall_stat_table
 
         if self.log_roc_curve:
             (_, y_true) = self._get_data(mode="labels")
@@ -879,6 +883,7 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
             wandb.log(
                { "ROC Curve": roc_plot}, commit=False
             )
+            _best["ROC Curve"] = roc_plot
 
         if self.log_confusion_matrix:
             _, y_true = self._get_data(mode="labels")
@@ -887,17 +892,18 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
             wandb.log(
                { "Confusion Matrix": cm_plot}, commit=False
             )
+            _best["Confusion Matrix"] = cm_plot
 
         if self.log_predictions:
             y_predictive_distribution, y_pred, _ = predictions_uncertainty
+            examples = self._log_predictions(
+                *validation_data, y_predictive_distribution, y_pred
+            )
             wandb.log(
-                {
-                    "Examples": self._log_predictions(
-                        *validation_data, y_predictive_distribution, y_pred
-                    )
-                },
+                {"Examples": examples},
                commit=False
             )
+            _best["Examples"] = examples
 
         if self.log_uncertainty:
             y_predictive_distribution, _, y_predictions_samples = predictions_uncertainty
@@ -905,37 +911,42 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
                 y_predictive_distribution=y_predictive_distribution,
                 y_predictions_samples=y_predictions_samples
             )
+            _mean_uncertainty = self._log_mean_uncertainty(uncertainty)
             wandb.log(
-                self._log_mean_uncertainty(uncertainty),
+                _mean_uncertainty,
                 commit=False
             ) 
+            _uncertainty = {
+                "Uncertainty": self._log_epistemic_uncertainty(
+                    *validation_data, 
+                    *predictions_uncertainty,
+                    uncertainty
+                ),
+                "Uncertainty By Class": self._log_uncertainty_by_class(
+                    validation_data[1], 
+                    uncertainty
+                ),
+                "High Uncertainty": self._log_epistemic_uncertainty_highlights(
+                    *validation_data,
+                    *predictions_uncertainty,
+                    uncertainty, mode='max'
+                ),
+                "Low Uncertainty": self._log_epistemic_uncertainty_highlights(
+                    *validation_data,
+                    *predictions_uncertainty,
+                    uncertainty, mode='min'
+                )
+            }
             wandb.log(
-                {
-                    "Uncertainty": self._log_epistemic_uncertainty(
-                        *validation_data, 
-                        *predictions_uncertainty,
-                        uncertainty
-                    ),
-                    "Uncertainty By Class": self._log_uncertainty_by_class(
-                        validation_data[1], 
-                        uncertainty
-                    ),
-                    "High Uncertainty": self._log_epistemic_uncertainty_highlights(
-                        *validation_data,
-                        *predictions_uncertainty,
-                        uncertainty, mode='max'
-                    ),
-                    "Low Uncertainty": self._log_epistemic_uncertainty_highlights(
-                        *validation_data,
-                        *predictions_uncertainty,
-                        uncertainty, mode='min'
-                    )
-                },
+                _uncertainty,
                commit=False
             )
+            for k,v in _mean_uncertainty.items(): _best[k] = v
+            for k,v in _uncertainty.items(): _best[k] = v
         wandb.log({"epoch": epoch}, commit=False)
         wandb.log(logs, commit=True)
 
+        # Save best performance
         self.current = logs.get(self.monitor)
         if self.current and self.monitor_op(self.current, self.best):
             if self.log_best_prefix:
@@ -945,6 +956,10 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
                 wandb.run.summary[
                     "%s%s" % (self.log_best_prefix, "epoch")
                 ] = epoch
+                for k,v in _best.items():
+                    wandb.run.summary[
+                        "%s%s" % (self.log_best_prefix, k)
+                    ] = v 
                 if self.verbose and not self.save_model:
                     print(
                         "Epoch %05d: %s improved from %0.5f to %0.5f"
@@ -979,6 +994,7 @@ class AleatoricCallback(EpistemicCallback):
     """
     def on_epoch_end(self, epoch, logs={}):
         #self.generator  = self.tf_Dataset.as_numpy_iterator()
+        _best = {}
         if self.log_weights:
             wandb.log(self._log_weights(), commit=False)
 
@@ -999,6 +1015,9 @@ class AleatoricCallback(EpistemicCallback):
                 "Class Stat": class_stat_table,
                 "Overall Stat": overall_stat_table
             }, commit=False)
+            for k,v in overall_and_class_values.items(): _best[k] = v
+            _best["Class Stat"] = class_stat_table
+            _best["Overall Stat"] = overall_stat_table
 
         if self.log_roc_curve:
             (_, y_true) = self._get_data(mode="labels")
@@ -1007,6 +1026,7 @@ class AleatoricCallback(EpistemicCallback):
             wandb.log(
                { "ROC Curve": roc_plot}, commit=False
             )
+            _best["ROC Curve"] = roc_plot
 
         if self.log_confusion_matrix:
             _, y_true = self._get_data(mode="labels")
@@ -1015,27 +1035,28 @@ class AleatoricCallback(EpistemicCallback):
             wandb.log(
                { "Confusion Matrix": cm_plot}, commit=False
             )
+            _best["Confusion Matrix"] = cm_plot
 
         if self.log_predictions:
             y_predictive_distribution, y_pred, _ = predictions_uncertainty
-            wandb.log(
-                {
-                    "Examples": self._log_predictions(
-                        *validation_data, y_predictive_distribution, y_pred
-                    )
-                },
-               commit=False
+            examples = self._log_predictions(
+                *validation_data, y_predictive_distribution, y_pred
             )
+            wandb.log(
+                {"Examples": examples},
+                commit=False
+            )
+            _best["Examples"] = examples
 
         if self.log_uncertainty:
             y_predictive_distribution, y_pred, y_predictive_variance = predictions_uncertainty
             uncertainty = self.model.uncertainty(y_predictive_variance=y_predictive_variance)
+            _mean_uncertainty = self._log_mean_uncertainty(uncertainty)
             wandb.log(
-                self._log_mean_uncertainty(uncertainty),
+                _mean_uncertainty,
                 commit=False
             ) 
-            wandb.log(
-                {
+            _uncertainty = {
                     "Uncertainty": self._log_aleatoric_uncertainty(
                         *validation_data, 
                         y_predictive_distribution,
@@ -1058,8 +1079,10 @@ class AleatoricCallback(EpistemicCallback):
                         y_pred,
                         uncertainty, mode='min'
                     )
-                },
-               commit=False
+            }
+            wandb.log(
+                _uncertainty,
+                commit=False
             )
         wandb.log({"epoch": epoch}, commit=False)
         wandb.log(logs, commit=True)
@@ -1073,6 +1096,10 @@ class AleatoricCallback(EpistemicCallback):
                 wandb.run.summary[
                     "%s%s" % (self.log_best_prefix, "epoch")
                 ] = epoch
+                for k,v in _best.items():
+                    wandb.run.summary[
+                        "%s%s" % (self.log_best_prefix, k)
+                    ] = v 
                 if self.verbose and not self.save_model:
                     print(
                         "Epoch %05d: %s improved from %0.5f to %0.5f"

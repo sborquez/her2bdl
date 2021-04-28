@@ -3,11 +3,7 @@ import sys
 sys.path.insert(1, '..')
 
 from her2bdl import *
-
 from pathlib import Path
-import logging
-import time
-import numpy as np
 
 
 def train_model(config, quiet=False, run_dir="."):
@@ -48,6 +44,11 @@ def train_model(config, quiet=False, run_dir="."):
         learning_rate=optimizer_learning_rate, 
         **optimizer_parameters
     )
+    ## Class Weights
+    class_weight = None
+    class_weight_list = config["training"].get("class_weight", None)
+    if class_weight_list is not None:
+        class_weight = {i: w for i, w in enumerate(class_weight_list)}
     ## Callbacks
     enable_wandb = config["training"]["callbacks"]["enable_wandb"]
     earlystop = config["training"]["callbacks"]["earlystop"]
@@ -77,6 +78,7 @@ def train_model(config, quiet=False, run_dir="."):
         validation_data=val_dataset, 
         validation_steps=validation_steps,
         epochs=epochs,
+        class_weight=class_weight,
         callbacks=callbacks
     )
     
@@ -84,6 +86,9 @@ def train_model(config, quiet=False, run_dir="."):
     return model
 
 if __name__ == "__main__":
+    import os
+    os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+    os.environ['CUDA_DISABLE_PTX_JIT'] = "1"
     import argparse
     ap = argparse.ArgumentParser(description="Train a model.")
     ap.add_argument("-c", "--config", type=str, required=True, 
@@ -108,19 +113,19 @@ if __name__ == "__main__":
     # Configure multiples runs
     job = args["job"]
     if job is not None:
-        model_name = experiment_config["experiment"]["name"]
-        job_sufix  = f"job {str(job).zfill(2)}"
-        experiment_config["experiment"]["name"]= f"{model_name} {job_sufix}"
+        experiment_config["experiment"]["tags"].append(f"job {job}")
+        if experiment_config["experiment"]["seed"] is not None:
+            experiment_config["experiment"]["seed"] += job
     # Overwrite seed
     seed = args["seed"]
     if seed is not None:
-        experiment_config["experiment"]["seed"]= seed
+        experiment_config["experiment"]["seed"] = seed
     # Setup experiments and pluggins
     if args["disable_wandb"]:
         experiment_config["training"]["callbacks"]["enable_wandb"] = False
         experiment_config["plugins"]["wandb"] = None
     if args["dryrun"]:
-        WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
+        WANDB_MODE_bck = os.environ.get("WANDB_MODE", "")
         os.environ["WANDB_MODE"] = 'dryrun'
     run_dir = setup_experiment(experiment_config, mode="training")
     

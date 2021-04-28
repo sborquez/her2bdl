@@ -241,11 +241,10 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
         **hyperparameters, #config["model"]["hyperparameters"], 
         **uncertainty,     #config["model"]["uncertainty"]
     )
+    if build or (weights is not None):
+        model(np.empty((1, *input_shape), np.float32))
     if weights is not None:
-        model(np.empty((1, *input_shape), np.float32))
         model.load_weights(weights)
-    elif build:
-        model(np.empty((1, *input_shape), np.float32))
     return model
 
 def setup_aggregator(method, parameters):

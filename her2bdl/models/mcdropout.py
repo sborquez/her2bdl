@@ -799,7 +799,7 @@ class EfficientNetMCDropout(MCDropoutModel):
 
     def __init__(self, input_shape, num_classes, 
                 base_model="B0", efficient_net_weights='imagenet',
-                classifier_dense_layers=[128, 128, 128], dense_activation='relu',
+                classifier_dense_layers=[256, 128, 64], dense_activation='relu',
                 mc_dropout_rate=0.2, sample_size=200, mc_dropout_batch_size=32,
                 multual_information=True, variation_ratio=True,
                 predictive_entropy=True):

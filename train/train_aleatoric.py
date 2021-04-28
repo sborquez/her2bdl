@@ -29,7 +29,7 @@ def train_model(config, quiet=False, run_dir="."):
 
     # Model architecture
     model_configuration = config["model"]
-    model = setup_model(input_shape, num_classes, **model_configuration)
+    model = setup_model(input_shape, num_classes, **model_configuration, build=True)
     aleatoric_model = model.get_aleatoric_model()
 
     ## Loss

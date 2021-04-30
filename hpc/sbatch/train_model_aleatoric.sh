@@ -93,7 +93,7 @@ env="$project/.env"
 
 # ----------------Comands--------------------------
 source activate "$project/.env"
-echo "Running train_model.sh"
+echo "Running train_aleatoric.sh"
 echo ""
 
 # Overwrite experiment with bash variable
@@ -106,12 +106,13 @@ echo "Running $experiment"
 
 if [ -z "$job" ];
 then
-    python train_model.py -c $experiment --quiet;
+    python train_aleatoric.py -c $experiment --quiet;
 else
     if [ -z "$seed" ];
     then
-        python train_model.py -c $experiment --quiet --job $job;
+        #python train_aleatoric.py -c $experiment --quiet --job $job;
+        python train_aleatoric.py -c $experiment --quiet --job $job --dryrun;
     else
-        python train_model.py -c $experiment --quiet --job $job --seed $seed;
+        python train_aleatoric.py -c $experiment --quiet --job $job --seed $seed;
     fi
 fi

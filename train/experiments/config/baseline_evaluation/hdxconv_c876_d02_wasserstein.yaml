@@ -155,7 +155,9 @@ training:
       monitor: val_loss
 # Evaluation metrics
 evaluation:
-  #metrics: [accuracy] (deprecated)
+  evaluate_classification: true
+  evaluate_aleatoric_uncertainty: false
+  evaluate_aggregation: false (deprecated)
   batch_size: 8
   experiment_logger:
     enable_wandb: true

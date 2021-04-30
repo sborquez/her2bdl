@@ -13,8 +13,8 @@ experiment:
     - binary
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
-  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
+  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -123,7 +123,9 @@ training:
       monitor: val_loss
 # Evaluation metrics
 evaluation:
-  #metrics: [accuracy]
+  evaluate_classification: false
+  evaluate_aleatoric_uncertainty: true
+  evaluate_aggregation: false
 # Predict 
 predict:
   save_aggregation: false
@@ -135,5 +137,5 @@ plugins:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
     #apikey: D:/sebas/Projects/her2bdl/.wandb_secret
-    apikey: /home/asuka/projects/her2bdl/.wandb_secret
-    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    #apikey: /home/asuka/projects/her2bdl/.wandb_secret
+    apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret

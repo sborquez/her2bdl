@@ -61,8 +61,7 @@ __required = {
     "training":
         ["epochs", "loss", "callbacks"],
     "evaluation":
-        #["metrics"],
-        [],
+        [ "evaluate_classification", "evaluate_aleatoric_uncertainty", "evaluate_aggregation"],
     "predict":
         ["save_aggregation", "save_predictions", "save_uncertainty"]
 }
@@ -80,9 +79,6 @@ __default_optional = {
     },
     "evaluation": {
         "batch_size": 16,
-        "evaluate_classification": True,
-        "evaluate_aleatoric_uncertainty": True,
-        "evaluate_aggregation": False,
         "experiment_logger": {
                 "enable_wandb" : True, "classification_metrics": {}, 
                 "aggregation_metrics": {}, "aleatoric_uncertainty": {},
@@ -112,21 +108,19 @@ def load_config_file(config_filepath, **overwrite_config):
     # Check sections
     assert set(base_config.keys()).issubset(__sections),\
      "Configuration file has missings sections."
-    # Check required sections and subsections
-    not_defined = {}
-    for section, required_keys in __required.items():
-        defined_keys = base_config[section].keys()
-        if len(set(required_keys) - set(defined_keys)) > 0:
-            not_defined[section] = set(required_keys) - set(defined_keys)
-    assert len(not_defined) == 0, f"Configuration not defined: {not_defined}"
     # Default values
     config = __default_optional.copy()
-    
     for section in base_config.keys():
         config[section].update(base_config[section])
     for section in overwrite_config:
         config[section].update(overwrite_config[section])
-    
+    # Check required sections and subsections
+    not_defined = {}
+    for section, required_keys in __required.items():
+        defined_keys = config[section].keys()
+        if len(set(required_keys) - set(defined_keys)) > 0:
+            not_defined[section] = set(required_keys) - set(defined_keys)
+    assert len(not_defined) == 0, f"Configuration not defined: {not_defined}"
     # Set Experiment run id
     if config["experiment"]["run_id"] is None:
         config["experiment"]["run_id"] = wandb.util.generate_id()

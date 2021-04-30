@@ -129,7 +129,8 @@ if __name__ == "__main__":
         WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
         os.environ["WANDB_MODE"] = 'dryrun'
     # Add Aleatoric modifications
-    experiment_config["experiment"]["tags"].append("aleatoric")
+    if "aleatoric" not in experiment_config["experiment"]["tags"]:
+        experiment_config["experiment"]["tags"].append("aleatoric")
 
     run_dir = setup_experiment(experiment_config, mode="training")
     

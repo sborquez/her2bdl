@@ -2,7 +2,7 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: HDXConvClassifier-McDropout-C876
+  name: HDXConvClassifier-Aleatoric-C876
   notes: HDXConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
     - hedconv

@@ -2,7 +2,7 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: EfficientNetB1-McDropout-C876
+  name: EfficientNetB1-Aleatoric-C876
   notes: EfficientNet with MC-Dropout for Binary Classification.
   tags:
     - efficientnet
@@ -11,6 +11,7 @@ experiment:
     - dropout_rate=0.5
     - catsvsdogs
     - binary
+    - aleatoric
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
   #experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs

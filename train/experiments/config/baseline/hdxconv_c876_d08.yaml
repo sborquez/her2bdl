@@ -166,8 +166,8 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
-  metrics: [accuracy]
+evaluation:
+  #metrics: [accuracy]
 # Predict 
 predict:
   save_aggregation: false

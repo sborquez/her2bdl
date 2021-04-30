@@ -6,7 +6,7 @@ from her2bdl import *
 from pathlib import Path
 
 
-def train_model(config, quiet=False, run_dir="."):
+def train_aleatoric(config, quiet=False, run_dir="."):
 
     # Experiment paths and indentifiers
     experiments_folder = config["experiment"]["experiments_folder"]
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     quiet = args["quiet"]
 
     # Run training process
-    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir)
+    model = train_aleatoric(experiment_config, quiet=quiet, run_dir=run_dir)
 
     # restore configuration
     if args["dryrun"]:

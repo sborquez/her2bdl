@@ -166,7 +166,7 @@ def get_generator_from_wsi(generator, input_shape, batch_size, num_classes=4,
     generator = generator_contructor[generator_type](
         batch_size=batch_size, 
         patch_size=patch_size, 
-        label_mode=label_mode, 
+        label_mode=label_mode,
         **generator_parameters
     )
     steps_per_epoch = int(generator.size // batch_size)
@@ -384,6 +384,7 @@ class MCPatchGenerator(GridPatchGenerator):
 
     def __setup__(self, dataset):
         'Setup dataset for patch extraction.'
+        # TODO: Fix this. I may increase RAM.
         # For each Slide
         self.slides = {}
         # Generator dataset with weights, patches and scores only
@@ -435,6 +436,7 @@ class MCPatchGenerator(GridPatchGenerator):
 
     def on_epoch_end(self):
         'Updates samples after each epoch'
+        # TODO: Use GPU with cupy?
         self.size = len(self.dataset)*self.samples_per_tissue
         self.indexes = np.empty((self.size, 2), dtype=int)
         self.dataset_ref = np.empty((self.size), dtype=int)

@@ -43,7 +43,7 @@ __all__ = [
 # Experiment files variables
 __sections = set([
     "experiment", "model", "aggregation", "data",
-    "training", "evaluate", "predict", "plugins",
+    "training", "evaluation", "predict", "plugins",
 ])
 
 __required = {
@@ -60,7 +60,7 @@ __required = {
         ],
     "training":
         ["epochs", "loss", "callbacks"],
-    "evaluate":
+    "evaluation":
         #["metrics"],
         [],
     "predict":
@@ -68,29 +68,29 @@ __required = {
 }
 
 __default_optional = {
-    "experiment":
-        {"tags": [], "run_id": None, "seed": 1234},
-    "model":
-        {"weights": None},
-    "aggregation":
-        {},
-    "data":
-        {"preprocessing": {}, "label_mode": "categorical", "labels": None},
-    "training":
-        {"batch_size": 16, "validation_split": 0.2,
-         "optimizer":
-            {"name": "adam", "learning_rate": 0.4, "parameters": None},
+    "experiment": {"tags": [], "run_id": None, "seed": 1234},
+    "model": {"weights": None, "aleatoric_weights": None},
+    "aggregation": {},
+    "data": {"preprocessing": {}, "label_mode": "categorical", "labels": None},
+    "training": {
+        "batch_size": 16, "validation_split": 0.2,
+        "optimizer": {
+            "name": "adam", "learning_rate": 0.4, "parameters": None
         },
-    "evaluate":
-        {"batch_size": 16, 
-         "experiment_logger": 
-            {"enable_wandb" : False, "patch_metrics": {}, "wsi_metrics": {}, 
-             "uncertainty_metric": {}}
-        },
-    "predict":
-        {},
-    "plugins":
-        {"wandb": None}
+    },
+    "evaluation": {
+        "batch_size": 16,
+        "evaluate_classification": True,
+        "evaluate_aleatoric_uncertainty": True,
+        "evaluate_aggregation": False,
+        "experiment_logger": {
+                "enable_wandb" : True, "classification_metrics": {}, 
+                "aggregation_metrics": {}, "aleatoric_uncertainty": {},
+                "max_plots": 120
+            }
+    },
+    "predict": {},
+    "plugins":{"wandb": None}
 }
 
 
@@ -209,7 +209,8 @@ def setup_experiment(experiment_config, mode="training"):
 
 
 def setup_model(input_shape, num_classes, architecture, uncertainty,
-                            hyperparameters, weights=None, task=None, build=False):
+                hyperparameters, weights=None, aleatoric_weights=None,
+                task=None, build=False, build_aleatoric=False):
     """
     Construct model from configuration.
     Parameters
@@ -228,6 +229,8 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
         Path to model`s trained weights or checkpoint.
     build :  `bool`
         Use `build=True` for inspect the model without compiling it.
+    build_aleatoric : `bool`
+        Use `build_aleatoric=True` for inspect the aleatoric model without compiling it.
     task : (ignored)
     Return
     ------
@@ -243,8 +246,13 @@ def setup_model(input_shape, num_classes, architecture, uncertainty,
     )
     if build or (weights is not None):
         model(np.empty((1, *input_shape), np.float32))
-    if weights is not None:
-        model.load_weights(weights)
+        if weights is not None:
+            model.load_weights(weights)
+    if build_aleatoric or (aleatoric_weights is not None):
+        aleatoric_model = model.get_aleatoric_model()
+        aleatoric_model(np.empty((1, *input_shape), np.float32))
+        if aleatoric_weights is not None:
+            model.load_aleatoric_weights(aleatoric_weights)
     return model
 
 def setup_aggregator(method, parameters):
@@ -312,7 +320,7 @@ def setup_generators(source, num_classes, labels, label_mode, preprocessing,
     return generators, input_shape, num_classes, labels
 
 def setup_callbacks(validation_data, validation_steps, model_name, batch_size, 
-    	           enable_wandb, labels=None, earlystop=None, uncertainty_type="epistemic",
+    	           enable_wandb=True, labels=None, earlystop=None, uncertainty_type="epistemic",
                    experiment_tracker=None, checkpoints=None, run_dir="."):
     """
     Callbacks configuration:
@@ -1116,14 +1124,14 @@ class AleatoricCallback(EpistemicCallback):
                 (y_predictive_distribution, y_pred, y_predictions_variance)    
 
 
-def setup_evaluation_logger( model_name, enable_wandb, labels=None,
-                   patch_metrics={}, wsi_metrics={}, uncertainty_metric={},
-                   run_dir="."):
+def setup_evaluation_logger( model_name, enable_wandb=True, labels=None, max_plots=150,
+                   classification_metrics={}, aleatoric_uncertainty={},
+                   aggregation_metrics={}, run_dir="."):
     if enable_wandb:
         return EvaluationLogger(model_name, labels, 
-            patch_metrics=patch_metrics, 
-            wsi_metrics=wsi_metrics, 
-            uncertainty_metric=uncertainty_metric
+            classification_metrics=classification_metrics, 
+            aggregation_metrics=aggregation_metrics, 
+            aleatoric_uncertainty=aleatoric_uncertainty
         )
     else:
         # This can be implemented later ;)
@@ -1131,32 +1139,42 @@ def setup_evaluation_logger( model_name, enable_wandb, labels=None,
         raise NotImplementedError()
 
 class EvaluationLogger(WandBLogGenerator):
-    def __init__(self, model_name, labels, 
-                 patch_metrics={}, wsi_metrics={}, uncertainty_metric={},
-                max_plots  = 48
+    def __init__(self, model_name, labels, max_plots=150,
+                 classification_metrics={}, 
+                 aleatoric_uncertainty={}, 
+                 aggregation_metrics={}
         ):
         super().__init__(model_name, labels, max_plots=max_plots)
-        self._patch_metrics = {
-            "log_predictions": patch_metrics.get("log_predictions", False), 
-            "log_uncertainty": patch_metrics.get("log_uncertainty", False), 
-            "log_confusion_matrix": patch_metrics.get("log_confusion_matrix", False), 
-            "log_roc_curve": patch_metrics.get("log_roc_curve", False), 
-            "log_metrics": patch_metrics.get("log_metrics", False)
+        self._classification_metrics = {
+            "log_predictions": classification_metrics.get("log_predictions", False), 
+            "log_uncertainty": classification_metrics.get("log_uncertainty", True), # prediction + uncertainty
+            "log_class_uncertainty": classification_metrics.get("log_class_uncertainty", True),
+            "log_ranking_uncertainty": classification_metrics.get("log_ranking_uncertainty", True),
+            "log_confusion_matrix": classification_metrics.get("log_confusion_matrix", True), 
+            "log_roc_curve": classification_metrics.get("log_roc_curve", True), 
+            "log_metrics": classification_metrics.get("log_metrics", True)
         }
-        self._wsi_metrics = {
-            "log_prediction_map": wsi_metrics.get("log_prediction_map", False),
-            "log_confusion_matrix": wsi_metrics.get("log_confusion_matrix", False),
-            "log_roc_curve": wsi_metrics.get("log_roc_curve", False),
-            "log_metrics": wsi_metrics.get("log_metrics", False)
+        self._aleatoric_uncertainty = {
+            "log_class_uncertainty": aleatoric_uncertainty.get("log_class_uncertainty", True),
+            "log_ranking_uncertainty": aleatoric_uncertainty.get("log_ranking_uncertainty", True)
         }
-        self._uncertainty_metric = {
-            "log_class_uncertainty": uncertainty_metric.get("log_class_uncertainty", False),
-            "log_uncertainty_map": uncertainty_metric.get("log_uncertainty_map", False)
+        self._aggregation_metrics = {
+            "log_prediction": aggregation_metrics.get("log_prediction", True),
+            "log_prediction_map": aggregation_metrics.get("log_prediction_map", True),
+            "log_uncertainty_map": aggregation_metrics.get("log_uncertainty_map", True),
+            "log_confusion_matrix": aggregation_metrics.get("log_confusion_matrix", True),
+            "log_ranking_uncertainty": aggregation_metrics.get("log_ranking_uncertainty", True),
+            "log_class_uncertainty": aggregation_metrics.get("log_class_uncertainty", True),
+            "log_roc_curve": aggregation_metrics.get("log_roc_curve", True),
+            "log_metrics": aggregation_metrics.get("log_metrics", True),
         }
 
-    def log_patch_metrics(self, X, y_true, y_pred, y_predictive_distribution, 
+    def log_aleatoric_uncerainty(self):
+        pass
+
+    def log_classification_metrics(self, X, y_true, y_pred, y_predictive_distribution, 
                   y_predictions_samples, uncertainty):
-        log_configuration = self._patch_metrics
+        log_configuration = self._classification_metrics
         uncertainty = pd.DataFrame(uncertainty) if isinstance(uncertainty, dict) else uncertainty
         if log_configuration["log_metrics"]:
             _metrics = self._log_metrics(y_pred, y_true)
@@ -1214,3 +1232,6 @@ class EvaluationLogger(WandBLogGenerator):
                commit=False
             )
         wandb.log({}, commit=True)
+
+    def log_aggregation_metrics(self):
+        pass

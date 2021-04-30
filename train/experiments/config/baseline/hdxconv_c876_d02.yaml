@@ -79,7 +79,7 @@ data:
       validation_generator:
         generator: 'GridPatchGenerator'
         generator_parameters:
-#dataset: 'D:/sebas/Projects/her2bdl/train/datasets/best_parameters/training.csv'
+          #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/best_parameters/training.csv'
           dataset: '/home/asuka/projects/her2bdl/train/datasets/best_parameters/validation.csv'
           #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/best_parameters/training.csv'
           patch_level: 3
@@ -164,8 +164,8 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
-  metrics: [accuracy]
+evaluation:
+  #metrics: [accuracy]
 # Predict 
 predict:
   save_aggregation: false

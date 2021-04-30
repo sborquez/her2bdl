@@ -53,10 +53,11 @@ model:
 # Aggregation methods
 aggregation: 
   # Method Class
-  method: "MixtureAggregator"
+  method: "ThresholdAggregator"
   # Mathod parameters
   parameters: 
-    uncertainty_metric: "predictive_entropy"
+    uncertainty_metric: "predictive entropy"
+    threshold: 1.0
 
 # Datasets and preprocessing
 data:
@@ -155,7 +156,7 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
+evaluation:
   #metrics: [accuracy] (deprecated)
   batch_size: 8
   experiment_logger:

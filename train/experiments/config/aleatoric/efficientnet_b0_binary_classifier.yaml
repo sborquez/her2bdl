@@ -78,7 +78,7 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 10
+  epochs: 5
   # (Optional, default=16) Depends on CPU-GPU available memory.
   batch_size: 16
   # (Optional, default=0.2) Train and validation split.
@@ -122,8 +122,8 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
-  metrics: [accuracy]
+evaluation:
+  #metrics: [accuracy]
 # Predict 
 predict:
   save_aggregation: false

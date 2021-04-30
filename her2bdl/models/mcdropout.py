@@ -64,7 +64,7 @@ class MCDropoutModel(tf.keras.Model):
         self.sample_size = sample_size
         self.encoder = None
         self.classifier = None
-        self.aleatoric_model = None
+        self.__aleatoric_model = None
         # Uncertainty measures
         self.get_multual_information = multual_information
         self.get_variation_ratio = variation_ratio
@@ -78,9 +78,14 @@ class MCDropoutModel(tf.keras.Model):
         # Classify 
         return self.classifier(z)
 
-    def get_aleatoric_model(self):
-        self.aleatoric_model = self.aleatoric_model or AleatoricModel(self)
-        return self.aleatoric_model
+    def get_aleatoric_model(self, aleatoric_weights=None):
+        self.__aleatoric_model = self.__aleatoric_model or AleatoricModel(self)
+        return self.__aleatoric_model
+
+    def load_aleatoric_weights(self, load_aleatoric_weights):
+        "Load"
+        aleatoric_model = self.get_aleatoric_model()
+        aleatoric_model.load_weights(load_aleatoric_weights)
 
     @staticmethod
     def build_encoder_model(input_shape, **kwargs):

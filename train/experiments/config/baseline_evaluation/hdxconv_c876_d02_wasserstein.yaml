@@ -53,11 +53,9 @@ model:
 # Aggregation methods
 aggregation: 
   # Method Class
-  method: "ThresholdAggregator"
+  method: null
   # Mathod parameters
-  parameters: 
-    uncertainty_metric: "predictive entropy"
-    threshold: 1.0
+  parameters: null
 
 # Datasets and preprocessing
 data:
@@ -156,7 +154,7 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
+evaluation:
   #metrics: [accuracy] (deprecated)
   batch_size: 8
   experiment_logger:
@@ -177,9 +175,9 @@ evaluate:
       log_uncertainty_map: true
 # Predict 
 predict:
-  save_aggregation: false
+  save_aggregation: true
   save_predictions: true
-  save_uncertainty: false
+  save_uncertainty: true
 # Plugin setups
 plugins:
   wandb:

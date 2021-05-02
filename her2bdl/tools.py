@@ -185,10 +185,8 @@ def setup_experiment(experiment_config, mode="training"):
             # for consistency
             experiment_config["training"]["callbacks"]["enable_wandb"] = False 
             pass
-        elif mode == "evaluate":
-            # TODO: add enable_wandb option for evaluation
-            experiment_config["evaluate"]["experiment_logger"]["enable_wandb"] = False 
-            pass
+        elif mode == "evaluation":
+            experiment_config["evaluation"]["experiment_logger"]["enable_wandb"] = False 
         else:
             raise ValueError(f"mode {mode} not supported yet.")
         experiments_folder = \
@@ -290,7 +288,12 @@ def setup_generators(source, num_classes, labels, label_mode, preprocessing,
                 validation_split=validation_split, preprocessing=preprocessing
             )
         else:
-            raise NotImplementedError
+            generators = get_generators_from_tf_Dataset(
+                **dataset_parameters, 
+                num_classes=num_classes, label_mode=label_mode,
+                input_shape=input_shape, batch_size=batch_size, 
+                test_dataset=True, preprocessing=preprocessing
+            )
     elif source_type == "wsi":
         if not test_dataset:
             #Load train and validation generators 
@@ -474,7 +477,8 @@ class WandBLogGenerator():
         return img_log
 
     def _log_predictions(self, x_true, y_true, 
-                         y_predictive_distribution, y_pred):
+                         y_predictive_distribution, y_pred,
+                         examples_n=None):
         """
         Display sample and models prediction.
         
@@ -488,6 +492,8 @@ class WandBLogGenerator():
             Predicted distribution. (batch, ?, ?)
         y_pred : `np.ndarray`
             Predicted classes. (batch, 1)
+        examples_n : `int` or `None`
+            Plot n examples.
         Return
         ------
             List of `wandb.Image`
@@ -495,9 +501,10 @@ class WandBLogGenerator():
         """
         wandb_images = []
         length = len(x_true)
-        if length > self.max_plots :
+        max_plots = self.max_plots if examples_n is None else min(self.max_plots, examples_n)
+        if length > max_plots :
             choices = np.random.choice(
-                range(length), size=self.max_plots , replace=False
+                range(length), size=max_plots , replace=False
             )
         else:
             choices = range(length)
@@ -533,7 +540,8 @@ class WandBLogGenerator():
 
     def _log_epistemic_uncertainty(self, x_true, y_true, 
                          y_predictive_distribution, y_pred, 
-                         y_predictions_samples, uncertainty):
+                         y_predictions_samples, uncertainty,
+                         examples_n=None):
         """
         Display sample and models uncertainty.
 
@@ -547,9 +555,11 @@ class WandBLogGenerator():
             Predicted distribution. (batch, ?, ?)
         y_pred : `np.ndarray`
             Predicted classes. (batch, 1)
-        y_predictions_samples : `np.ndarray`
+        y_predictions_samples : `np.ndarray` or `None`
             Predicted classes samples. (batch, samples, classes)
         uncertainty : `pd.DataFrame`
+        examples_n : `int`
+            Number of examples.
         Return
         ------
             List of `wandb.Image`
@@ -557,9 +567,10 @@ class WandBLogGenerator():
         """
         wandb_images = []
         length = len(x_true)
-        if length > self.max_plots :
+        max_plots = self.max_plots if examples_n is None else min(self.max_plots, examples_n)
+        if length > max_plots:
             choices = np.random.choice(range(length), 
-                        size=self.max_plots , replace=False)
+                        size=max_plots , replace=False)
         else:
             choices = range(length)
         for i in choices:
@@ -568,7 +579,7 @@ class WandBLogGenerator():
                 y_pred = y_pred[i],
                 y_true = y_true[i], 
                 predictive_distribution = y_predictive_distribution[i],
-                prediction_samples = y_predictions_samples[i],
+                prediction_samples = y_predictions_samples[i] if y_predictions_samples is not None else None,
                 uncertainty = uncertainty.iloc[i],
                 model_name = self.model_name,
                 labels = self.labels
@@ -607,10 +618,10 @@ class WandBLogGenerator():
             plt.close(figure)
         return wandb_images
 
-    def _log_epistemic_uncertainty_highlights(self, x_true, y_true, 
-                                    y_predictive_distribution, y_pred, 
-                                    y_predictions_samples, uncertainty, 
-                                    mode='max'):
+    def _log_epistemic_uncertainty_highlights(self,
+        x_true, y_true, y_predictive_distribution, y_pred, y_predictions_samples,
+        uncertainty, mode='max', top_n=1, return_dict=False
+        ):
         """
         Display sample uncertainty with higher or lower uncertainty.
 
@@ -627,42 +638,56 @@ class WandBLogGenerator():
         y_predictions_samples : `np.ndarray`
             Predicted classes samples. (batch, samples, classes)
         uncertainty : `pd.DataFrame`
+            Predicted uncertainty
         mode :  `str` ['max' | 'min'] (default='max')
             Select mode for sorted samples.
+        top_n: `int`
+            Number of samples.
         Return
         ------
             List of `wandb.Image`
                 Prediction, input image and uncertainty samples.
         """
-        # TODO: Merge this with the epistemic highlight, to dont repeat code
         caption = "higher" if mode == "max" else "lower"
         highlights = []
+        top_n = min(self.max_plots, top_n)
         for metric in uncertainty:
+            sorted_indices = uncertainty[metric].argsort()
             if mode == 'max':
-                index = uncertainty[metric].argmax()
+                indices = sorted_indices.iloc[-1:-(1+top_n):-1]
             elif mode == 'min':
-                index = uncertainty[metric].argmin()
-            highlights.append((index, metric))
+                indices = sorted_indices.iloc[:top_n]
+            highlights.append((indices, metric))
         wandb_images = []
-        for i, metric in highlights:
-            figure = display_uncertainty(
-                x = x_true[i],
-                y_pred = y_pred[i],
-                y_true = y_true[i], 
-                predictive_distribution = y_predictive_distribution[i],
-                prediction_samples = y_predictions_samples[i],
-                uncertainty = uncertainty.iloc[i],
-                model_name = self.model_name,
-                labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure, caption=f"{caption} {metric}")
-            )
-            plt.close(figure)
+        for indices, metric in highlights:
+            for i in indices:             
+                figure = display_uncertainty(
+                    x = x_true[i],
+                    y_pred = y_pred[i],
+                    y_true = y_true[i], 
+                    predictive_distribution = y_predictive_distribution[i],
+                    prediction_samples = (y_predictions_samples[i]) if y_predictions_samples is not None else None,
+                    uncertainty = uncertainty.iloc[i],
+                    model_name = self.model_name,
+                    labels = self.labels
+                )
+                wandb_images.append(
+                    wandb.Image(figure, caption=f"{caption} {metric}")
+                )
+                plt.close(figure)
+        if (top_n > 1) or return_dict:
+            n_metrics = len(wandb_images)//top_n
+            wandb_images = [wandb_images[i*top_n:(i+1)*top_n] for i in range(n_metrics)]
+            if return_dict:
+                cap_ = "High" if mode == "max" else "Low"
+                wandb_images = {
+                    f"{cap_} {metric}": wandb_images[m] for m, metric in enumerate(uncertainty)
+                }
         return wandb_images
 
     def _log_aleatoric_uncertainty(self, x_true, y_true, 
-                         y_predictive_distribution, y_pred, uncertainty):
+                         y_predictive_distribution, y_pred, uncertainty,
+                         examples_n=None):
         """
         Display sample and models uncertainty.
 
@@ -682,33 +707,16 @@ class WandBLogGenerator():
             List of `wandb.Image`
                 Prediction, input image and uncertainty samples.
         """
-        wandb_images = []
-        length = len(x_true)
-        if length > self.max_plots :
-            choices = np.random.choice(range(length), 
-                        size=self.max_plots , replace=False)
-        else:
-            choices = range(length)
-        for i in choices:
-            figure = display_uncertainty(
-                x = x_true[i],
-                y_pred = y_pred[i],
-                y_true = y_true[i], 
-                predictive_distribution = y_predictive_distribution[i],
-                prediction_samples = None,
-                uncertainty = uncertainty.iloc[i],
-                model_name = self.model_name,
-                labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure)
-            )
-            plt.close(figure)
-        return wandb_images
+        return self._log_epistemic_uncertainty(
+            x_true, y_true, 
+            y_predictive_distribution, y_pred, None, uncertainty,
+            examples_n=examples_n
+        )
 
-    def _log_aleatoric_uncertainty_highlights(self, x_true, y_true, 
-                                    y_predictive_distribution, y_pred, uncertainty, 
-                                    mode='max'):
+    def _log_aleatoric_uncertainty_highlights(self, 
+            x_true, y_true, y_predictive_distribution, y_pred, uncertainty,
+            mode='max', top_n=1, return_dict=False
+        ):
         """
         Display sample uncertainty with higher or lower uncertainty.
 
@@ -723,39 +731,23 @@ class WandBLogGenerator():
         y_pred : `np.ndarray`
             Predicted classes. (batch, 1)
         uncertainty : `pd.DataFrame`
+            Predicted uncertainty
         mode :  `str` ['max' | 'min'] (default='max')
             Select mode for sorted samples.
+        top_n: `int`
+            Number of samples.
+        return_dict: `bool`
+            Return a dictionary for each uncertainty metric instead of a list of images
         Return
         ------
             List of `wandb.Image`
                 Prediction, input image and uncertainty samples.
         """
-        # TODO: Merge this with the epistemic highlight, to dont repeat code
-        caption = "higher" if mode == "max" else "lower"
-        highlights = []
-        for metric in uncertainty:
-            if mode == 'max':
-                index = uncertainty[metric].argmax()
-            elif mode == 'min':
-                index = uncertainty[metric].argmin()
-            highlights.append((index, metric))
-        wandb_images = []
-        for i, metric in highlights:
-            figure = display_uncertainty(
-                x = x_true[i],
-                y_pred = y_pred[i],
-                y_true = y_true[i], 
-                predictive_distribution = y_predictive_distribution[i],
-                prediction_samples = None,
-                uncertainty = uncertainty.iloc[i],
-                model_name = self.model_name,
-                labels = self.labels
-            )
-            wandb_images.append(
-                wandb.Image(figure, caption=f"{caption} {metric}")
-            )
-            plt.close(figure)
-        return wandb_images
+        return self._log_epistemic_uncertainty_highlights(
+            x_true, y_true, 
+            y_predictive_distribution, y_pred, None, uncertainty,
+            mode=mode, top_n=top_n, return_dict=return_dict
+        ) 
 
 class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
     """
@@ -795,7 +787,8 @@ class EpistemicCallback(wandb.keras.WandbCallback, WandBLogGenerator):
                         validation_steps=validation_steps,
                         class_colors=class_colors,
                         log_batch_frequency=log_batch_frequency,
-                        log_best_prefix=log_best_prefix)
+                        log_best_prefix=log_best_prefix
+        )
         self.tf_Dataset = generator #TF dataset
 
         self.sample_data, self.validation_data = self.setup_validation_data(
@@ -1058,23 +1051,23 @@ class AleatoricCallback(EpistemicCallback):
                 commit=False
             ) 
             _uncertainty = {
-                    "Uncertainty": self._log_aleatoric_uncertainty(
+                    "Aleatoric Uncertainty": self._log_aleatoric_uncertainty(
                         *validation_data, 
                         y_predictive_distribution,
                         y_pred,
                         uncertainty
                     ),
-                    "Uncertainty By Class": self._log_uncertainty_by_class(
+                    "Aleatoric Uncertainty By Class": self._log_uncertainty_by_class(
                         validation_data[1], 
                         uncertainty
                     ),
-                    "High Uncertainty": self._log_aleatoric_uncertainty_highlights(
+                    "High Aleatoric Uncertainty": self._log_aleatoric_uncertainty_highlights(
                         *validation_data,
                         y_predictive_distribution,
                         y_pred,
                         uncertainty, mode='max'
                     ),
-                    "Low Uncertainty": self._log_aleatoric_uncertainty_highlights(
+                    "Low Aleatoric Uncertainty": self._log_aleatoric_uncertainty_highlights(
                         *validation_data,
                         y_predictive_distribution,
                         y_pred,
@@ -1123,6 +1116,7 @@ def setup_evaluation_logger( model_name, enable_wandb=True, labels=None, max_plo
                    aggregation_metrics={}, run_dir="."):
     if enable_wandb:
         return EvaluationLogger(model_name, labels, 
+            max_plots=max_plots,
             classification_metrics=classification_metrics, 
             aggregation_metrics=aggregation_metrics, 
             aleatoric_uncertainty=aleatoric_uncertainty
@@ -1140,36 +1134,102 @@ class EvaluationLogger(WandBLogGenerator):
         ):
         super().__init__(model_name, labels, max_plots=max_plots)
         self._classification_metrics = {
+            "examples_n": classification_metrics.get("examples_n", 30),
             "log_predictions": classification_metrics.get("log_predictions", False), 
             "log_uncertainty": classification_metrics.get("log_uncertainty", True), # prediction + uncertainty
             "log_class_uncertainty": classification_metrics.get("log_class_uncertainty", True),
-            "log_ranking_uncertainty": classification_metrics.get("log_ranking_uncertainty", True),
+            "top_n": classification_metrics.get("top_n", 30),
+            "log_uncertainty_highlights": classification_metrics.get("log_uncertainty_highlights", True),
             "log_confusion_matrix": classification_metrics.get("log_confusion_matrix", True), 
             "log_roc_curve": classification_metrics.get("log_roc_curve", True), 
             "log_metrics": classification_metrics.get("log_metrics", True)
         }
         self._aleatoric_uncertainty = {
+            "examples_n": classification_metrics.get("examples_n", 30),
+            "log_uncertainty": classification_metrics.get("log_uncertainty", True), # prediction + uncertainty
             "log_class_uncertainty": aleatoric_uncertainty.get("log_class_uncertainty", True),
-            "log_ranking_uncertainty": aleatoric_uncertainty.get("log_ranking_uncertainty", True)
+            "top_n": classification_metrics.get("top_n", 30),
+            "log_uncertainty_highlights": aleatoric_uncertainty.get("log_uncertainty_highlights", True)
         }
         self._aggregation_metrics = {
             "log_prediction": aggregation_metrics.get("log_prediction", True),
             "log_prediction_map": aggregation_metrics.get("log_prediction_map", True),
             "log_uncertainty_map": aggregation_metrics.get("log_uncertainty_map", True),
             "log_confusion_matrix": aggregation_metrics.get("log_confusion_matrix", True),
-            "log_ranking_uncertainty": aggregation_metrics.get("log_ranking_uncertainty", True),
+            "log_uncertainty_highlights": aggregation_metrics.get("log_uncertainty_highlights", True),
             "log_class_uncertainty": aggregation_metrics.get("log_class_uncertainty", True),
             "log_roc_curve": aggregation_metrics.get("log_roc_curve", True),
-            "log_metrics": aggregation_metrics.get("log_metrics", True),
+            "log_metrics": aggregation_metrics.get("log_metrics", True)
         }
 
-    def log_aleatoric_uncerainty(self):
-        pass
+    def log_aleatoric_uncertainty(self, data, predictions_results, uncertainty_results):
+        X = data["X"]
+        y_true = data["y_true"]
+        y_pred = predictions_results['y_pred']
+        y_predictive_distribution = predictions_results['y_predictive_distribution']
+        uncertainty = pd.DataFrame(uncertainty_results)
+        log_configuration = self._aleatoric_uncertainty
+        # Uncertainty
+        if log_configuration["log_uncertainty"]:
+            examples_n = log_configuration["examples_n"]
+            wandb.log(
+                self._log_mean_uncertainty(uncertainty),
+                commit=False
+            ) 
+            wandb.log(
+                {
+                    "Aleatoric Uncertainty": self._log_aleatoric_uncertainty(
+                        X, y_true, 
+                        y_predictive_distribution, y_pred, 
+                        uncertainty,
+                        examples_n=examples_n
+                    )
+                },
+               commit=False
+            )
+        if log_configuration["log_class_uncertainty"]:
+            wandb.log(
+                {
+                    "Aleatoric Uncertainty By Class": self._log_uncertainty_by_class(
+                        y_true, uncertainty
+                    )
+                },
+               commit=False
+            )
+        if log_configuration["log_uncertainty_highlights"]:
+            top_n = log_configuration["top_n"]
+            wandb.log(
+                self._log_aleatoric_uncertainty_highlights(
+                    X, y_true, 
+                    y_predictive_distribution, y_pred, 
+                    uncertainty,
+                    mode='max', top_n=top_n, return_dict=True
+                    ),
+                commit=False
+            )
+            wandb.log(
+                self._log_aleatoric_uncertainty_highlights(
+                        X, y_true, 
+                        y_predictive_distribution, y_pred, 
+                        uncertainty,
+                        mode='min', top_n=top_n, return_dict=True
+                ),
+                commit=False
+            )
+        wandb.log({}, commit=True)
 
-    def log_classification_metrics(self, X, y_true, y_pred, y_predictive_distribution, 
-                  y_predictions_samples, uncertainty):
+
+    def log_classification_metrics(self, 
+            data, predictions_results, uncertainty_results
+        ):
+        X = data["X"]
+        y_true = data["y_true"]
+        y_pred = predictions_results['y_pred']
+        y_predictive_distribution = predictions_results['y_predictive_distribution']
+        y_predictions_samples = predictions_results['y_predictions_samples']
+        uncertainty = pd.DataFrame(uncertainty_results)
         log_configuration = self._classification_metrics
-        uncertainty = pd.DataFrame(uncertainty) if isinstance(uncertainty, dict) else uncertainty
+        #  Metrics
         if log_configuration["log_metrics"]:
             _metrics = self._log_metrics(y_pred, y_true)
             class_stat_table, overall_stat_table, overall_and_class_values = _metrics 
@@ -1178,6 +1238,7 @@ class EvaluationLogger(WandBLogGenerator):
                 "Class Stat": class_stat_table,
                 "Overall Stat": overall_stat_table
             }, commit=False)
+        #  Plots
         if log_configuration["log_roc_curve"]:
             roc_plot = self._log_roc_curve(y_predictive_distribution, y_true)
             wandb.log({ "ROC Curve": roc_plot}, commit=False)
@@ -1186,15 +1247,21 @@ class EvaluationLogger(WandBLogGenerator):
             cm_plot = self._log_confusion_matrix(y_pred, y_true)
             wandb.log({"Confusion Matrix": cm_plot}, commit=False)
 
+        # Examples
         if log_configuration["log_predictions"]:
+            examples_n = log_configuration["examples_n"]
             wandb.log(
-                {"Examples": self._log_predictions(
-                        X, y_true, y_predictive_distribution, y_pred
-                    )},
+                {
+                    "Examples": self._log_predictions(
+                        X, y_true, y_predictive_distribution, y_pred,
+                        examples_n=examples_n
+                    )
+                },
                 commit=False
             )
-
+        # Uncertainty
         if log_configuration["log_uncertainty"]:
+            examples_n = log_configuration["examples_n"]
             wandb.log(
                 self._log_mean_uncertainty(uncertainty),
                 commit=False
@@ -1204,26 +1271,40 @@ class EvaluationLogger(WandBLogGenerator):
                     "Uncertainty": self._log_epistemic_uncertainty(
                         X, y_true, 
                         y_predictive_distribution, y_pred, 
-                        y_predictions_samples, uncertainty
-                    ),
-                    "Uncertainty By Class": self._log_uncertainty_by_class(
-                        y_true, 
-                        uncertainty
-                    ),
-                    "High Uncertainty": self._log_epistemic_uncertainty_highlights(
-                        X, y_true, 
-                        y_predictive_distribution, y_pred, 
                         y_predictions_samples, uncertainty,
-                        mode='max'
-                    ),
-                    "Low Uncertainty": self._log_epistemic_uncertainty_highlights(
-                        X, y_true, 
-                        y_predictive_distribution, y_pred, 
-                        y_predictions_samples, uncertainty,
-                        mode='min'
+                        examples_n=examples_n
                     )
                 },
                commit=False
+            )
+        if log_configuration["log_class_uncertainty"]:
+            wandb.log(
+                {
+                    "Uncertainty By Class": self._log_uncertainty_by_class(
+                        y_true, uncertainty
+                    )
+                },
+               commit=False
+            )
+        if log_configuration["log_uncertainty_highlights"]:
+            top_n = log_configuration["top_n"]
+            wandb.log(
+                self._log_epistemic_uncertainty_highlights(
+                    X, y_true, 
+                    y_predictive_distribution, y_pred, 
+                    y_predictions_samples, uncertainty,
+                    mode='max', top_n=top_n, return_dict=True
+                ),
+                commit=False
+            )
+            wandb.log(
+                self._log_epistemic_uncertainty_highlights(
+                    X, y_true, 
+                    y_predictive_distribution, y_pred, 
+                    y_predictions_samples, uncertainty,
+                    mode='min', top_n=top_n, return_dict=True
+                ), 
+                commit=False
             )
         wandb.log({}, commit=True)
 

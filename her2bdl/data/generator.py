@@ -41,14 +41,15 @@ def generator_to_tf_Dataset(generator, img_height, img_width):
 
 def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, 
                                    num_classes=None, label_mode="categorical", 
-                                   validation_split=None, preprocessing={},
-                                   data_dir=None):
+                                   validation_split=None, test_dataset=False, 
+                                   preprocessing={}, data_dir=None):
     """
     Sources:
         * simple: https://www.tensorflow.org/datasets/catalog/mnist
         * binary: https://www.tensorflow.org/datasets/catalog/cats_vs_dogs
         * multiclass: https://www.tensorflow.org/datasets/catalog/stanford_dogs
     """
+    #data_dir= "/home/asuka/mnt/external/datasets/tensorflow_datasets" 
     img_height, img_width = input_shape[:2]
     def get_mapper(img_height, img_width, to_rgb, num_classes, label_mode="categorical", rescale=None):
         @tf.autograph.experimental.do_not_convert
@@ -68,48 +69,62 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
 
     assert (dataset_target in ["simple", "binary", "multiclass", "mnist"]),\
      "Invalid dataset_target."
+    train_val_split = None
     if dataset_target == "simple":
         to_rgb = True
         num_classes = 10
         dataset = 'mnist'
-    elif dataset_target == "mnist":
-        to_rgb = True
-        num_classes = 10
-        dataset = 'mnist'
+        train_split = 'train'
+        test_split = f'test[:{2*batch_size}]'
+        if validation_split is not None:
+            train_val_split = [f'train[:{2*batch_size}]', f'train[{2*batch_size}:{4*batch_size}]']
     elif dataset_target == "binary":
         to_rgb = False
         num_classes = 2
         dataset = "cats_vs_dogs"
-    elif dataset_target == "multiclass":
-        to_rgb = False
-        raise NotImplementedError("find num_classes for dogs")
-        num_classes = None
-        dataset = "stanford_dogs"
-
+        train_split = 'train[:80%]'
+        test_split = 'train[80%:]'
+        if validation_split is not None:
+            split_ = min(80, max(0, int(80*(1-validation_split))))
+            train_val_split = [f'train[:{split_}%]', f'train[{split_}%:80%]']
+    # elif dataset_target == "multiclass":
+    #     to_rgb = False
+    #     raise NotImplementedError("find num_classes for dogs")
+    #     num_classes = None
+    #     dataset = "stanford_dogs"
     # preprocessing
     rescale = preprocessing.get("rescale", None)
 
     # load and split datasets
-    if validation_split is not None:
-        if isinstance(validation_split, str):
-            split = [f'train[:{2*batch_size}]', f'train[:{2*batch_size}]']
-        elif isinstance(validation_split, float):
-            #TODO: add split
-            #validation_split
-            split_ = int(10*validation_split)
-            split = [f'train[:{100 - split_}%]', f'train[-{split_}%:]']
-        train_ds, validation_ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
-        train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        steps_per_epoch = len(train_dataset)
-        val_dataset = validation_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        validation_steps = len(val_dataset)
-        return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
-    else:
-        split = f'train[:{2*batch_size}]' if dataset_target == "simple" else "train" 
-        ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+    if test_dataset:
+        ds = tfds.load(dataset, split=test_split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+        test_dataset = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        steps_per_epoch = len(test_dataset)
+        return (test_dataset, steps_per_epoch)
+    elif validation_split is None:
+        ds = tfds.load(
+            dataset, split=train_split, as_supervised=True, shuffle_files=True,
+            batch_size=batch_size, data_dir=data_dir
+        )
         train_dataset = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(train_dataset)
         return (train_dataset, steps_per_epoch)
+    else:
+        train_ds, validation_ds = tfds.load(
+            dataset, split=train_val_split, as_supervised=True, 
+            shuffle_files=True, batch_size=batch_size, data_dir=data_dir
+        )
+        train_dataset = train_ds.map(
+            get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE
+        )
+        steps_per_epoch = len(train_dataset)
+        val_dataset = validation_ds.map(
+            get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE
+        )
+        validation_steps = len(val_dataset)
+        return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
 
 
 def get_generators_from_directory(data_directory, input_shape, batch_size, num_classes=None, label_mode="categorical", validation_split=None, preprocessing={}):

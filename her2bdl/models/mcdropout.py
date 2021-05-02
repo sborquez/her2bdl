@@ -100,8 +100,8 @@ class MCDropoutModel(tf.keras.Model):
         Prediction and epistemic uncertainty results for x dataset.
         Parameters
         ----------
-        dataset : `np.ndarray`  (batch_size, *input_shape)
-            Data generator.
+        dataset : `keras.utils.Sequence` or `ParallelMapDataset`
+            Data generator or TF_Dataset.
         include_data    : `bool``
             Returns x and y_true from dataset.
         kwargs : 
@@ -113,9 +113,15 @@ class MCDropoutModel(tf.keras.Model):
         """
         predictions_results = None
         uncertainty_results = None
-        pbar = tqdm(range(len(dataset))) if verbose >= 0 else range(len(dataset))
-        for i in pbar:
-            (X_batch, y_batch) = dataset[i]
+        if isinstance(dataset, tf.keras.utils.Sequence):
+            steps_per_epoch = len(dataset)
+            pbar = tqdm(enumerate(dataset)) if verbose >= 0 else enumerate(dataset)
+        else:
+            steps_per_epoch = len(dataset)
+            iterator = dataset.as_numpy_iterator()
+            pbar = tqdm(enumerate(iterator), total=steps_per_epoch) if verbose >= 0 else enumerate(iterator)
+        
+        for i, (X_batch, y_batch) in pbar:
             y_true_batch = y_batch.argmax(axis=1)
             predictions_batch = self.predict_distribution(
                 x=X_batch, verbose=verbose, **kwargs
@@ -589,16 +595,19 @@ class AleatoricModel(tf.keras.Model):
         """
         predictions_results = None
         uncertainty_results = None
-        pbar = tqdm(range(len(dataset))) if verbose >= 0 else range(len(dataset))
-        for i in pbar:
-            (X_batch, y_batch) = dataset[i]
+        if isinstance(dataset, tf.keras.utils.Sequence):
+            steps_per_epoch = len(dataset)
+            pbar = tqdm(enumerate(dataset)) if verbose >= 0 else enumerate(dataset)
+        else:
+            steps_per_epoch = len(dataset)
+            iterator = dataset.as_numpy_iterator()
+            pbar = tqdm(enumerate(iterator), total=steps_per_epoch) if verbose >= 0 else enumerate(iterator)
+        for i, (X_batch, y_batch) in pbar:
             y_true_batch = y_batch.argmax(axis=1)
-            predictions_batch = self.predict(
+            predictions_batch = self.predict_variance(
                 x=X_batch, verbose=verbose, **kwargs
             )
-            y_predictive_distribution_batch = predictions_batch[:,:-1]
-            y_pred_batch = y_predictive_distribution_batch.argmax(axis=1)
-            predictive_variance = predictions_batch[:,-1]
+            y_predictive_distribution_batch, y_pred_batch, predictive_variance = predictions_batch
             if i == 0:
                 predictions_results = {
                     "y_pred": y_pred_batch,
@@ -652,7 +661,7 @@ class AleatoricModel(tf.keras.Model):
         # Uncertainty metrics
         uncertainty = {}
         ## Predictive Variance
-        uncertainty["predictive variance"] = y_predictive_variance
+        uncertainty["predictive_variance"] = y_predictive_variance
         ## STD
         if get_std:
             uncertainty["predictive std"] = np.sqrt(y_predictive_variance)

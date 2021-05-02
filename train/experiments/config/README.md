@@ -208,7 +208,7 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
+evaluation:
   metrics: [accuracy]
 # Predict 
 predict:
@@ -394,7 +394,7 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
+evaluation:
   metrics: [accuracy]
 # Predict 
 predict:

@@ -126,7 +126,7 @@ if __name__ == "__main__":
         experiment_config["training"]["callbacks"]["enable_wandb"] = False
         experiment_config["plugins"]["wandb"] = None
     if args["dryrun"]:
-        WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
+        WANDB_MODE_bck = os.environ.get("WANDB_MODE", "")
         os.environ["WANDB_MODE"] = 'dryrun'
     # Add Aleatoric modifications
     if "aleatoric" not in experiment_config["experiment"]["tags"]:

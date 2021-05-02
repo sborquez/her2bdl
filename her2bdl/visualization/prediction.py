@@ -142,11 +142,11 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples=N
     if prediction_samples is None:
         ax1_subplot = 121
         ax2_subplot = 122
+        fig = plt.figure(figsize=(8, 4))
     else:
         ax1_subplot = 221
         ax2_subplot = 222
-
-    fig = plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(8, 6))
     ax1 = plt.subplot(221)
     plot_sample(x, y_true=y_true, y_pred=y_pred, labels=labels, axis=ax1)
     ax2 = plt.subplot(222)

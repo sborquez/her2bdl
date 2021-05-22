@@ -11,6 +11,7 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import cv2
 from tensorflow.random import set_seed
 
 import yaml
@@ -27,11 +28,11 @@ from .visualization.performance import (
     display_confusion_matrix, display_multiclass_roc_curve
 )
 from .visualization.prediction import (
-    display_prediction, display_uncertainty, display_uncertainty_by_class
+    display_prediction, display_uncertainty, display_uncertainty_by_class, display_map
 )
 from .models import MODELS, AGGREGATION_METHODS
 from .data import get_generator_from_wsi, get_generators_from_tf_Dataset
-from .data import TARGET_LABELS_list
+from .data import TARGET_LABELS_list, TARGET, TARGET_LABELS
 
 
 __all__ = [
@@ -346,6 +347,7 @@ def setup_callbacks(validation_data, validation_steps, model_name, batch_size,
             save_weights_only: true
             monitor: val_loss
     """
+    assert uncertainty_type in ("epistemic", "aleatoric")
     callbacks =[]
     if enable_wandb:
         if uncertainty_type == "epistemic":
@@ -1152,11 +1154,10 @@ class EvaluationLogger(WandBLogGenerator):
             "log_uncertainty_highlights": aleatoric_uncertainty.get("log_uncertainty_highlights", True)
         }
         self._aggregation_metrics = {
-            "log_prediction": aggregation_metrics.get("log_prediction", True),
-            "log_prediction_map": aggregation_metrics.get("log_prediction_map", True),
-            "log_uncertainty_map": aggregation_metrics.get("log_uncertainty_map", True),
+            "examples_n": aggregation_metrics.get("examples_n", 50),
+            "log_predictions": aggregation_metrics.get("log_predictions", True),
+            "log_map": aggregation_metrics.get("log_map", True),
             "log_confusion_matrix": aggregation_metrics.get("log_confusion_matrix", True),
-            "log_uncertainty_highlights": aggregation_metrics.get("log_uncertainty_highlights", True),
             "log_class_uncertainty": aggregation_metrics.get("log_class_uncertainty", True),
             "log_roc_curve": aggregation_metrics.get("log_roc_curve", True),
             "log_metrics": aggregation_metrics.get("log_metrics", True)
@@ -1308,5 +1309,139 @@ class EvaluationLogger(WandBLogGenerator):
             )
         wandb.log({}, commit=True)
 
-    def log_aggregation_metrics(self):
-        pass
+    def _log_maps(self, dataset, agg_groups, agg_groups_df, 
+                agg_y_true, agg_y_pred, X, y_pred, uncertainty):
+        example_maps = []
+        prediction_maps = []
+        uncertainty_maps = {u:[] for u in uncertainty.columns}
+        scale = 0.25
+        for group_  in zip(agg_groups, agg_groups_df, agg_y_true, agg_y_pred):
+            group, group_df, group_true, group_pred = group_
+            info_ = group_df.iloc[0]
+            # Example
+            img_map_title = f"CaseNo {info_['CaseNo']} - ID {info_['label']}\n{TARGET} {TARGET_LABELS[info_[TARGET]]}"
+            img_map_original = dataset.get_map(group_df, values=X)
+            img_map = cv2.resize(img_map_original, (0, 0), fx=scale, fy=scale)
+            del img_map_original
+            img_map_fig = display_map(img_map, title=img_map_title)
+            example_maps.append(wandb.Image(img_map_fig))
+            plt.close(img_map_fig)
+
+            # Prediction
+            pred_map_title =  f"CaseNo {info_['CaseNo']} - ID {info_['label']}\n"
+            pred_map_title += f"{TARGET} {TARGET_LABELS[info_[TARGET]]}\n"
+            pred_map_title += f"Predicted {TARGET_LABELS[group_pred]}"
+            pred_map_original = dataset.get_map(group_df, values=y_pred)
+            pred_map = cv2.resize(pred_map_original, (0, 0), fx=scale, fy=scale)
+            del pred_map_original
+            pred_map_fig =  display_map(img_map, pred_map, title=pred_map_title, color_map='her2')
+            prediction_maps.append(wandb.Image(pred_map_fig))
+            plt.close(pred_map_fig)
+            
+            # Uncertainty
+            for u in uncertainty.columns:
+                unc_map_title =  f"CaseNo {info_['CaseNo']} - ID {info_['label']}\n"
+                unc_map_title += f"{TARGET} {TARGET_LABELS[info_[TARGET]]}\n"
+                unc_map_title += f"{u}"
+                uncertainty_map_original = dataset.get_map(group_df, values=uncertainty[u])
+                uncertainty_map = cv2.resize(uncertainty_map_original, (0, 0), fx=scale, fy=scale)
+                del uncertainty_map_original
+                uncertainty_map_fig = display_map(img_map, uncertainty_map, title=unc_map_title)
+                uncertainty_maps[u].append(wandb.Image(uncertainty_map_fig))
+                plt.close(uncertainty_map_fig)
+                del uncertainty_map
+            del img_map
+            del pred_map
+        return example_maps, prediction_maps, uncertainty_maps
+
+    def log_aggregation_metrics(self,
+            dataset,
+            data, predictions_results, uncertainty_results,
+            aggregated_data, aggregated_predictions, aggregated_uncertainty
+        ):
+        log_configuration = self._aggregation_metrics
+        # Individual classifications
+        X = data["X"]
+        y_true = data["y_true"]
+        y_pred = predictions_results["y_pred"]
+        uncertainty = pd.DataFrame(uncertainty_results)
+        # Aggregated classifications
+        agg_groups      = aggregated_data["group"]
+        agg_groups_df = aggregated_data["df"]
+        agg_y_true = aggregated_data["y_true"]
+        agg_y_pred = aggregated_predictions['y_pred']
+        agg_y_predictive_distribution = aggregated_predictions['y_predictive_distribution']
+        agg_y_predictions_samples = aggregated_predictions['y_predictions_samples']
+        agg_uncertainty = pd.DataFrame(aggregated_uncertainty)
+        #  Metrics
+        if log_configuration["log_metrics"]:
+            _metrics = self._log_metrics(agg_y_pred, agg_y_true)
+            class_stat_table, overall_stat_table, overall_and_class_values = _metrics 
+            wandb.log(overall_and_class_values, commit=False)
+            wandb.log({
+                "Agg Class Stat": class_stat_table,
+                "Agg Overall Stat": overall_stat_table
+            }, commit=False)
+        #  Plots
+        if log_configuration["log_roc_curve"]:
+            roc_plot = self._log_roc_curve(agg_y_predictive_distribution, agg_y_true)
+            wandb.log({ "Agg ROC Curve": roc_plot}, commit=False)
+
+        if log_configuration["log_confusion_matrix"]:
+            cm_plot = self._log_confusion_matrix(agg_y_pred, agg_y_true)
+            wandb.log({"Agg Confusion Matrix": cm_plot}, commit=False)
+
+        # Examples
+        if log_configuration["log_predictions"]:
+            examples_n = log_configuration["examples_n"] or len(agg_groups_df)
+            examples_ = []
+            for i, group_df in enumerate(agg_groups_df):
+                if examples_n == 0:
+                    break
+                agg_X = dataset.get_map(group_df, values=X, resize=0.35)
+                examples_.append(
+                    self._log_predictions(
+                        [agg_X], [agg_y_true[i]], [agg_y_predictive_distribution[i]], [agg_y_pred[i]],
+                        examples_n=1
+                    )[0]
+                )
+                examples_n -= 1
+                del agg_X
+            wandb.log({"Agg Examples": examples_}, commit=False)
+
+        if log_configuration["log_map"]:
+            maps_ = self._log_maps(
+                dataset, agg_groups, agg_groups_df, agg_y_true, agg_y_pred, 
+                X, y_pred, uncertainty
+            )
+            example_maps, prediction_maps, uncertainty_maps = maps_
+            # Image and predictions
+            wandb.log(
+                {
+                    "Agg Example Maps": example_maps,
+                    "Agg Prediction Maps": prediction_maps
+                },
+                commit=False
+            )
+            # Uncertainty
+            for k,v in uncertainty_maps.items():
+                wandb.log(
+                    {
+                        f"Agg Uncertainty Maps - {k}": v
+                    },
+                commit=False
+                )
+        if log_configuration["log_class_uncertainty"]:
+            wandb.log(
+                self._log_mean_uncertainty(agg_uncertainty),
+                commit=False
+            ) 
+            wandb.log(
+                {
+                    "Agg Uncertainty By Class": self._log_uncertainty_by_class(
+                        agg_y_true, agg_uncertainty
+                    )
+                },
+               commit=False
+            )
+        wandb.log({}, commit=True)

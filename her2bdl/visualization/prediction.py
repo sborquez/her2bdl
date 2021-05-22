@@ -15,7 +15,8 @@ from pathlib import Path
 
 __all__ = [
     'plot_predictive_distribution', 'plot_forward_pass_samples', 'plot_sample',
-    'display_prediction', 'display_uncertainty', 'display_uncertainty_by_class'
+    'display_prediction', 'display_uncertainty', 'display_uncertainty_by_class',
+    'display_map'
 ]
 
 #DEFAULT_PALETTE = "YlOrBr" # this is ideal for her2 representation
@@ -82,7 +83,7 @@ def plot_sample(x, y_true=None, y_pred=None, labels=None, axis=None):
     Plot input sample.
     """
     # Create new figure
-    x = x.copy()
+    x = x.astype(np.float32)
     if axis is None:
         plt.figure(figsize=(6,6))
         axis = plt.gca()
@@ -290,7 +291,34 @@ def display_uncertainty_by_class(y_true, uncertainty, metric="predictive entropy
     else:
         return fig
 
-
+def display_map(image, heatmap=None, title=None, transparency=0.6, color_map='jet', show=False, save_to=None):
+    fig = plt.figure(figsize=(8, 8))
+    # Plot
+    plt.imshow(image)
+    if heatmap is not None:
+        if color_map == "her2":
+            color_map = "viridis"
+            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=0, vmax=3)
+            plt.colorbar(ticks=[0, 1, 2, 3], label="score")
+        else:
+            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=0, vmax=1.5)
+            plt.colorbar(label="uncertainty")
+    # Style
+    if title is not None: plt.suptitle(title, fontsize=14)
+    plt.grid(False)
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+    # Show or Save
+    if save_to is not None:
+        save_to = Path(save_to)
+        fig.savefig(save_to.joinpath(f'map.png'))
+    if show:
+        plt.show()
+        plt.close()
+        return None
+    else:
+        return fig
 
 
 

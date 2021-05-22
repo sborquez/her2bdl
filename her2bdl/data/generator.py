@@ -230,6 +230,52 @@ class GridPatchGenerator(keras.utils.Sequence):
         self.__setup__(dataset)
         self.on_epoch_end()
     
+    def get_map(self, group_df, values, resize=None):
+        ndim = values.ndim
+        patch_size_level_0 = level_scaler(self.patch_size, self.patch_level, 0)
+        map_rows = 1 + (group_df.row.max() - group_df.row.min())/patch_size_level_0[0]
+        map_cols = 1 + (group_df.col.max() - group_df.col.min())/patch_size_level_0[1]
+        if ndim > 1:
+            agg_map = np.empty(
+                (int(map_rows*self.patch_size[0]), int(map_cols*self.patch_size[1]), 3),
+                dtype=np.uint8
+            )
+            agg_map[:,:] = 0
+        else:
+            agg_map = np.empty(
+                (int(map_rows*self.patch_size[0]), int(map_cols*self.patch_size[1])),
+            )
+            agg_map[:,:] = np.nan
+        for i, row_ in group_df.iterrows():
+            row = int(row_["row"])
+            col = int(row_["col"])
+            map_row = (row - group_df.row.min())//patch_size_level_0[0]
+            map_col = (col - group_df.col.min())//patch_size_level_0[0]
+            if ndim > 1:
+                agg_map[
+                    int(map_row*self.patch_size[0]):int((1+map_row)*self.patch_size[0]),
+                    int(map_col*self.patch_size[1]):int((1+map_col)*self.patch_size[1]),
+                    :
+                ] = values[i].astype(np.uint8)
+            else:
+                agg_map[
+                    int(map_row*self.patch_size[0]):int((1+map_row)*self.patch_size[0]),
+                    int(map_col*self.patch_size[1]):int((1+map_col)*self.patch_size[1])
+                ] = values[i]
+        if resize is not None:
+            agg_map_resized = cv2.resize(agg_map, (0,0), fx=resize, fy=resize)
+            del agg_map
+            return agg_map_resized
+        else:            
+            return agg_map
+
+    def get_n_partitions(self, by="CaseNo_label"):
+        if "CaseNo_label" not in self.dataset.columns:
+            self.dataset["CaseNo_label"] = self.dataset.apply(
+                lambda row: f"{int(row['CaseNo'])}_{int(row['label'])}", axis=1
+            )
+        return self.dataset[by].nunique()
+
     def get_partition(self, predictions_results, uncertainty_results, by="CaseNo_label"):
         """
         Iterate over dataseta partition corresponding to the same tissue. This is used to 
@@ -248,7 +294,7 @@ class GridPatchGenerator(keras.utils.Sequence):
             group, group_dataframe, group_predictions_results, group_uncertainty_results
             A subset of the dataset and results for a group.
         """
-        if "CaseNo_labels" not in self.dataset.columns:
+        if "CaseNo_label" not in self.dataset.columns:
             self.dataset["CaseNo_label"] = self.dataset.apply(
                 lambda row: f"{int(row['CaseNo'])}_{int(row['label'])}", axis=1
             )
@@ -305,17 +351,22 @@ class GridPatchGenerator(keras.utils.Sequence):
                     "col": patch[1]
                 } for patch in patch_indexes]
                 patches += new_patches
+                del sampling_map
+                del sampling_map_translation
+                del sampling_map_patch_indexes
+                del sampling_map_patch_selector
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
         self.num_classes = self.dataset[TARGET].nunique()
+        self.size = len(self.dataset)
         # Use this option for evaluate all samples
         if self.batch_size == -1:
-            self.batch_size = 16 #len(self.dataset)
-            self.size = len(self.dataset)
+            self.batch_size = self.size
+            self.steps_per_epoch = 1
         # This can ignore some samples that can't fit in the epoch.
-        # TODO: use ceil
         else:
-            self.size = self.batch_size * (len(self.dataset)//self.batch_size)
+            self.steps_per_epoch = np.ceil(self.size/self.batch_size)
+            self.steps_per_epoch = int(self.steps_per_epoch)
         atexit.register(self.cleanup)
  
     def cleanup(self):
@@ -327,7 +378,7 @@ class GridPatchGenerator(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.ceil(self.size/self.batch_size))
+        return self.steps_per_epoch
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -342,9 +393,9 @@ class GridPatchGenerator(keras.utils.Sequence):
         'Updates indexes after each epoch'
         if self.shuffle:
             self.indexes = np.random.choice(
-                np.arange(len(self.dataset)), size=self.size, replace=False
+                np.arange(self.size), size=self.size, replace=False
             )
-        else: # ignore last rows, TODO: check the other todo in __setup__
+        else:
             self.indexes = np.arange(self.size)
         if self.patch_vertical_flip:
             self.vertical_flips = np.random.choice((-1, 1), size=self.size)
@@ -442,6 +493,14 @@ class MCPatchGenerator(GridPatchGenerator):
                 }, ignore_index=True)
 
         self.size = len(self.dataset)*self.samples_per_tissue
+        # Use this option for evaluate all samples
+        if self.batch_size == -1:
+            self.batch_size = self.size
+            self.steps_per_epoch = 1
+        # This can ignore some samples that can't fit in the epoch.
+        else:
+            self.steps_per_epoch = np.ceil(self.size/self.batch_size)
+            self.steps_per_epoch = int(self.steps_per_epoch)        
         self.num_classes = self.dataset[TARGET].nunique()
         # How many pixels contain one pixel at sample level at patch level
         self.upsample_pixels_patch_level = level_scaler((1, 1), sampling_map_level, patch_level)
@@ -451,8 +510,6 @@ class MCPatchGenerator(GridPatchGenerator):
 
     def on_epoch_end(self):
         'Updates samples after each epoch'
-        # TODO: Use GPU with cupy?
-        self.size = len(self.dataset)*self.samples_per_tissue
         self.indexes = np.empty((self.size, 2), dtype=int)
         self.dataset_ref = np.empty((self.size), dtype=int)
         for i, (_, row) in enumerate(self.dataset.iterrows()):

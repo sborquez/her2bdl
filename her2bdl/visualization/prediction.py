@@ -8,6 +8,7 @@ Here you can find weights distributios, activations plots and model plot
 """
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import  ListedColormap
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -297,14 +298,14 @@ def display_map(image, heatmap=None, title=None, transparency=0.6, color_map='je
     plt.imshow(image)
     if heatmap is not None:
         if color_map == "her2":
-            color_map = "viridis"
-            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=0, vmax=3)
+            color_map = ListedColormap(sns.color_palette(DEFAULT_PALETTE)[:4])
+            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=-0.5, vmax=3.5)
             plt.colorbar(ticks=[0, 1, 2, 3], label="score")
         else:
-            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=0, vmax=1.5)
+            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=0, vmax=1.5) #~np.log(4)
             plt.colorbar(label="uncertainty")
     # Style
-    if title is not None: plt.suptitle(title, fontsize=14)
+    if title is not None: plt.suptitle(title, fontsize=16)
     plt.grid(False)
     plt.xticks([])
     plt.yticks([])

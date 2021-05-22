@@ -129,6 +129,7 @@ def profiling(config_file, repeat_it=10):
     display_profiling("Classifier", classifier_fp_times)
 
     # Vanilla predictive distribution
+    model.predict(X_batch, batch_size=batch_size)  # Load any required 
     print("\nVanilla Predictive Distribution")
     model_vpd_times = repeat(
         lambda: [
@@ -156,6 +157,7 @@ def profiling(config_file, repeat_it=10):
     display_profiling("Classifier", classifier_vpd_times)
 
     # Improved predictive distribution time
+    model.predict_distribution(X_batch, batch_size=batch_size) # Load any required 
     print("\n2-Steps Predictive Distribution")
     model_ipd_times = repeat(
         lambda: model.predict_distribution(X_batch, batch_size=batch_size),
@@ -171,7 +173,7 @@ def profiling(config_file, repeat_it=10):
         lambda: [
             classifier.predict(
                 np.tile(z_i, (sample_size, 1)),
-                batch_size=mc_dropout_batch_size
+                batch_size=sample_size#mc_dropout_batch_size*16
             )
             for z_i in z_batch#_arr
         ],

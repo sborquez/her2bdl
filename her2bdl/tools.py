@@ -1145,6 +1145,10 @@ class EvaluationLogger(WandBLogGenerator):
             "log_confusion_matrix": classification_metrics.get("log_confusion_matrix", True), 
             "log_roc_curve": classification_metrics.get("log_roc_curve", True), 
             "log_metrics": classification_metrics.get("log_metrics", True)
+            # TODO: add these options
+            #"save_data": aggregation_metrics.get("save_data", False),
+            #"save_predictions": aggregation_metrics.get("save_predictions", False),
+            #"save_uncertainty": aggregation_metrics.get("save_uncertainty", False)
         }
         self._aleatoric_uncertainty = {
             "examples_n": classification_metrics.get("examples_n", 30),
@@ -1152,6 +1156,10 @@ class EvaluationLogger(WandBLogGenerator):
             "log_class_uncertainty": aleatoric_uncertainty.get("log_class_uncertainty", True),
             "top_n": classification_metrics.get("top_n", 30),
             "log_uncertainty_highlights": aleatoric_uncertainty.get("log_uncertainty_highlights", True)
+            # TODO: add these options
+            #"save_data": aggregation_metrics.get("save_data", False),
+            #"save_predictions": aggregation_metrics.get("save_predictions", False),
+            #"save_uncertainty": aggregation_metrics.get("save_uncertainty", False)
         }
         self._aggregation_metrics = {
             "examples_n": aggregation_metrics.get("examples_n", 50),
@@ -1160,8 +1168,13 @@ class EvaluationLogger(WandBLogGenerator):
             "log_confusion_matrix": aggregation_metrics.get("log_confusion_matrix", True),
             "log_class_uncertainty": aggregation_metrics.get("log_class_uncertainty", True),
             "log_roc_curve": aggregation_metrics.get("log_roc_curve", True),
-            "log_metrics": aggregation_metrics.get("log_metrics", True)
+            "log_metrics": aggregation_metrics.get("log_metrics", True),
+            "save_data": aggregation_metrics.get("save_data", False),
+            "save_predictions": aggregation_metrics.get("save_predictions", False),
+            "save_uncertainty": aggregation_metrics.get("save_uncertainty", False),
+            "save_aggregation": aggregation_metrics.get("save_aggregation", True)
         }
+        self.run_dir = wandb.run.dir
 
     def log_aleatoric_uncertainty(self, data, predictions_results, uncertainty_results):
         X = data["X"]
@@ -1444,4 +1457,16 @@ class EvaluationLogger(WandBLogGenerator):
                 },
                commit=False
             )
+
+        run_dir = Path(wandb.run.dir)
+        if log_configuration["save_data"]:
+            np.save(run_dir / "data.npy", data, allow_pickle=True)
+        if log_configuration["save_predictions"]:
+            np.save(run_dir / "predictions_results.npy", predictions_results, allow_pickle=True)
+        if log_configuration["save_uncertainty"]:
+            np.save(run_dir / "uncertainty_results.npy", uncertainty_results, allow_pickle=True)
+        if log_configuration["save_aggregation"]:
+            np.save(run_dir / "aggregated_data.npy", aggregated_data, allow_pickle=True)
+            np.save(run_dir / "aggregated_predictions.npy", aggregated_predictions, allow_pickle=True)
+            np.save(run_dir / "aggregated_uncertainty.npy", aggregated_uncertainty, allow_pickle=True)
         wandb.log({}, commit=True)

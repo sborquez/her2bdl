@@ -41,6 +41,7 @@ def evaluate(config, quiet=False, run_dir="."):
         **logger_configuration
     )
     # Evaluation options
+    results = None
     if evaluate_classification:
         ## Get performance metrics for classification and epistemic uncertainty.
         results = model.predict_with_epistemic_uncertainty(test_dataset, include_data=True)

@@ -80,6 +80,8 @@ class MCDropoutModel(tf.keras.Model):
 
     def get_aleatoric_model(self, aleatoric_weights=None):
         self.__aleatoric_model = self.__aleatoric_model or AleatoricModel(self)
+        if aleatoric_weights is not None:
+            self.load_aleatoric_weights(aleatoric_weights)
         return self.__aleatoric_model
 
     def load_aleatoric_weights(self, load_aleatoric_weights):
@@ -115,7 +117,7 @@ class MCDropoutModel(tf.keras.Model):
         uncertainty_results = None
         if isinstance(dataset, tf.keras.utils.Sequence):
             steps_per_epoch = len(dataset)
-            pbar = tqdm(enumerate(dataset)) if verbose >= 0 else enumerate(dataset)
+            pbar = tqdm(enumerate(dataset), total=steps_per_epoch) if verbose >= 0 else enumerate(dataset)
         else:
             steps_per_epoch = len(dataset)
             iterator = dataset.as_numpy_iterator()
@@ -469,10 +471,9 @@ class AleatoricModel(tf.keras.Model):
         ## Copy architecture except classifier head and mc dropouts
         for layer in layers[:-1]:
             config = layer.get_config()
-            if isinstance(layer, Dense) and (mc_model.mc_dropout_rate > 0):
-                config["units"] = int(mc_model.mc_dropout_rate * config["units"])
-            elif isinstance(layer, Dropout) and (mc_model.mc_dropout_rate > 0):
-                continue
+            # TODO: should I keep dropout layers?
+            # if isinstance(layer, Dropout) and (mc_model.mc_dropout_rate > 0):
+            #    continue
             x = type(layer)(**config)(x)
         ## New Aleatoric head layers
         logits = Dense(self.num_classes, name="head_logits_classifier")(x)
@@ -597,7 +598,7 @@ class AleatoricModel(tf.keras.Model):
         uncertainty_results = None
         if isinstance(dataset, tf.keras.utils.Sequence):
             steps_per_epoch = len(dataset)
-            pbar = tqdm(enumerate(dataset)) if verbose >= 0 else enumerate(dataset)
+            pbar = tqdm(enumerate(dataset), total=steps_per_epoch) if verbose >= 0 else enumerate(dataset)
         else:
             steps_per_epoch = len(dataset)
             iterator = dataset.as_numpy_iterator()

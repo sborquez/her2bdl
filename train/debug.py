@@ -156,7 +156,7 @@ def profiling(config_file, repeat_it=10):
     display_profiling("Classifier", classifier_vpd_times)
 
     # Improved predictive distribution time
-    print("\nImproved Predictive Distribution")
+    print("\n2-Steps Predictive Distribution")
     model_ipd_times = repeat(
         lambda: model.predict_distribution(X_batch, batch_size=batch_size),
         repeat=repeat_it, number=3

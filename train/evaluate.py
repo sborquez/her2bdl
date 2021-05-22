@@ -54,34 +54,20 @@ def evaluate(config, quiet=False, run_dir="."):
         logger.log_aleatoric_uncertainty(aleatoric_data, aleatoric_predictions_results, aleatoric_uncertainty_results)
     if evaluate_aggregation:
         # Aggregator method
-        raise NotImplementedError
         aggregator_configuration = config["aggregation"]
         aggregator = setup_aggregator(**aggregator_configuration)
+        if results is None:
+            results = model.predict_with_epistemic_uncertainty(test_dataset, include_data=True)
+        data, predictions_results, uncertainty_results = results
+        agg = aggregator.predict_with_aggregation(test_dataset, predictions_results, uncertainty_results, include_data=True, verbose=1)
+        aggregated_data, aggregated_predictions, aggregated_uncertainty = agg
+        logger.log_aggregation_metrics(
+            test_dataset,
+            data, predictions_results, uncertainty_results,
+            aggregated_data, aggregated_predictions, aggregated_uncertainty,
+        )
     return
 
-
-    # Whole Image Evaluation
-    ## Use aggregation and get performance metrics at wsi level.
-    # tissue_results={}
-    # tissue_y_true = []
-    # tissue_y_pred = []
-    # tissue_y_predictive_distribution = []
-    # for group_partition in test_dataset.get_partition(predictions_results, uncertainty_results, by="CaseNo_label"):
-    #     group, group_df, group_predictions_results, group_uncertainty_results = group_partition
-    #     prediction_agg_result, uncertainty_agg_result = aggregator(group_predictions_results, group_uncertainty_results)
-    #     tissue_results[group] = {
-    #         **prediction_agg_result, 
-    #         **uncertainty_agg_result,
-    #     }
-    #     tissue_y_true.append(group_df.iloc[0][TARGET])
-    #     tissue_y_pred.append(prediction_agg_result['y_pred'])
-    #     tissue_y_predictive_distribution.append(prediction_agg_result['y_predictive_distribution'])
-    # tissue_y_true = np.array(tissue_y_true)
-    # tissue_y_pred = np.array(tissue_y_pred)
-    # tissue_y_predictive_distribution = np.array(tissue_y_predictive_distribution)
-    ## Get performance metrics for tissue classification.
-
-    # Whole Image Uncertainty Evaluation
 
 if __name__ == "__main__":
     import os

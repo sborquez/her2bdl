@@ -1359,7 +1359,7 @@ class EvaluationLogger(WandBLogGenerator):
                 uncertainty_map_original = dataset.get_map(group_df, values=uncertainty[u])
                 uncertainty_map = cv2.resize(uncertainty_map_original, (0, 0), fx=scale, fy=scale)
                 del uncertainty_map_original
-                uncertainty_map_fig = display_map(img_map, uncertainty_map, title=unc_map_title)
+                uncertainty_map_fig = display_map(img_map, uncertainty_map, title=unc_map_title, color_map=u.replace("_", " "))
                 uncertainty_maps[u].append(wandb.Image(uncertainty_map_fig))
                 plt.close(uncertainty_map_fig)
                 del uncertainty_map

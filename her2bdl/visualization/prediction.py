@@ -292,7 +292,7 @@ def display_uncertainty_by_class(y_true, uncertainty, metric="predictive entropy
     else:
         return fig
 
-def display_map(image, heatmap=None, title=None, transparency=0.6, color_map='jet', show=False, save_to=None):
+def display_map(image, heatmap=None, title=None, transparency=0.6, color_map='predictive entropy', show=False, save_to=None):
     fig = plt.figure(figsize=(8, 8))
     # Plot
     plt.imshow(image)
@@ -301,8 +301,14 @@ def display_map(image, heatmap=None, title=None, transparency=0.6, color_map='je
             color_map = ListedColormap(sns.color_palette(DEFAULT_PALETTE)[:4])
             plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=-0.5, vmax=3.5)
             plt.colorbar(ticks=[0, 1, 2, 3], label="score")
+        elif color_map == "mutual information":
+            plt.imshow(heatmap, alpha=transparency, cmap="jet", vmin=0, vmax=1.5/3) #~np.log(4)
+            plt.colorbar(label="uncertainty")
+        elif color_map == 'predictive entropy':
+            plt.imshow(heatmap, alpha=transparency, cmap="jet", vmin=0, vmax=1.5) #~np.log(4)
+            plt.colorbar(label="uncertainty")
         else:
-            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=0, vmax=1.5) #~np.log(4)
+            plt.imshow(heatmap, alpha=transparency, cmap="jet", vmin=0, vmax=1.05) #~np.log(4)
             plt.colorbar(label="uncertainty")
     # Style
     if title is not None: plt.suptitle(title, fontsize=16)

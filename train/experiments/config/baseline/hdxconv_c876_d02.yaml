@@ -95,7 +95,7 @@ data:
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
-          shuffle: true
+          shuffle: false
   # Input
   img_height: 240
   img_width: 240
@@ -146,11 +146,6 @@ training:
     # Experiments results while training
     experiment_tracker:
       # Save model architecture summary
-      #log_model_summary: true
-      # Save datasets info: source, sizes, etc. 
-      #log_dataset_description: true
-      # Plots and logs
-      #log_training_loss: true
       log_predictions: true
       log_uncertainty: true
       log_confusion_matrix: true

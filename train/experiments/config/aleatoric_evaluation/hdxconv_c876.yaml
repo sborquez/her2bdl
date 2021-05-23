@@ -2,15 +2,16 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: RGBConvClassifier-Aleatoric-C876
-  notes: RGBConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
+  name: HDXConvClassifier-Aleatoric-C876
+  notes: HDXConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
-    - rgbconv
-    - rgb
+    - hedconv
+    - hdx
     - C876
     - her2
     - MCPatchGenerator
     - aleatoric
+    - evaluation
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
   experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
@@ -27,7 +28,8 @@ model:
   # Model Class implemented in her2bdl.models
   architecture: HEDConvClassifierMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
-  weights: /home/asuka/her2bdl-files/cv/RGB-cv-best.h5
+  weights: /home/asuka/her2bdl-files/cv/HDX-cv-best.h5
+  aleatoric_weights: /home/asuka/her2bdl-files/baseline/HDX-aleatoric.h5
   # Model architecture hyperparameters
   hyperparameters: 
     ignore_eosin: false
@@ -114,9 +116,9 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 200
+  epochs: 100
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 128
+  batch_size: 32
   # (Optional, default=0.2) Train and validation split.
   validation_split: null
   # Models loss function
@@ -125,7 +127,7 @@ training:
     parameters: null
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
-    learning_rate: 1e-5
+    learning_rate: 1e-4
     name: rmsprop
     parameters: 
        centered: True
@@ -135,7 +137,7 @@ training:
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 25
+      patience: 15
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:
@@ -154,9 +156,38 @@ training:
       monitor: val_loss
 # Evaluation metrics
 evaluation:
-  evaluate_classification: true
-  evaluate_aleatoric_uncertainty: false
+  batch_size: 128
+  evaluate_classification: false
+  evaluate_aleatoric_uncertainty: true
   evaluate_aggregation: false
+  experiment_logger:
+    enable_wandb: true
+    max_plots: 100 # maybe there are too many images?
+    classification_metrics:
+      examples_n : 50
+      log_predictions: false
+      log_uncertainty: true
+      top_n : 100
+      log_uncertainty_highlights: true
+      log_class_uncertainty: true
+      log_confusion_matrix: true
+      log_roc_curve: true
+      log_metrics: true
+    aleatoric_uncertainty:
+      examples_n : 50
+      log_uncertainty: true
+      top_n : 100
+      log_uncertainty_highlights: true
+      log_class_uncertainty: true
+    aggregation_metrics:
+      log_predictions: false
+      log_prediction_map: false
+      log_uncertainty_map: false
+      log_confusion_matrix: false
+      log_uncertainty_highlights: false
+      log_class_uncertainty: false
+      log_roc_curve: false
+      log_metrics: false
 # Predict 
 predict:
   save_aggregation: false

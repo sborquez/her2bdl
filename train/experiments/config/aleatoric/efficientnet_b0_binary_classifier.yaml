@@ -11,11 +11,11 @@ experiment:
     - dropout_rate=0.5
     - catsvsdogs
     - binary
-    - aletoric
+    - aleatoric
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  #experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
-  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -79,9 +79,9 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 5
+  epochs: 100
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 16
+  batch_size: 64
   # (Optional, default=0.2) Train and validation split.
   validation_split: 0.1
   # Models loss function
@@ -90,7 +90,7 @@ training:
     parameters: null
   # (Optional, default=Adam(lr=1e-4)) Training optimizer
   optimizer:
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     name: rmsprop
     parameters: 
        centered: True
@@ -100,28 +100,22 @@ training:
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 4
+      patience: 30
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:
-      # Save model architecture summary
-      #log_model_summary: true
-      # Save datasets info: source, sizes, etc. 
-      #log_dataset_description: true
-      # Plots and logs
-      #log_training_loss: true
       log_predictions: true
       log_uncertainty: true
       log_confusion_matrix: true
       log_metrics: true
       log_roc_curve: true
     # Save checkpoints: saved at experiments_folder/experiment/checkpoints
-    checkpoints:
-      # saved weights format
-      format: "weights.{epoch:03d}-{val_loss:.4f}.h5"
-      save_best_only: true
-      save_weights_only: true
-      monitor: val_loss
+    checkpoints: null
+      # # saved weights format
+      # format: "weights.{epoch:03d}-{val_loss:.4f}.h5"
+      # save_best_only: true
+      # save_weights_only: true
+      # monitor: val_loss
 # Evaluation metrics
 evaluation:
   evaluate_classification: false
@@ -138,5 +132,5 @@ plugins:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
     #apikey: D:/sebas/Projects/her2bdl/.wandb_secret
-    #apikey: /home/asuka/projects/her2bdl/.wandb_secret
-    apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret

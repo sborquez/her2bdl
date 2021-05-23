@@ -27,7 +27,7 @@ model:
   # Model Class implemented in her2bdl.models
   architecture: HEDConvClassifierMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
-  weights: /home/asuka/her2bdl-files/HED-cv-best.h5
+  weights: /home/asuka/her2bdl-files/cv/HED-cv-best.h5
   # Model architecture hyperparameters
   hyperparameters: 
     ignore_eosin: false
@@ -114,9 +114,9 @@ data:
 # Training model hyperparameters
 training:
   # Training epochs
-  epochs: 100
+  epochs: 200
   # (Optional, default=16) Depends on CPU-GPU available memory.
-  batch_size: 32
+  batch_size: 128
   # (Optional, default=0.2) Train and validation split.
   validation_split: null
   # Models loss function
@@ -125,7 +125,7 @@ training:
     parameters: null
   # (Optional, default=sgd(lr=1e-4)) Training optimizer
   optimizer:
-    learning_rate: 1e-4
+    learning_rate: 1e-5
     name: rmsprop
     parameters: 
        centered: True
@@ -135,16 +135,11 @@ training:
     enable_wandb: true
     # Early stop, use null to disable. 
     earlystop: 
-      patience: 15
+      patience: 25
       monitor: val_loss
     # Experiments results while training
     experiment_tracker:
       # Save model architecture summary
-      #log_model_summary: true
-      # Save datasets info: source, sizes, etc. 
-      #log_dataset_description: true
-      # Plots and logs
-      #log_training_loss: true
       log_predictions: true
       log_uncertainty: true
       log_confusion_matrix: true

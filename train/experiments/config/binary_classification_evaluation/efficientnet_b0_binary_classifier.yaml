@@ -24,13 +24,13 @@ experiment:
 
 # Model architecture
 model:
-  # Model task: [classification|regression|hierarchical]
+  # Model task: [classification|regression]
   task: classification
   # Model Class implemented in her2bdl.models
   architecture: EfficientNetMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
-  weights: /home/asuka/her2bdl-files/efficientnetb0_MCDropout.h5
-  aleatoric_weights: /home/asuka/her2bdl-files/efficientnetb0_aleatoric.h5
+  weights: /home/asuka/her2bdl-files/binary_classification/efficientnetb0_MCDropout.h5
+  aleatoric_weights: /home/asuka/her2bdl-files/binary_classification/efficientnetb0_aleatoric.h5
   # Model architecture hyperparameters
   hyperparameters: 
     mc_dropout_rate: 0.5

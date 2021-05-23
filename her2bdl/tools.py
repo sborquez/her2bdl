@@ -1144,22 +1144,20 @@ class EvaluationLogger(WandBLogGenerator):
             "log_uncertainty_highlights": classification_metrics.get("log_uncertainty_highlights", True),
             "log_confusion_matrix": classification_metrics.get("log_confusion_matrix", True), 
             "log_roc_curve": classification_metrics.get("log_roc_curve", True), 
-            "log_metrics": classification_metrics.get("log_metrics", True)
-            # TODO: add these options
-            #"save_data": aggregation_metrics.get("save_data", False),
-            #"save_predictions": aggregation_metrics.get("save_predictions", False),
-            #"save_uncertainty": aggregation_metrics.get("save_uncertainty", False)
+            "log_metrics": classification_metrics.get("log_metrics", True),
+            "save_data": aggregation_metrics.get("save_data", False),
+            "save_predictions": aggregation_metrics.get("save_predictions", True),
+            "save_uncertainty": aggregation_metrics.get("save_uncertainty", True)
         }
         self._aleatoric_uncertainty = {
             "examples_n": classification_metrics.get("examples_n", 30),
             "log_uncertainty": classification_metrics.get("log_uncertainty", True), # prediction + uncertainty
             "log_class_uncertainty": aleatoric_uncertainty.get("log_class_uncertainty", True),
             "top_n": classification_metrics.get("top_n", 30),
-            "log_uncertainty_highlights": aleatoric_uncertainty.get("log_uncertainty_highlights", True)
-            # TODO: add these options
-            #"save_data": aggregation_metrics.get("save_data", False),
-            #"save_predictions": aggregation_metrics.get("save_predictions", False),
-            #"save_uncertainty": aggregation_metrics.get("save_uncertainty", False)
+            "log_uncertainty_highlights": aleatoric_uncertainty.get("log_uncertainty_highlights", True),
+            "save_data": aggregation_metrics.get("save_data", False),
+            "save_predictions": aggregation_metrics.get("save_predictions", True),
+            "save_uncertainty": aggregation_metrics.get("save_uncertainty", True)
         }
         self._aggregation_metrics = {
             "examples_n": aggregation_metrics.get("examples_n", 50),
@@ -1230,6 +1228,14 @@ class EvaluationLogger(WandBLogGenerator):
                 ),
                 commit=False
             )
+        # Save results files
+        run_dir = Path(wandb.run.dir)
+        if log_configuration["save_data"]:
+            np.save(run_dir / "data.npy", data, allow_pickle=True)
+        if log_configuration["save_predictions"]:
+            np.save(run_dir / "predictions_results.npy", predictions_results, allow_pickle=True)
+        if log_configuration["save_uncertainty"]:
+            np.save(run_dir / "uncertainty_results.npy", uncertainty_results, allow_pickle=True)
         wandb.log({}, commit=True)
 
 
@@ -1320,14 +1326,26 @@ class EvaluationLogger(WandBLogGenerator):
                 ), 
                 commit=False
             )
+        # Save results files
+        run_dir = Path(wandb.run.dir)
+        if log_configuration["save_data"]:
+            np.save(run_dir / "data.npy", data, allow_pickle=True)
+        if log_configuration["save_predictions"]:
+            np.save(run_dir / "predictions_results.npy", predictions_results, allow_pickle=True)
+        if log_configuration["save_uncertainty"]:
+            np.save(run_dir / "uncertainty_results.npy", uncertainty_results, allow_pickle=True)
+        
         wandb.log({}, commit=True)
 
-    def _log_maps(self, dataset, agg_groups, agg_groups_df, 
-                agg_y_true, agg_y_pred, X, y_pred, uncertainty):
+    def _log_maps(self,
+         dataset, agg_groups, agg_groups_df, 
+         agg_y_true, agg_y_pred, agg_uncertainty,
+         X, y_pred, uncertainty):
         example_maps = []
         prediction_maps = []
         uncertainty_maps = {u:[] for u in uncertainty.columns}
-        scale = 0.25
+        scale = 0.3
+        i = 0
         for group_  in zip(agg_groups, agg_groups_df, agg_y_true, agg_y_pred):
             group, group_df, group_true, group_pred = group_
             info_ = group_df.iloc[0]
@@ -1350,12 +1368,12 @@ class EvaluationLogger(WandBLogGenerator):
             pred_map_fig =  display_map(img_map, pred_map, title=pred_map_title, color_map='her2')
             prediction_maps.append(wandb.Image(pred_map_fig))
             plt.close(pred_map_fig)
-            
             # Uncertainty
             for u in uncertainty.columns:
+                group_u_uncertainty = agg_uncertainty[u][i]
                 unc_map_title =  f"CaseNo {info_['CaseNo']} - ID {info_['label']}\n"
                 unc_map_title += f"{TARGET} {TARGET_LABELS[info_[TARGET]]}\n"
-                unc_map_title += f"{u}"
+                unc_map_title += f"{u}: {group_u_uncertainty:.3f}"
                 uncertainty_map_original = dataset.get_map(group_df, values=uncertainty[u])
                 uncertainty_map = cv2.resize(uncertainty_map_original, (0, 0), fx=scale, fy=scale)
                 del uncertainty_map_original
@@ -1363,6 +1381,7 @@ class EvaluationLogger(WandBLogGenerator):
                 uncertainty_maps[u].append(wandb.Image(uncertainty_map_fig))
                 plt.close(uncertainty_map_fig)
                 del uncertainty_map
+            i += 1
             del img_map
             del pred_map
         return example_maps, prediction_maps, uncertainty_maps
@@ -1399,11 +1418,9 @@ class EvaluationLogger(WandBLogGenerator):
         if log_configuration["log_roc_curve"]:
             roc_plot = self._log_roc_curve(agg_y_predictive_distribution, agg_y_true)
             wandb.log({ "Agg ROC Curve": roc_plot}, commit=False)
-
         if log_configuration["log_confusion_matrix"]:
             cm_plot = self._log_confusion_matrix(agg_y_pred, agg_y_true)
             wandb.log({"Agg Confusion Matrix": cm_plot}, commit=False)
-
         # Examples
         if log_configuration["log_predictions"]:
             examples_n = log_configuration["examples_n"] or len(agg_groups_df)
@@ -1424,7 +1441,7 @@ class EvaluationLogger(WandBLogGenerator):
 
         if log_configuration["log_map"]:
             maps_ = self._log_maps(
-                dataset, agg_groups, agg_groups_df, agg_y_true, agg_y_pred, 
+                dataset, agg_groups, agg_groups_df, agg_y_true, agg_y_pred, agg_uncertainty,
                 X, y_pred, uncertainty
             )
             example_maps, prediction_maps, uncertainty_maps = maps_
@@ -1457,7 +1474,7 @@ class EvaluationLogger(WandBLogGenerator):
                 },
                commit=False
             )
-
+        # Save results files
         run_dir = Path(wandb.run.dir)
         if log_configuration["save_data"]:
             np.save(run_dir / "data.npy", data, allow_pickle=True)
@@ -1469,4 +1486,14 @@ class EvaluationLogger(WandBLogGenerator):
             np.save(run_dir / "aggregated_data.npy", aggregated_data, allow_pickle=True)
             np.save(run_dir / "aggregated_predictions.npy", aggregated_predictions, allow_pickle=True)
             np.save(run_dir / "aggregated_uncertainty.npy", aggregated_uncertainty, allow_pickle=True)
-        wandb.log({}, commit=True)
+        # Agg result table
+        wandb.log({
+            "Agg Result Table": wandb.Table(
+                dataframe=pd.DataFrame({
+                    "group": aggregated_data["group"], 
+                    "y_true": aggregated_data["y_true"],
+                    "y_pred": aggregated_predictions["y_pred"],
+                    **aggregated_uncertainty
+                })
+            )
+        }, commit=True)

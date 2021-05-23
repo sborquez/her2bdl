@@ -85,32 +85,23 @@ class ThresholdAggregator(Aggregator):
             y_predictive_distribution_samples = selected['y_predictive_distribution']
             y_predictive_distribution = y_predictive_distribution_samples.mean(axis=0)
             y_pred = y_predictive_distribution.argmax()
-            #y_predictions_samples = selected['y_predictions_samples'].reshape((-1, num_classes))
-            prediction_agg_result = {
-                'y_pred' : y_pred,
-                'y_predictive_distribution': y_predictive_distribution,
-                'y_predictions_samples': y_predictive_distribution_samples
-            }
-            # Recalculate uncertainties
-            uncertainty_agg_result = {
-                'predictive entropy': predictive_entropy(y_predictive_distribution, is_sample=True),
-                'mutual information': mutual_information(y_predictive_distribution, y_predictive_distribution_samples, is_sample=True),
-                'variation-ratio': variation_ratio(y_predictive_distribution_samples, is_sample=True)
-            }
         else:            
             warnings.warn(f"No predictions with uncertainty '{self.uncertainty_metric}' lower than {self.t} ")
-            prediction_agg_result = {
-                'y_pred' : None,
-                'y_predictive_distribution': np.array(num_classes*[None]),
-                'y_predictions_samples': np.array(num_classes*[None]).reshape((1, num_classes))
-            }
-            # Recalculate uncertainties
-            uncertainty_agg_result = {
-                'predictive entropy': None,
-                'mutual information': None,
-                'variation-ratio': None
-
-            }
+            # Define predictive distribution as an uninformative prediction
+            y_predictive_distribution_samples = predictions_results['y_predictive_distribution']
+            y_predictive_distribution = np.array(num_classes*[1/num_classes])
+            y_pred = np.random.choice(num_classes)
+        prediction_agg_result = {
+            'y_pred' : y_pred,
+            'y_predictive_distribution': y_predictive_distribution,
+            'y_predictions_samples': y_predictive_distribution_samples
+        }
+        # Recalculate uncertainties
+        uncertainty_agg_result = {
+            'predictive entropy': predictive_entropy(y_predictive_distribution, is_sample=True),
+            'mutual information': mutual_information(y_predictive_distribution, y_predictive_distribution_samples, is_sample=True),
+            'variation-ratio': variation_ratio(y_predictive_distribution_samples, is_sample=True)
+        }
         return prediction_agg_result, uncertainty_agg_result
 
 class MixtureAggregator(Aggregator):

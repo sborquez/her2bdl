@@ -2,16 +2,18 @@
 experiment:
   # Custom indentifier name for the experiment.
   # Experiment
-  name: HDXConvClassifier-McDropout02-C876
+  name: HDXConvClassifier-McDropout05-C876-Base
   notes: HDXConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
   tags:
     - hedconv
     - hdx
     - C876
-    - dropout_rate=0.2
+    - dropout_rate=0.5
     - her2
     - MCPatchGenerator
+    - baseline
     - evaluation
+    - aggregation
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
   experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
@@ -28,13 +30,12 @@ model:
   # Model Class implemented in her2bdl.models
   architecture: HEDConvClassifierMCDropout
   # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
-  #weights: E:/projects/her2bdl-files/cv/HDX-cv-best.h5
-  weights: /home/asuka/her2bdl-files/cv/HDX-cv-best.h5
-  aleatoric_weights: /home/asuka/her2bdl-files/aleatoric/cv/HDX-best.h5
+  weights: /home/asuka/her2bdl-files/baseline/HDX-MCDropout05.h5
+  aleatoric_weights: null
   # Model architecture hyperparameters
   hyperparameters: 
     ignore_eosin: true
-    mc_dropout_rate: 0.2
+    mc_dropout_rate: 0.5
     encoder_kernel_sizes:
       - 3
       - 3
@@ -48,7 +49,7 @@ model:
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
-    mc_dropout_batch_size: 64
+    mc_dropout_batch_size: 200
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -56,10 +57,12 @@ model:
 # Aggregation methods
 aggregation: 
   # Method Class
-  method: "MixtureAggregator"
+  method: "ThresholdAggregator"
   # Mathod parameters
   parameters: 
     uncertainty_metric: "predictive_entropy"
+    by : "CaseNo_label"
+    threshold: 2
 
 # Datasets and preprocessing
 data:
@@ -98,7 +101,7 @@ data:
           patch_level: 3
           patch_vertical_flip: false
           patch_horizontal_flip: false
-          shuffle: true
+          shuffle: false
   # Input
   img_height: 240
   img_width: 240
@@ -149,11 +152,6 @@ training:
     # Experiments results while training
     experiment_tracker:
       # Save model architecture summary
-      #log_model_summary: true
-      # Save datasets info: source, sizes, etc. 
-      #log_dataset_description: true
-      # Plots and logs
-      #log_training_loss: true
       log_predictions: true
       log_uncertainty: true
       log_confusion_matrix: true
@@ -168,38 +166,47 @@ training:
       monitor: val_loss
 # Evaluation metrics
 evaluation:
-  batch_size: 32
-  evaluate_classification: true
-  evaluate_aleatoric_uncertainty: true
+  batch_size: 128
+  evaluate_classification: false
+  evaluate_aleatoric_uncertainty: false
   evaluate_aggregation: true
   experiment_logger:
     enable_wandb: true
-    max_plots: -1 # maybe are too many images?
+    max_plots: 100
     classification_metrics:
+      examples_n : 50
       log_predictions: false
       log_uncertainty: true
-      log_ranking_uncertainty: true
+      top_n : 100
+      log_uncertainty_highlights: true
       log_class_uncertainty: true
       log_confusion_matrix: true
       log_roc_curve: true
       log_metrics: true
     aleatoric_uncertainty:
-      log_ranking_uncertainty: true
+      examples_n : 50
+      log_uncertainty: true
+      top_n : 100
+      log_uncertainty_highlights: true
       log_class_uncertainty: true
     aggregation_metrics:
+      examples_n : 50
       log_predictions: true
-      log_prediction_map: true
-      log_uncertainty_map: true
+      log_map: true
       log_confusion_matrix: true
-      log_ranking_uncertainty: true
       log_class_uncertainty: true
       log_roc_curve: true
       log_metrics: true
+      save_data: false
+      save_predictions: true
+      save_uncertainty: true
+      save_aggregation: true
 # Predict 
 predict:
-  save_aggregation: true
+  save_data: false
   save_predictions: true
   save_uncertainty: true
+  save_aggregation: true  
 # Plugin setups
 plugins:
   wandb:

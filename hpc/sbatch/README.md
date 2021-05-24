@@ -1,5 +1,8 @@
 # Setup Instructions for running in HPC with Slurm Workload Manager
+## Deprecation Note
 
+This maybe doesn't work. Required update the scripts by adding environment
+variable support.
 
 ## Creating conda enviroment
 

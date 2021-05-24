@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # Package folder name (check also classifiers and keyworks below)
 ai_name = 'her2bdl'
@@ -31,7 +31,7 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     url=about['__url__'],
-    packages=[ai_name], #, 'deploy'], TODO: Add deploy
+    packages=find_packages(),
     #include_package_data=True,
     python_requires=">=3.8.*",
     install_requires=[

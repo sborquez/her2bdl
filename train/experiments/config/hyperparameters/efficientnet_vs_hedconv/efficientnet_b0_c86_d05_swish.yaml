@@ -8,16 +8,15 @@ experiment:
     - efficientnet
     - B0
     - C86
-    - mcdropout
     - dropout_rate=0.5
     - her2
     - MCPatchGenerator
     - hyperparameters
-    - training
     - swish
   # Experiments folder: Contains multiples experiments
   #experiments_folder: D:/sebas/Projects/her2bdl/train/experiments/runs
-  experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  #experiments_folder: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/experiments/runs
+  experiments_folder: /home/asuka/projects/her2bdl/train/experiments/runs
   # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
   run_id: null
   # (Optional, default=null) Random seed, if it`s null, uses a random seed.
@@ -43,7 +42,7 @@ model:
   # Model uncertainty hyperparameters
   uncertainty:
     sample_size: 200
-    mc_dropout_batch_size: 8
+    mc_dropout_batch_size: 32
     multual_information: true
     variation_ratio: true
     predictive_entropy: true
@@ -66,7 +65,8 @@ data:
         generator: 'MCPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/train.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/train.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/train.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/train.csv'
           patch_level: 4
           samples_per_tissue: 200
           patch_vertical_flip: true
@@ -76,7 +76,8 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/validation.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/validation.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/train.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/validation.csv'
           patch_level: 4
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -85,7 +86,8 @@ data:
         generator: 'GridPatchGenerator'
         generator_parameters:
           #dataset: 'D:/sebas/Projects/her2bdl/train/datasets/test.csv'
-          dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/test.csv'
+          dataset: '/home/asuka/projects/her2bdl/train/datasets/train.csv'
+          #dataset: '/data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/train/datasets/test.csv'
           patch_level: 4
           patch_vertical_flip: false
           patch_horizontal_flip: false
@@ -151,8 +153,10 @@ training:
       save_weights_only: true
       monitor: val_loss
 # Evaluation metrics
-evaluate:
-  metrics: [accuracy]
+evaluation:
+  evaluate_classification: true
+  evaluate_aleatoric_uncertainty: false
+  evaluate_aggregation: false
 # Predict 
 predict:
   save_aggregation: false
@@ -163,4 +167,5 @@ plugins:
   wandb:
     project: Her2BDL
     # Use environment variable name (recommended) or API KEY.
-    apikey: WANDB_API_KEY
+    #apikey: /data/atlas/dbetalhc/cta-test/gerumo/src/her2bdl/.wandb_secret
+    apikey: /home/asuka/projects/her2bdl/.wandb_secret

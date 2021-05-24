@@ -41,14 +41,15 @@ def generator_to_tf_Dataset(generator, img_height, img_width):
 
 def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size, 
                                    num_classes=None, label_mode="categorical", 
-                                   validation_split=None, preprocessing={},
-                                   data_dir=None):
+                                   validation_split=None, test_dataset=False, 
+                                   preprocessing={}, data_dir=None):
     """
     Sources:
         * simple: https://www.tensorflow.org/datasets/catalog/mnist
         * binary: https://www.tensorflow.org/datasets/catalog/cats_vs_dogs
         * multiclass: https://www.tensorflow.org/datasets/catalog/stanford_dogs
     """
+    #data_dir= "/home/asuka/mnt/external/datasets/tensorflow_datasets" 
     img_height, img_width = input_shape[:2]
     def get_mapper(img_height, img_width, to_rgb, num_classes, label_mode="categorical", rescale=None):
         @tf.autograph.experimental.do_not_convert
@@ -68,48 +69,62 @@ def get_generators_from_tf_Dataset(dataset_target, input_shape, batch_size,
 
     assert (dataset_target in ["simple", "binary", "multiclass", "mnist"]),\
      "Invalid dataset_target."
+    train_val_split = None
     if dataset_target == "simple":
         to_rgb = True
         num_classes = 10
         dataset = 'mnist'
-    elif dataset_target == "mnist":
-        to_rgb = True
-        num_classes = 10
-        dataset = 'mnist'
+        train_split = 'train'
+        test_split = f'test[:{2*batch_size}]'
+        if validation_split is not None:
+            train_val_split = [f'train[:{2*batch_size}]', f'train[{2*batch_size}:{4*batch_size}]']
     elif dataset_target == "binary":
         to_rgb = False
         num_classes = 2
         dataset = "cats_vs_dogs"
-    elif dataset_target == "multiclass":
-        to_rgb = False
-        raise NotImplementedError("find num_classes for dogs")
-        num_classes = None
-        dataset = "stanford_dogs"
-
+        train_split = 'train[:80%]'
+        test_split = 'train[80%:]'
+        if validation_split is not None:
+            split_ = min(80, max(0, int(80*(1-validation_split))))
+            train_val_split = [f'train[:{split_}%]', f'train[{split_}%:80%]']
+    # elif dataset_target == "multiclass":
+    #     to_rgb = False
+    #     raise NotImplementedError("find num_classes for dogs")
+    #     num_classes = None
+    #     dataset = "stanford_dogs"
     # preprocessing
     rescale = preprocessing.get("rescale", None)
 
     # load and split datasets
-    if validation_split is not None:
-        if isinstance(validation_split, str):
-            split = [f'train[:{2*batch_size}]', f'train[:{2*batch_size}]']
-        elif isinstance(validation_split, float):
-            #TODO: add split
-            #validation_split
-            split_ = int(10*validation_split)
-            split = [f'train[:{100 - split_}%]', f'train[-{split_}%:]']
-        train_ds, validation_ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
-        train_dataset = train_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    if test_dataset:
+        ds = tfds.load(dataset, split=test_split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
+        test_dataset = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        steps_per_epoch = len(test_dataset)
+        return (test_dataset, steps_per_epoch)
+    elif validation_split is None:
+        ds = tfds.load(
+            dataset, split=train_split, as_supervised=True, shuffle_files=True,
+            batch_size=batch_size, data_dir=data_dir
+        )
+        train_dataset = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
         steps_per_epoch = len(train_dataset)
-        val_dataset = validation_ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        return (train_dataset, steps_per_epoch)
+    else:
+        train_ds, validation_ds = tfds.load(
+            dataset, split=train_val_split, as_supervised=True, 
+            shuffle_files=True, batch_size=batch_size, data_dir=data_dir
+        )
+        train_dataset = train_ds.map(
+            get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE
+        )
+        steps_per_epoch = len(train_dataset)
+        val_dataset = validation_ds.map(
+            get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode),
+            num_parallel_calls=tf.data.experimental.AUTOTUNE
+        )
         validation_steps = len(val_dataset)
         return (train_dataset, steps_per_epoch), (val_dataset, validation_steps)
-    else:
-        split = f'train[:{2*batch_size}]' if dataset_target == "simple" else "train" 
-        ds = tfds.load(dataset, split=split, as_supervised=True, shuffle_files=True, batch_size=batch_size, data_dir=data_dir)
-        steps_per_epoch = ds.map(get_mapper(img_height, img_width, to_rgb, num_classes, label_mode=label_mode), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-        steps_per_epoch = len(steps_per_epoch)
-        return (train_dataset, steps_per_epoch)
 
 
 def get_generators_from_directory(data_directory, input_shape, batch_size, num_classes=None, label_mode="categorical", validation_split=None, preprocessing={}):
@@ -146,7 +161,7 @@ def get_generators_from_directory(data_directory, input_shape, batch_size, num_c
         return (train_dataset, steps_per_epoch)
 
 
-def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes=4,
+def get_generator_from_wsi(generator, input_shape, batch_size, num_classes=4,
                         validation_generator=None, label_mode='categorical', preprocessing={}):
     patch_size = input_shape[:2] # target_size
     img_height, img_width = patch_size
@@ -157,8 +172,8 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
     aggregate_dataset_parameters = preprocessing.get("aggregate_dataset_parameters", None)
     aggregate_dataset_parameters = aggregate_dataset_parameters or {}
     # Train generator
-    generator_type = train_generator["generator"]
-    generator_parameters = train_generator["generator_parameters"]
+    generator_type = generator["generator"]
+    generator_parameters = generator["generator_parameters"]
     generator_parameters["dataset"] = aggregate_dataset(
         load_dataset(generator_parameters["dataset"]),
         **aggregate_dataset_parameters
@@ -166,7 +181,7 @@ def get_generator_from_wsi(train_generator, input_shape, batch_size, num_classes
     generator = generator_contructor[generator_type](
         batch_size=batch_size, 
         patch_size=patch_size, 
-        label_mode=label_mode, 
+        label_mode=label_mode,
         **generator_parameters
     )
     steps_per_epoch = int(generator.size // batch_size)
@@ -214,8 +229,85 @@ class GridPatchGenerator(keras.utils.Sequence):
         # Prepare dataset
         self.__setup__(dataset)
         self.on_epoch_end()
-        
     
+    def get_map(self, group_df, values, resize=None):
+        ndim = values.ndim
+        patch_size_level_0 = level_scaler(self.patch_size, self.patch_level, 0)
+        map_rows = 1 + (group_df.row.max() - group_df.row.min())/patch_size_level_0[0]
+        map_cols = 1 + (group_df.col.max() - group_df.col.min())/patch_size_level_0[1]
+        if ndim > 1:
+            agg_map = np.empty(
+                (int(map_rows*self.patch_size[0]), int(map_cols*self.patch_size[1]), 3),
+                dtype=np.uint8
+            )
+            agg_map[:,:] = 0
+        else:
+            agg_map = np.empty(
+                (int(map_rows*self.patch_size[0]), int(map_cols*self.patch_size[1])),
+            )
+            agg_map[:,:] = np.nan
+        for i, row_ in group_df.iterrows():
+            row = int(row_["row"])
+            col = int(row_["col"])
+            map_row = (row - group_df.row.min())//patch_size_level_0[0]
+            map_col = (col - group_df.col.min())//patch_size_level_0[0]
+            if ndim > 1:
+                agg_map[
+                    int(map_row*self.patch_size[0]):int((1+map_row)*self.patch_size[0]),
+                    int(map_col*self.patch_size[1]):int((1+map_col)*self.patch_size[1]),
+                    :
+                ] = values[i].astype(np.uint8)
+            else:
+                agg_map[
+                    int(map_row*self.patch_size[0]):int((1+map_row)*self.patch_size[0]),
+                    int(map_col*self.patch_size[1]):int((1+map_col)*self.patch_size[1])
+                ] = values[i]
+        if resize is not None:
+            agg_map_resized = cv2.resize(agg_map, (0,0), fx=resize, fy=resize)
+            del agg_map
+            return agg_map_resized
+        else:            
+            return agg_map
+
+    def get_n_partitions(self, by="CaseNo_label"):
+        if "CaseNo_label" not in self.dataset.columns:
+            self.dataset["CaseNo_label"] = self.dataset.apply(
+                lambda row: f"{int(row['CaseNo'])}_{int(row['label'])}", axis=1
+            )
+        return self.dataset[by].nunique()
+
+    def get_partition(self, predictions_results, uncertainty_results, by="CaseNo_label"):
+        """
+        Iterate over dataseta partition corresponding to the same tissue. This is used to 
+        aggregate results from patch predictions to tissue predictions.
+
+        Parameters
+        ----------
+        predictions_results : `dict`
+            Predictions from an uncertainty model.
+        uncertanty_results : `dict`
+            Uncertainty predicted from an uncertainty model.
+        by : `str`
+            Column name from dataset to generate partitions.
+        Yield
+        -----
+            group, group_dataframe, group_predictions_results, group_uncertainty_results
+            A subset of the dataset and results for a group.
+        """
+        if "CaseNo_label" not in self.dataset.columns:
+            self.dataset["CaseNo_label"] = self.dataset.apply(
+                lambda row: f"{int(row['CaseNo'])}_{int(row['label'])}", axis=1
+            )
+        for group, group_df in self.dataset.groupby(by):
+            index = group_df.index
+            group_predictions_results = {
+                k:v[index] for k,v in predictions_results.items()
+            }
+            group_uncertainty_results = {
+                k:v[index] for k,v in uncertainty_results.items()
+            }
+            yield group, group_df, group_predictions_results, group_uncertainty_results
+  
     def __setup__(self, dataset):
         'Setup dataset for patch extraction.'
         self.slides = {}
@@ -259,14 +351,22 @@ class GridPatchGenerator(keras.utils.Sequence):
                     "col": patch[1]
                 } for patch in patch_indexes]
                 patches += new_patches
+                del sampling_map
+                del sampling_map_translation
+                del sampling_map_patch_indexes
+                del sampling_map_patch_selector
         # Generator dataset with patches and scores only
         self.dataset = pd.DataFrame(patches)
         self.num_classes = self.dataset[TARGET].nunique()
+        self.size = len(self.dataset)
+        # Use this option for evaluate all samples
         if self.batch_size == -1:
-            self.batch_size = len(self.dataset)
-            self.size = len(self.dataset)
+            self.batch_size = self.size
+            self.steps_per_epoch = 1
+        # This can ignore some samples that can't fit in the epoch.
         else:
-            self.size = self.batch_size * (len(self.dataset)//self.batch_size)
+            self.steps_per_epoch = np.ceil(self.size/self.batch_size)
+            self.steps_per_epoch = int(self.steps_per_epoch)
         atexit.register(self.cleanup)
  
     def cleanup(self):
@@ -278,7 +378,7 @@ class GridPatchGenerator(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(self.size//self.batch_size)
+        return self.steps_per_epoch
 
     def __getitem__(self, index):
         'Generate one batch of data'
@@ -293,9 +393,9 @@ class GridPatchGenerator(keras.utils.Sequence):
         'Updates indexes after each epoch'
         if self.shuffle:
             self.indexes = np.random.choice(
-                np.arange(len(self.dataset)), size=self.size, replace=False
+                np.arange(self.size), size=self.size, replace=False
             )
-        else: #ignore last rows
+        else:
             self.indexes = np.arange(self.size)
         if self.patch_vertical_flip:
             self.vertical_flips = np.random.choice((-1, 1), size=self.size)
@@ -312,10 +412,14 @@ class GridPatchGenerator(keras.utils.Sequence):
         batch_rows = self.dataset.iloc[list_indexes]
         batch_patches = np.empty((len(list_indexes), *self.patch_size, 3), dtype=np.float64)
         batch_scores  = np.empty((len(list_indexes), len(TARGET_LABELS)))
+        # TODO: fix index out of range
+        #batch_v_flips = self.vertical_flips[list_indexes]
+        #batch_h_flips = self.horizational_flips[list_indexes]
         for i, (_, row) in enumerate(batch_rows.iterrows()):
             case_no = int(row["CaseNo"])
             score   = int(row[TARGET])
             patch = self.load_patch(case_no, int(row["row"]), int(row["col"]))
+            #v_flip, h_flip = batch_v_flips[i], batch_h_flips[i]
             v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
             batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]
@@ -346,6 +450,7 @@ class MCPatchGenerator(GridPatchGenerator):
 
     def __setup__(self, dataset):
         'Setup dataset for patch extraction.'
+        # TODO: Fix this. I may increase RAM.
         # For each Slide
         self.slides = {}
         # Generator dataset with weights, patches and scores only
@@ -388,6 +493,14 @@ class MCPatchGenerator(GridPatchGenerator):
                 }, ignore_index=True)
 
         self.size = len(self.dataset)*self.samples_per_tissue
+        # Use this option for evaluate all samples
+        if self.batch_size == -1:
+            self.batch_size = self.size
+            self.steps_per_epoch = 1
+        # This can ignore some samples that can't fit in the epoch.
+        else:
+            self.steps_per_epoch = np.ceil(self.size/self.batch_size)
+            self.steps_per_epoch = int(self.steps_per_epoch)        
         self.num_classes = self.dataset[TARGET].nunique()
         # How many pixels contain one pixel at sample level at patch level
         self.upsample_pixels_patch_level = level_scaler((1, 1), sampling_map_level, patch_level)
@@ -397,7 +510,6 @@ class MCPatchGenerator(GridPatchGenerator):
 
     def on_epoch_end(self):
         'Updates samples after each epoch'
-        self.size = len(self.dataset)*self.samples_per_tissue
         self.indexes = np.empty((self.size, 2), dtype=int)
         self.dataset_ref = np.empty((self.size), dtype=int)
         for i, (_, row) in enumerate(self.dataset.iterrows()):

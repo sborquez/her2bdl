@@ -3,46 +3,44 @@ import sys
 sys.path.insert(1, '..')
 
 from her2bdl import *
-
-import logging
-import time
-from os import path
-from tensorflow.random import set_seed
-import numpy as np
+from pathlib import Path
 
 
-def train_model(config, quiet=False, run_dir="."):
-    # Seed
-    seed = config["experiment"]["seed"]
-    if seed is not None:
-        np.random.seed(seed)
-        set_seed(seed)
-
+def train_model(config, uncertainty_type="epistemic", quiet=False, run_dir="."):
+    assert uncertainty_type in ("epistemic", "aleatoric")
     # Experiment paths and indentifiers
     experiments_folder = config["experiment"]["experiments_folder"]
     experiment_name    = config["experiment"]["name"]
-    experiment_folder  = path.join(experiments_folder, experiment_name)
+    experiment_folder  = Path(experiments_folder) / experiment_name
     run_id             = config["experiment"]["run_id"]
-
+    
     # Training parameters
     epochs = config["training"]["epochs"]
     batch_size  = config["training"]["batch_size"]    
 
     # Dataset
     data_configuration = config["data"]
-    generators, input_shape, num_classes, labels = setup_generators(batch_size=batch_size, **data_configuration)
+    generators, input_shape, num_classes, labels = setup_generators(
+        batch_size=batch_size, **data_configuration
+    )
     train_, val_ = generators
     (train_dataset, steps_per_epoch) = train_
     (val_dataset, validation_steps)  = val_
 
     # Model architecture
     model_configuration = config["model"]
-    model = setup_model(input_shape, num_classes, **model_configuration)
-    ## Loss
-    loss_function    = config["training"]["loss"]["function"]
-    loss_parameters  = config["training"]["loss"]["parameters"]
-    loss_parameters  = loss_parameters or {}
-    loss = LOSS[loss_function](**loss_parameters)
+    if uncertainty_type=="aleatoric":
+        model_epistemic = setup_model(input_shape, num_classes, **model_configuration, build=True)
+        model = model_epistemic.get_aleatoric_model()
+        ## Loss
+        loss = model.build_aleatoric_loss()
+    else:
+        model = setup_model(input_shape, num_classes, **model_configuration)
+        ## Loss
+        loss_function    = config["training"]["loss"]["function"]
+        loss_parameters  = config["training"]["loss"]["parameters"]
+        loss_parameters  = loss_parameters or {}
+        loss = LOSS[loss_function](**loss_parameters)
     ## Optimizer
     optimizer_name = config["training"]["optimizer"]["name"]
     optimizer_learning_rate = float(config["training"]["optimizer"]["learning_rate"]) # fix scientific notation parsed as str.
@@ -52,6 +50,11 @@ def train_model(config, quiet=False, run_dir="."):
         learning_rate=optimizer_learning_rate, 
         **optimizer_parameters
     )
+    ## Class Weights
+    class_weight = None
+    class_weight_list = config["training"].get("class_weight", None)
+    if class_weight_list is not None:
+        class_weight = {i: w for i, w in enumerate(class_weight_list)}
     ## Callbacks
     enable_wandb = config["training"]["callbacks"]["enable_wandb"]
     earlystop = config["training"]["callbacks"]["earlystop"]
@@ -67,25 +70,31 @@ def train_model(config, quiet=False, run_dir="."):
          earlystop=earlystop,
          experiment_tracker=experiment_tracker,
          checkpoints=checkpoints,
-         run_dir=run_dir
+         run_dir=run_dir,
+         uncertainty_type=uncertainty_type
     )
+    
     # Train
     model.compile(
         optimizer=optimizer,
         loss=loss
     )
     history = model.fit(train_dataset, 
-        verbose = 2 if quiet else 1,
+        verbose = 1,
         steps_per_epoch=steps_per_epoch,
         validation_data=val_dataset, 
         validation_steps=validation_steps,
         epochs=epochs,
+        class_weight=class_weight,
         callbacks=callbacks
     )
     # Return final model
     return model
 
 if __name__ == "__main__":
+    import os
+    os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+    os.environ['CUDA_DISABLE_PTX_JIT'] = "1"
     import argparse
     ap = argparse.ArgumentParser(description="Train a model.")
     ap.add_argument("-c", "--config", type=str, required=True, 
@@ -97,41 +106,45 @@ if __name__ == "__main__":
     ap.add_argument("--disable_wandb", action='store_true', 
         help="Disable WandB for locally testing without Weight&Bias Callbacks.")
     ap.add_argument("--job", type=int, default=None, 
-        help="Disable WandB for locally testing without Weight&Bias Callbacks.")
+        help="Job number.")
+    ap.add_argument("-u", "--uncertainty_type", type=str, default="epistemic",
+        help="Uncertainty type epistemic/aleatoric.")
     ap.add_argument("--seed", type=int, default=None, 
         help="Overwrite experiment`s seed.")
-    args = vars(ap.parse_args()) 
+    args = ap.parse_args()
 
     # Load experiment configuration
-    config_file = args["config"]
+    config_file = args.config
     print(f"Loading config from: {config_file}")
     experiment_config = load_config_file(config_file)
 
     # Configure multiples runs
-    job = args["job"]
+    job = args.job
     if job is not None:
-        model_name = experiment_config["experiment"]["name"]
-        job_sufix  = f"job {str(job).zfill(2)}"
-        experiment_config["experiment"]["name"]= f"{model_name} {job_sufix}"
+        experiment_config["experiment"]["tags"].append(f"job {job}")
+        if experiment_config["experiment"]["seed"] is not None:
+            experiment_config["experiment"]["seed"] += job
     # Overwrite seed
-    seed = args["seed"]
+    seed = args.seed
     if seed is not None:
-        experiment_config["experiment"]["seed"]= seed
+        experiment_config["experiment"]["seed"] = seed
     # Setup experiments and pluggins
-    if args["disable_wandb"]:
+    if args.disable_wandb:
         experiment_config["training"]["callbacks"]["enable_wandb"] = False
         experiment_config["plugins"]["wandb"] = None
-    if args["dryrun"]:
-        WANDB_MODE_bck = os.environ.get("WANDB_MODE", None)
+    if args.dryrun:
+        WANDB_MODE_bck = os.environ.get("WANDB_MODE", "")
         os.environ["WANDB_MODE"] = 'dryrun'
-    run_dir = setup_experiment(experiment_config)
+    run_dir = setup_experiment(experiment_config, mode="training")
     
     # Verbosity
-    quiet = args["quiet"]
+    quiet = args.quiet
 
-    # Run trainong process
-    model = train_model(experiment_config, quiet=quiet, run_dir=run_dir)
+    # Run training process
+    uncertainty_type = args.uncertainty_type
+    model = train_model(experiment_config, uncertainty_type=uncertainty_type,
+                        quiet=quiet, run_dir=run_dir)
 
     # restore configuration
-    if args["dryrun"]:
+    if args.dryrun:
         os.environ["WANDB_MODE"] = WANDB_MODE_bck

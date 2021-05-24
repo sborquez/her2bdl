@@ -8,6 +8,7 @@ Here you can find weights distributios, activations plots and model plot
 """
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import  ListedColormap
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -15,7 +16,8 @@ from pathlib import Path
 
 __all__ = [
     'plot_predictive_distribution', 'plot_forward_pass_samples', 'plot_sample',
-    'display_prediction', 'display_uncertainty', 'display_uncertainty_by_class'
+    'display_prediction', 'display_uncertainty', 'display_uncertainty_by_class',
+    'display_map'
 ]
 
 #DEFAULT_PALETTE = "YlOrBr" # this is ideal for her2 representation
@@ -78,8 +80,11 @@ def plot_forward_pass_samples(prediction_samples, y_true=None,
     return axis
 
 def plot_sample(x, y_true=None, y_pred=None, labels=None, axis=None):
+    """
+    Plot input sample.
+    """
     # Create new figure
-    x = x.copy()
+    x = x.astype(np.float32)
     if axis is None:
         plt.figure(figsize=(6,6))
         axis = plt.gca()
@@ -102,19 +107,51 @@ def plot_sample(x, y_true=None, y_pred=None, labels=None, axis=None):
     axis.set_title(title, y=-0.3)
     return axis
 
-def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
-                        model_name=None, labels=None,
-                        y_true=None, uncertainty=None, 
-                        show=False, save_to=None):
+def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples=None,
+                        model_name=None, labels=None, y_true=None, 
+                        uncertainty=None, show=False, save_to=None):
     """
     Display uncertainty for a sample x, plot predictive distribution and samples 
     class distributions.
+
+    Parameters
+    ----------
+    x : `np.ndarray`
+        Input image (width, height, channels).
+    y_pred :  `int`
+        Predicted label.
+    predictive_distribution : `np.ndarray`
+        Predicted distribution (n_classes)
+    prediction_samples : `np.ndarray` or `None`
+        Predicted samples (samples, n_classes). Ignore second row plot if is `None`.
+    model_name : `str`
+        Model name.
+    labels : `list`
+        Label names ordered by index.
+    y_true : `int`
+        True label.
+    uncertainty : `pd.Serie`
+        ...
+    show    : `bool`
+        Show and close plot.
+    save_to : `str` or `None`
+        If is not `None`, save figure into filepath.
+    Return
+    ------
+        `matplotlib.figure.Figure`.
     """
     # Create new Figure
-    fig = plt.figure(figsize=(8, 6))
-    ax1 = plt.subplot(221)
+    if prediction_samples is None:
+        ax1_subplot = 121
+        ax2_subplot = 122
+        fig = plt.figure(figsize=(8, 4))
+    else:
+        ax1_subplot = 221
+        ax2_subplot = 222
+        fig = plt.figure(figsize=(8, 6))
+    ax1 = plt.subplot(ax1_subplot)
     plot_sample(x, y_true=y_true, y_pred=y_pred, labels=labels, axis=ax1)
-    ax2 = plt.subplot(222)
+    ax2 = plt.subplot(ax2_subplot)
     plot_predictive_distribution(predictive_distribution, labels=labels, axis=ax2)
     # Uncertainty 
     if uncertainty is not None:
@@ -124,8 +161,9 @@ def display_uncertainty(x, y_pred, predictive_distribution, prediction_samples,
         # place a text box in upper left in axes coords
         ax2.text(0.05, 0.95, textstr, transform=ax2.transAxes, fontsize=10, 
                 verticalalignment='top', bbox=props)
-    ax3 = plt.subplot(212)
-    plot_forward_pass_samples(prediction_samples, y_true=y_true, labels=labels, axis=ax3)
+    if prediction_samples is not None:
+        ax3 = plt.subplot(212)
+        plot_forward_pass_samples(prediction_samples, y_true=y_true, labels=labels, axis=ax3)
     # Style
     title = f"Uncertainty\n{model_name}" if model_name is not None else "Uncertainty"
     plt.suptitle(title, fontsize=16)
@@ -147,6 +185,30 @@ def display_prediction(x, y_pred, predictive_distribution, model_name=None,
     """
     Display the prediction of a input, the probability and the predicted point.
     If targets_values is not None, the target point is included in the figure.
+    
+    Parameters
+    ----------
+    x : `np.ndarray`
+        Input image (width, height, channels).
+    y_pred :  `int`
+        Predicted label.
+    predictive_distribution : `np.ndarray`
+        Predicted distribution (n_classes)
+    prediction_samples : `np.ndarray`
+        Predicted samples (samples, n_classes)
+    model_name : `str`
+        Model name.
+    labels : `list`
+        Label names ordered by index.
+    y_true : `int`
+        True label.
+    show    : `bool`
+        Show and close plot.
+    save_to : `str` or `None`
+        If is not `None`, save figure into filepath.
+    Return
+    ------
+        `matplotlib.figure.Figure`.
     """
     # Create new Figure
     fig = plt.figure(figsize=(8, 4))
@@ -173,6 +235,9 @@ def display_prediction(x, y_pred, predictive_distribution, model_name=None,
 
 def plot_uncertainty_by_class(y_true, uncertainty, metric="predictive entropy",
                      labels=None, axis=None):
+    """
+    Plot uncertainty boxplot by class.
+    """
     # Create new figure
     if axis is None:
         plt.figure(figsize=(6,6))
@@ -187,6 +252,29 @@ def plot_uncertainty_by_class(y_true, uncertainty, metric="predictive entropy",
 
 def display_uncertainty_by_class(y_true, uncertainty, metric="predictive entropy",
                         model_name=None, labels=None, show=False, save_to=None):
+    """
+    Display uncertainty boxplot by class for a given metric.
+    
+    Parameters
+    ----------
+    y_true : `int`
+        True label.
+    uncertainty : `pd.Serie`
+        ...
+    metric : `str`
+        Uncertainty metric.
+    model_name : `str`
+        Model name.
+    labels : `list`
+        Label names ordered by index.
+    show    : `bool`
+        Show and close plot.
+    save_to : `str` or `None`
+        If is not `None`, save figure into filepath.
+    Return
+    ------
+        `matplotlib.figure.Figure`.
+    """
     # Create new Figure
     fig = plt.figure(figsize=(8, 4))
     # Plot
@@ -204,7 +292,40 @@ def display_uncertainty_by_class(y_true, uncertainty, metric="predictive entropy
     else:
         return fig
 
-
+def display_map(image, heatmap=None, title=None, transparency=0.6, color_map='predictive entropy', show=False, save_to=None):
+    fig = plt.figure(figsize=(8, 8))
+    # Plot
+    plt.imshow(image)
+    if heatmap is not None:
+        if color_map == "her2":
+            color_map = ListedColormap(sns.color_palette(DEFAULT_PALETTE)[:4])
+            plt.imshow(heatmap, alpha=transparency, cmap=color_map, vmin=-0.5, vmax=3.5)
+            plt.colorbar(ticks=[0, 1, 2, 3], label="score")
+        elif color_map == "mutual information":
+            plt.imshow(heatmap, alpha=transparency, cmap="jet", vmin=0, vmax=1.5/3) #~np.log(4)
+            plt.colorbar(label="uncertainty")
+        elif color_map == 'predictive entropy':
+            plt.imshow(heatmap, alpha=transparency, cmap="jet", vmin=0, vmax=1.5) #~np.log(4)
+            plt.colorbar(label="uncertainty")
+        else:
+            plt.imshow(heatmap, alpha=transparency, cmap="jet", vmin=0, vmax=1.05) #~np.log(4)
+            plt.colorbar(label="uncertainty")
+    # Style
+    if title is not None: plt.suptitle(title, fontsize=16)
+    plt.grid(False)
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+    # Show or Save
+    if save_to is not None:
+        save_to = Path(save_to)
+        fig.savefig(save_to.joinpath(f'map.png'))
+    if show:
+        plt.show()
+        plt.close()
+        return None
+    else:
+        return fig
 
 
 

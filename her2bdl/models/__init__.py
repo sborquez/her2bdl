@@ -44,11 +44,12 @@ CUSTOM_OBJECTS = {
 Optimizers
 ==========
 """
-from tensorflow.keras.optimizers import (Adam, SGD, RMSprop)
+from tensorflow.keras.optimizers import (Adam, SGD, RMSprop, Adadelta)
 OPTIMIZERS = {
     "adam"    : Adam,
     "sgd"     : SGD,
-    "rmsprop" : RMSprop  
+    "rmsprop" : RMSprop,
+    "adadelta": Adadelta
 }
 
 
@@ -56,16 +57,27 @@ OPTIMIZERS = {
 Models and Aggregations
 ==========
 """
-from .mcdropout import *
 from .uncertainty import *
 from .metrics import *
 
+from .mcdropout import (
+    SimpleClassifierMCDropout,
+    EfficientNetMCDropout,
+    HEDConvClassifierMCDropout,
+    RGBConvClassifierMCDropout  
+)
 MODELS = {
     "SimpleClassifierMCDropout" : SimpleClassifierMCDropout,
-    "EfficientNetMCDropout": EfficientNetMCDropout,
     "HEDConvClassifierMCDropout": HEDConvClassifierMCDropout,
-    "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout
-
+    "RGBConvClassifierMCDropout": RGBConvClassifierMCDropout,
+    "EfficientNetMCDropout":      EfficientNetMCDropout
 }
+
+from .aggregation import (
+    ThresholdAggregator,
+    MixtureAggregator
+)    
 AGGREGATION_METHODS = {
+    "ThresholdAggregator":  ThresholdAggregator,
+    "MixtureAggregator":    MixtureAggregator
 }

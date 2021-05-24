@@ -19,9 +19,9 @@ IMAGE_FILES = ("{CaseNo:02d}_HER2.ndpi", "{CaseNo:02d}_HE.ndpi")
 INPUTS  = ['image_her2']
 INPUT  = INPUTS[0] # if it is sigle input
 # Patch
-PATCH_SIZE = (256, 256)
-PATCH_LEVEL = 2
-PATCH_RELEVANT_RATIO = 0.8 # foreground pixels/background pixels
+PATCH_SIZE = (300, 300)
+PATCH_LEVEL = 3
+PATCH_RELEVANT_RATIO = 0.2 # foreground pixels/background pixels
 
 # Target
 TARGETS = ['HeR2 SCORE']

@@ -15,7 +15,7 @@ __all__ = [
     'predictive_entropy', 'mutual_information', 'variation_ratio'
 ]
 
-def predictive_entropy(y_predictive_distribution, is_sample=False):
+def predictive_entropy(y_predictive_distribution, is_sample=False, normalize=False):
     """
     Predictive Entropy is the average amount of information contained in 
     the predictive distribution. Predictive entropy is a biases estimator.
@@ -30,6 +30,8 @@ def predictive_entropy(y_predictive_distribution, is_sample=False):
         Model's predictive distributions (normalized histogram).
     is_sample:  `bool`
         Calculate entropy for a sample instead of a batch of samples
+    normalize:  `bool`
+        Change range into [0,1]
     Return
     ------
         ``np.ndarray` with shape (batch_size,).
@@ -43,10 +45,14 @@ def predictive_entropy(y_predictive_distribution, is_sample=False):
     y_log_predictive_distribution = np.log(eps + y_predictive_distribution)
     # Predictive Entropy
     H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
+    if normalize:
+        k = y_predictive_distribution.shape[1]
+        H = H/np.log(k)
     return H[0] if is_sample else H
 
 
-def mutual_information(y_predictive_distribution, y_predictions_samples, is_sample=False):
+def mutual_information(y_predictive_distribution, y_predictions_samples, 
+                      is_sample=False, normalize=False, weights=None):
     """
     Measure of the mutual dependence between the two variables. More 
     specifically, it quantifies the "amount of information" (in units
@@ -65,7 +71,11 @@ def mutual_information(y_predictive_distribution, y_predictions_samples, is_samp
     y_predictions_samples : `np.ndarray` (batch_size, sample size, classes)
         Forward pass samples.
     is_sample:  `bool`
-        Calculate entropy for a sample instead of a batch of samples        
+        Calculate entropy for a sample instead of a batch of samples
+    normalize:  `bool`
+        Change range into [0,1]
+    weights: `np.ndarray` (batch_size,)
+        weight of samples.
     Return
     ------
         ``np.ndarray` with shape (batch_size,).
@@ -83,14 +93,21 @@ def mutual_information(y_predictive_distribution, y_predictions_samples, is_samp
     y_log_predictive_distribution = np.log(eps + y_predictive_distribution) 
     H = -1*np.sum(y_predictive_distribution * y_log_predictive_distribution, axis=1)
     ## Expected value (batch, classes) 
-    y_log_predictions_samples = np.log(eps + y_predictions_samples)
-    minus_E = np.sum(y_predictions_samples*y_log_predictions_samples, axis=(1,2))
-    minus_E /= sample_size
+    if weights is None:
+        y_log_predictions_samples = np.log(eps + y_predictions_samples)
+        minus_E = np.sum(y_predictions_samples*y_log_predictions_samples, axis=(1,2))
+        minus_E /= sample_size
+    else:
+        y_log_predictions_samples = np.log(eps + y_predictions_samples)
+        minus_E = np.average(np.sum(y_predictions_samples*y_log_predictions_samples, axis=2), axis=1, weights=weights)
     ## Mutual Information
     I = H + minus_E
+    if normalize:
+        k = y_predictive_distribution.shape[1]
+        I = I/np.log(k)
     return I[0] if is_sample else I
 
-def variation_ratio(y_predictions_samples, is_sample=False):
+def variation_ratio(y_predictions_samples, is_sample=False, weights=None):
     """
     Collecting a set of $T$ labels $y_t$ from multiple stochastic forward
     passes on the same input, we can find the mode of the distribution 
@@ -107,6 +124,7 @@ def variation_ratio(y_predictions_samples, is_sample=False):
         ``np.ndarray` with shape (batch_size,).
             Return predictive entropy for a the batch.
     """
+    #TODO: add weight for aggregation
     # To batch format
     if is_sample:
         y_predictions_samples = np.expand_dims(y_predictions_samples, 0)

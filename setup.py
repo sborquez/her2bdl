@@ -32,13 +32,13 @@ setup(
     author_email=about['__author_email__'],
     url=about['__url__'],
     packages=[ai_name], #, 'deploy'], TODO: Add deploy
-    include_package_data=True,
-    python_requires=">=3.7.*",
+    #include_package_data=True,
+    python_requires=">=3.8.*",
     install_requires=[
         'numpy', 'pandas', 'xlrd', 'scipy', 'tqdm', 'h5py', 'matplotlib', 'plotly', 'pyyaml',
-        'scikit-learn', 'tensorflow>=2.3.0', 'tensorflow-probability',
+        'scikit-learn', 'tensorflow==2.4.1', 'tensorflow-probability',
         'openslide-python', 'opencv-python', 'scikit-image',
-        'nose','jupyter', 'wandb', 'tensorflow-datasets', 'pycm'
+        'nose','jupyter', 'wandb', 'tensorflow-datasets', 'pycm','openpyxl'
     ],
     license=license, #about['__license__'],
     zip_safe=False,

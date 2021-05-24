@@ -18,7 +18,7 @@ pandas = "*"
 xlrd = "*"
 h5py = "*" 
 scikit-learn = "*"
-scikit-image = "*" 
+scikit-image = "*"
 tensorflow = "2.4.1"
 tensorflow-probability  = "*"
 tensorflow-datasets = "*"
@@ -31,6 +31,7 @@ openslide-python = "*"
 opencv-python = "*"
 pyyaml = "*"
 pycm= "3.0"
+openpyxl = "*"
 
 
 [dev-packages]

@@ -33,3 +33,4 @@ dependencies:
     - tensorflow-probability
     - tensorflow-datasets
     - pycm==3.0
+    - openpyxl

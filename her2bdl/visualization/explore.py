@@ -7,6 +7,8 @@ Generate plot for display dataset, inputs and targets.
 Here you can find dataset exploration and samples visualizations.
 """
 from os import path
+from pathlib import Path
+from IPython.core.display import display
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.colors import LogNorm
@@ -15,17 +17,48 @@ import seaborn as sns; sns.set()
 from .. import IMAGE_FILES, IMAGE_IHC, COLORS
 
 __all__ = [
+    'display_WSI_and_metadata',
     'display_class_distribution',
     'display_wsi_sizes_distribution'
 ]
 
+def open_slide(filename):
+  """
+  Open a whole-slide image (*.svs, etc).
+
+  Args:
+    filename: Name of the slide file.
+
+  Returns:
+    An OpenSlide object representing a whole-slide image.
+  """
+  import openslide
+  try:
+    slide = openslide.open_slide(filename)
+  except openslide.OpenSlideError:
+    slide = None
+  except FileNotFoundError:
+    slide = None
+  return slide
+
+def close_wsi(wsi):
+    wsi.close()
+
+def open_wsi(source, caseno, image_type):
+    slide_path = str( Path(source) / str(caseno).zfill(2) / image_type)
+    wsi = open_slide(slide_path)
+    return wsi
 
 """
 Input Plots
 =============
 """
 def display_WSI_and_metadata(wsi):
-    pass
+    thumbnail = wsi.get_thumbnail(size=(800, 800))
+    display(thumbnail)
+    for i, v in enumerate(zip(wsi.level_downsamples, wsi.level_dimensions)):
+        print(f"\tlevel [{i}]: Downsampling {v[0]} Size {v[1]}")
+    return thumbnail
 
 """
 Target Plots

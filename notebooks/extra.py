@@ -11,7 +11,7 @@ from IPython.core.display import display, HTML
 __all__ = [
     "display", "HTML",
     "gc", "wandb", "np", "pd", "Path", "plt", "tqdm",
-    "reset_kernel"
+    "reset_kernel", "os"
 ]
 
 def reset_kernel():

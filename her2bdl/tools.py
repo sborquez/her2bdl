@@ -98,6 +98,19 @@ def parse_wandb_config(config):
             parsed_config[section] = config.get(section)["value"]
     return parsed_config
 
+def replace_env_config(config):
+    c = config
+    c["experiment"]["experiments_folder"] = c["experiment"]["experiments_folder"].replace("$HER2BDL_EXPERIMENTS", os.environ.get("HER2BDL_EXPERIMENTS"))
+    if c["model"].get("weights", None) is not None:
+        c["model"]["weights"] = c["model"]["weights"].replace("$HER2BDL_EXTRAS", os.environ.get("HER2BDL_EXTRAS"))
+    if c["model"].get("aleatoric_weights", None) is not None:
+        c["model"]["aleatoric_weights"] = c["model"]["aleatoric_weights"].replace("$HER2BDL_EXTRAS", os.environ.get("HER2BDL_EXTRAS"))
+    if c["data"]["source"]["type"] == "wsi":
+        for g in ("train", "validation", "test"):
+            v=c["data"]["source"]["parameters"][f"{g}_generator"]['generator_parameters']["dataset"].replace("$HER2BDL_DATASETS", os.environ.get("HER2BDL_DATASETS"))
+            c["data"]["source"]["parameters"][f"{g}_generator"]['generator_parameters']["dataset"]=v
+    c["plugins"]["wandb"]["apikey"]=c["plugins"]["wandb"]["apikey"].replace("$HER2BDL_EXPERIMENTS", os.environ.get("HER2BDL_EXPERIMENTS"))
+    return c
 
 def load_config_file(config_filepath, **overwrite_config):
     """Load, validate and set default values"""
@@ -122,6 +135,8 @@ def load_config_file(config_filepath, **overwrite_config):
         if len(set(required_keys) - set(defined_keys)) > 0:
             not_defined[section] = set(required_keys) - set(defined_keys)
     assert len(not_defined) == 0, f"Configuration not defined: {not_defined}"
+    # Replace ENV variables
+    config = replace_env_config(config)
     # Set Experiment run id
     if config["experiment"]["run_id"] is None:
         config["experiment"]["run_id"] = wandb.util.generate_id()
@@ -170,12 +185,14 @@ def setup_experiment(experiment_config, mode="training"):
         else:
             os.environ["WANDB_API_KEY"] = wand_config["apikey"]
         project = wand_config["project"]
+        experiment_folder = experiment_config["experiment"]["experiments_folder"]
+        os.makedirs(experiment_folder, exist_ok=True)
         wandb.init(
             project = project,
             name    = experiment_config["experiment"]["name"],
             notes   = experiment_config["experiment"]["notes"],
             tags    = experiment_config["experiment"]["tags"],
-            dir     = experiment_config["experiment"]["experiments_folder"],
+            dir     = experiment_folder,
             job_type= mode,
             id      = experiment_config["experiment"]["run_id"],
             config  = experiment_config

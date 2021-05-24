@@ -1,0 +1,175 @@
+# Experiment information
+experiment:
+  # Custom indentifier name for the experiment.
+  # Experiment
+  name: HEDConvClassifier-McDropout-C876
+  notes: HEDConvClassifier with MC-Dropout for Her2 Classification using WSI-MCPatchGenerator.
+  tags:
+    - hedconv
+    - hdx
+    - C876
+    - dropout_rate=0.2
+    - her2
+    - MCPatchGenerator
+    - hyperparameters
+    - fold_5
+  # Experiments folder: Contains multiples experiments
+  experiments_folder: $HER2BDL_EXPERIMENTS/runs
+  # (Optional, default=null) numeric identfier for the experiment. If `null`, will be randomly picked.
+  run_id: null
+  # (Optional, default=null) Random seed, if it`s null, uses a random seed.
+  seed: 1234
+
+# Model architecture
+model:
+  # Model task: [classification|regression]
+  task: classification
+  # Model Class implemented in her2bdl.models
+  architecture: HEDConvClassifierMCDropout
+  # (Optional, default=null) Models pretrained weights path. If it is null, use random weight initialization.
+  weights: null
+  # Model architecture hyperparameters
+  hyperparameters: 
+    ignore_eosin: true
+    mc_dropout_rate: 0.2
+    encoder_kernel_sizes:
+      - 3
+      - 3
+      - 3
+    conv_activation: swish
+    classifier_dense_layers: 
+      - 256
+      - 128
+      - 64
+    dense_activation: swish
+  # Model uncertainty hyperparameters
+  uncertainty:
+    sample_size: 200
+    mc_dropout_batch_size: 64
+    multual_information: true
+    variation_ratio: true
+    predictive_entropy: true
+
+# Aggregation methods
+aggregation: 
+  # Method Class
+  method: null
+  # Mathod parameters
+  parameters: null
+
+# Datasets and preprocessing
+data:
+  # Source
+  source:
+    type: wsi
+    # Source type parameters
+    parameters:
+      train_generator:
+        generator: 'MCPatchGenerator'
+        generator_parameters:
+          dataset: '$HER2BDL_DATASETS/kfolds/fold_5_training.csv'
+          patch_level: 3
+          samples_per_tissue: 200
+          patch_vertical_flip: true
+          patch_horizontal_flip: true
+          shuffle: true
+      validation_generator:
+        generator: 'GridPatchGenerator'
+        generator_parameters:
+          dataset: '$HER2BDL_DATASETS/kfolds/fold_5_validation.csv'
+          patch_level: 3
+          patch_vertical_flip: false
+          patch_horizontal_flip: false
+          shuffle: true
+      test_generator:
+        generator: 'GridPatchGenerator'
+        generator_parameters:
+          dataset: '$HER2BDL_DATASETS/train.csv'
+          patch_level: 3
+          patch_vertical_flip: false
+          patch_horizontal_flip: false
+          shuffle: true
+  # Input
+  img_height: 240
+  img_width: 240
+  img_channels: 3
+  preprocessing:
+    rescale: null
+    aggregate_dataset_parameters: null
+  # Target
+  num_classes: 4
+  label_mode: categorical  # Depends on task and model architecture
+  labels: 
+    - '0'
+    - '1+'
+    - '2+'
+    - '3+'
+
+# Training model hyperparameters
+training:
+  # Training epochs
+  epochs: 100
+  # (Optional, default=16) Depends on CPU-GPU available memory.
+  batch_size: 80
+  # (Optional, default=0.2) Train and validation split.
+  validation_split: null
+  # Models loss function
+  loss:
+    function: CategoricalCrossentropy
+    parameters: null
+  # (Optional, default=sgd(lr=1e-4)) Training optimizer
+  optimizer:
+    name: rmsprop
+    learning_rate: 1e-3
+    parameters: 
+      centered: True
+  class_weight:
+    - 1
+    - 5
+    - 5
+    - 1
+  # Training callbacks
+  callbacks:
+    # Connect to weight and bias *Requiere plugins and env variable.* 
+    enable_wandb: true
+    # Early stop, use null to disable. 
+    earlystop: 
+      patience: 50
+      monitor: val_loss
+    # Experiments results while training
+    experiment_tracker:
+      # Save model architecture summary
+      log_model_summary: true
+      # Save datasets info: source, sizes, etc. 
+      log_dataset_description: true
+      # Plots and logs
+      log_training_loss: true
+      log_training_loss: true
+      log_predictions: true
+      log_uncertainty: true
+      log_confusion_matrix: true
+      log_metrics: true
+      log_roc_curve: true
+    # Save checkpoints: saved at experiments_folder/experiment/checkpoints
+    checkpoints:
+      # saved weights format
+      format: "weights.{epoch:03d}-{val_loss:.4f}.h5"
+      save_best_only: true
+      save_weights_only: true
+      monitor: val_loss
+# Evaluation metrics
+evaluation:
+  evaluate_classification: true
+  evaluate_aleatoric_uncertainty: false
+  evaluate_aggregation: false
+# Predict 
+predict:
+  save_aggregation: false
+  save_predictions: true
+  save_uncertainty: false
+# Plugin setups
+plugins:
+  wandb:
+    project: Her2BDL
+    # Use environment variable name (recommended) or API KEY.
+    apikey: $HER2BDL_EXPERIMENTS/.wandb_secret

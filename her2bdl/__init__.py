@@ -11,6 +11,7 @@ env_fails = []
 if not os.environ.get("HER2BDL_HOME"): env_fails.append("HER2BDL_HOME")
 if not os.environ.get("HER2BDL_DATASETS"): env_fails.append("HER2BDL_DATASETS")
 if not os.environ.get("HER2BDL_EXPERIMENTS"): env_fails.append("HER2BDL_EXPERIMENTS")
+if not os.environ.get("HER2BDL_EXTRAS"): env_fails.append("HER2BDL_EXTRAS")
 assert len(env_fails) == 0, f"Required set environment variables: ({env_fails})"
 
 from .data import *

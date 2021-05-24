@@ -1,7 +1,7 @@
 #!/bin/bash
 # ----------------Modules-----------------------------
 project=$HER2BDL_HOME
-experiments_folder=$HER2BDL_EXPERIMENTS
+experiments_folder=$$HER2BDL_HOME/scripts/config
 env="her2bdl"
 # ----------------Comands--------------------------
 experiments=(

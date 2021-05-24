@@ -11,7 +11,7 @@ import logging
 from os.path import join, split, basename
 from pathlib import Path
 from glob import glob
-
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -199,7 +199,7 @@ def describe_dataset(dataset, include_targets=True):
         for score, size in size_by_class.items():
             print(f'    Score {score}: {size}')
 
-def aggregate_dataset(dataset, replace_source=None, filter_selected=True, fix_lowercase=True):
+def aggregate_dataset(dataset, replace_dataset_var=True, filter_selected=True, fix_lowercase=True):
     """
     Perform simple aggegation to dataset.
 
@@ -207,16 +207,17 @@ def aggregate_dataset(dataset, replace_source=None, filter_selected=True, fix_lo
     ==========
     dataset : `for example pd.DataFrame`
         Dataset.
-    replace_source : `str` or `None`
-        Replace source columns.
+    replace_dataset_var : `bool`
+        Replace HER2BDL_DATASET variable
     Returns
     =======
     `pd.DataFrame`
         Dataset with aggregate information.
     """
-    #TODO: Add option to replace parent folder of sampling maps, segmentation and slide paths.
-    if replace_source is not None:
-        dataset.source = replace_source
+    if replace_dataset_var:
+        columns = ["source", "slide_path", "segmentation_path", "sampling_map"]
+        for c in columns:
+            dataset[c] = dataset[c].str.replace("$HER2BDL_DATASETS", os.environ.get("HER2BDL_DATASETS"), regex=False)
     if fix_lowercase:
         fixable_columns = ["image_her2", "slide_path"]
         mapper = ("_Her2.ndpi", "_HER2.ndpi")

@@ -48,13 +48,14 @@ For instructions to install `nvidia-docker` check their [website](https://develo
 Then, simply replace `docker` with `nvidia-docker` and `"Dockerfile"` with `"Dockerfile.nvidia"`.
 
 ```bash
-nvidia-docker build -q -f "Dockerfile.nvidia" -t her2bdl:latest  
-nvidia-docker run -it \
+sudo docker build -t sborquez/her2bdl:latest-gpu -< Dockerfile.nvidia
+sudo docker run -it \
+      --name her2bdl --gpus all --rm -p 8888:8888
      -v <path/to/dataset_folder>:/datasets \
      -v <path/to/experiment_folder>:/experiments \
      -v "$(pwd)":/her2bdl_dev \
      [-e WANDB_APY_KEY=<wandb_secret>]\
-     her2bdl:latest
+     sborquez/her2bdl:latest-gpu
 ```
 
 **note:** `nvidia-docker` doesn't work on Windows.

@@ -25,6 +25,10 @@ RUN mkdir ${HER2BDL_DATASETS}
 # Configurations files and runs
 ENV HER2BDL_EXPERIMENTS /experiments
 RUN mkdir ${HER2BDL_EXPERIMENTS}
+# Pretrained files and runs
+ENV HER2BDL_EXTRAS /extras
+RUN mkdir ${HER2BDL_EXTRAS}
+RUN git clone https://github.com/sborquez/her2bdl-files /extras
 # Host repository folder mounted from host to local development
 ENV HER2BDL_DEV /her2bdl_dev
 RUN mkdir ${HER2BDL_DEV}

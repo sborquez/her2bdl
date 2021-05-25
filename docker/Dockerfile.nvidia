@@ -1,11 +1,12 @@
-FROM  nvidia/cuda:10.0-cudnn7-runtime-ubuntu18.04
+FROM  nvidia/cuda:11.2.0-cudnn8-runtime-ubuntu20.04
 # TODO: Check GPU support with nvidia-docker
 LABEL Author, Sebastian Borquez
 
 # Install Miniconda3 (from minconda Dockerfile)
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-
-RUN apt-get update -q && \
+RUN  apt-get update -q && \
+    DEBIAN_FRONTEND="noninteractive" TZ="America/New_York" \
+    apt-get install -q -y tzdata apt-utils &&\
     apt-get install -q -y \
         bzip2 \
         ca-certificates \
@@ -20,8 +21,6 @@ RUN apt-get update -q && \
     && apt-get clean
 
 ENV PATH /opt/conda/bin:$PATH
-
-CMD [ "/bin/bash" ]
 
 # Leave these args here to better use the Docker build cache
 ARG CONDA_VERSION=py38_4.9.2
@@ -65,15 +64,28 @@ RUN mkdir ${HER2BDL_DATASETS}
 # Configurations files and runs
 ENV HER2BDL_EXPERIMENTS /experiments
 RUN mkdir ${HER2BDL_EXPERIMENTS}
+# Pretrained files and runs
+ENV HER2BDL_EXTRAS /extras
+RUN mkdir ${HER2BDL_EXTRAS}
+RUN git clone https://github.com/sborquez/her2bdl-files /extras
 # Host repository folder mounted from host to local development
 ENV HER2BDL_DEV /her2bdl_dev
 RUN mkdir ${HER2BDL_DEV}
 
+ENV LD_LIBRARY_PATH /usr/local/cuda/lib64
+RUN ln -s /usr/local/cuda/lib64/libcusolver.so.11 /usr/local/cuda/lib64/libcusolver.so.10
 RUN conda update --name base conda &&\
     conda env create --file environment_gpu.yml
+
 RUN echo "conda activate her2bdl" >> ~/.bashrc
 SHELL ["conda", "run", "--name", "her2bdl", "/bin/bash", "-c"]
 
-#CMD 
-# TODO: container commands
-# ENTRYPOINT ["conda", "run", "--name", "her2dbl", "python", "main.py"]
+RUN pip install .
+RUN apt install task-spooler
+
+# # Jupyter notebooks
+EXPOSE 8888
+RUN chmod +x /her2bdl/docker/docker-start.sh
+CMD [ "/her2bdl/docker/docker-start.sh" ]
+
+#ENTRYPOINT ["conda", "run", "--name", "her2dbl", "python", "main.py"]

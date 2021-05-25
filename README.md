@@ -13,8 +13,8 @@ Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
 - [x] Weight and Bias easy setup.
 - [x] Docker container.
 - [x] Easy experiment reproducibility.
-- [ ] Notebooks.
-- [ ] Pip Package.
+- [x] Notebooks.
+- [x] Pip Package.
 
 ## Her2BDL Framework - Environment Setup
 ### A. With Dockers
@@ -86,6 +86,17 @@ for more details about conda environments.
 
 **note**: `conda activate her2bdl` this is required for each new session.
 
+
+#### Setup ENV variables
+# HER2BDL
+
+```
+export HER2BDL_HOME=<This folder>
+export HER2BDL_DATASETS=<Datasets Folder>
+export HER2BDL_EXPERIMENTS=<Runs Folder>
+export HER2BDL_EXTRAS=<Pretrained model Folder>
+```
+
 ## Her2BDL Framework - Quick Start
 
 ### 1. Prepare Dataset
@@ -116,9 +127,6 @@ Contains notebook version of the scripts in `\train` handy for `Google Colab`. M
 
 Collections of user defined unit tests with `nose`. More details in `tests/README.md`.
 
-### deploy/
-
-Different options for consume a trained model. More details in `deploy/README.md`.
 
 ## Documentation
 

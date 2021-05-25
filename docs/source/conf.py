@@ -16,13 +16,13 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath('../..'))
-from AI.__version__ import __version__
+from her2bdl.__version__ import __version__
 
 
 # -- Project information -----------------------------------------------------
 
 project = 'Her2BDL'
-copyright = '2020, Sebastián Bórquez G,'
+copyright = '202 ...0, Sebastián Bórquez G,'
 author = 'Sebastián Bórquez G'
 
 # The short X.Y version
@@ -181,3 +181,4 @@ epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
+extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autodoc']

@@ -85,7 +85,8 @@ RUN apt install task-spooler
 
 # # Jupyter notebooks
 EXPOSE 8888
-RUN chmod +x /her2bdl/docker/docker-start.sh
-CMD [ "/her2bdl/docker/docker-start.sh" ]
+RUN chmod u+x $HER2BDL_HOME/docker/docker_start.sh
+RUN echo  "sh $HER2BDL_HOME/docker/docker_start.sh" >> ~/.bashrc
+#CMD [ "docker/docker_start.sh", "bash" ]
 
 #ENTRYPOINT ["conda", "run", "--name", "her2dbl", "python", "main.py"]

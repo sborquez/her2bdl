@@ -1,0 +1,593 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>her2bdl.data package &mdash; Her2BDL 0.0.0-alpha documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Her2BDL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.0-alp
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">her2bdl.data package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-her2bdl.data.constants">her2bdl.data.constants module</a><ul>
+<li><a class="reference internal" href="#data-and-dataset-constants">Data and dataset constants</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-her2bdl.data.dataset">her2bdl.data.dataset module</a><ul>
+<li><a class="reference internal" href="#dataset-setup">Dataset setup</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-her2bdl.data.generator">her2bdl.data.generator module</a><ul>
+<li><a class="reference internal" href="#data-generator-to-feed-models">Data generator to feed models</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-her2bdl.data.preprocessing">her2bdl.data.preprocessing module</a></li>
+<li><a class="reference internal" href="#module-her2bdl.data.tissues">her2bdl.data.tissues module</a><ul>
+<li><a class="reference internal" href="#whole-slide-images">Whole Slide Images</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-her2bdl.data">Module contents</a><ul>
+<li><a class="reference internal" href="#data">Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Her2BDL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>her2bdl.data package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/her2bdl.data.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="her2bdl-data-package">
+<h1>her2bdl.data package<a class="headerlink" href="#her2bdl-data-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="her2bdl.data.wsi.html">her2bdl.data.wsi package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="her2bdl.data.wsi.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="her2bdl.data.wsi.html#module-her2bdl.data.wsi.filters">her2bdl.data.wsi.filters module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="her2bdl.data.wsi.html#module-her2bdl.data.wsi.slide">her2bdl.data.wsi.slide module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="her2bdl.data.wsi.html#module-her2bdl.data.wsi.tiles">her2bdl.data.wsi.tiles module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="her2bdl.data.wsi.html#module-her2bdl.data.wsi.util">her2bdl.data.wsi.util module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="her2bdl.data.wsi.html#module-her2bdl.data.wsi">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="her2bdl.data.wsi.html#python-whole-slide-image-preprocessing">Python Whole Slide Image Preprocessing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-her2bdl.data.constants">
+<span id="her2bdl-data-constants-module"></span><h2>her2bdl.data.constants module<a class="headerlink" href="#module-her2bdl.data.constants" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="data-and-dataset-constants">
+<h3>Data and dataset constants<a class="headerlink" href="#data-and-dataset-constants" title="Permalink to this headline">¶</a></h3>
+<p>Collections of variables for datasets and data processing.</p>
+</div>
+</div>
+<div class="section" id="module-her2bdl.data.dataset">
+<span id="her2bdl-data-dataset-module"></span><h2>her2bdl.data.dataset module<a class="headerlink" href="#module-her2bdl.data.dataset" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="dataset-setup">
+<h3>Dataset setup<a class="headerlink" href="#dataset-setup" title="Permalink to this headline">¶</a></h3>
+<p>This module handle data files and generate the datasets used
+by the models.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.aggregate_dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">aggregate_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replace_dataset_var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_selected</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_lowercase</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.aggregate_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform simple aggegation to dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<cite>for example pd.DataFrame</cite>) – Dataset.</p></li>
+<li><p><strong>replace_dataset_var</strong> (<cite>bool</cite>) – Replace HER2BDL_DATASET variable</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataset with aggregate information.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.describe_dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">describe_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_targets</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.describe_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform simple description of the dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<cite>pd.DataFrame</cite>) – Dataset.</p></li>
+<li><p><strong>include_targets</strong> (<cite>bool</cite>) – Include include_targets in description.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.get_dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">get_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_ground_truth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.get_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get dataset from source.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>source</strong> (<cite>str</cite>) – <p>Path to dataset folder.
+datasets/</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>01/</p></li>
+<li><p>groundTruth.xlsx</p></li>
+</ul>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dataset .</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.load_dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">load_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.load_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dataset_filepath</strong> (<cite>str</cite>) – Path to dataset file. (.csv)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Loaded dataset</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.prepare_cv_splits">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">prepare_cv_splits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.prepare_cv_splits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split dataset into k folds and  return cv train/validation datasets.
+Splits keep class balance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<cite>pd.DataFramer</cite>) – Original dataset.</p></li>
+<li><p><strong>k</strong> (<cite>int</cite>) – Number of dataset subdivisions and pairs of train/validation datasets.</p></li>
+<li><p><strong>seed</strong> (<cite>int`or `None</cite>) – Split by images</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>splits = [(train, val), …]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of tuple of <cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.save_dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">save_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objects</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'training'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.save_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save Dataset.
+:param dataset: Dataset.
+:type dataset: <cite>pd.DataFrame</cite>
+:param objects: Selected objects.
+:type objects: <cite>pd.DataFrame</cite>
+:param output_folder: Folder containing saved file.
+:type output_folder: <cite>str</cite> or <cite>Path</cite>
+:param dataset_name: File name or dataset split (i.e. ‘training’).
+:type dataset_name: <cite>str</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dataset filepath</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><cite>str</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.dataset.split_dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.dataset.</span></span><span class="sig-name descname"><span class="pre">split_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.dataset.split_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split dataset in train and validation sets (test optional)
+using events and a given ratio.</p>
+<p>This split conserve class balance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<cite>pd.DataFramer</cite>) – Original dataset.</p></li>
+<li><p><strong>validation_ratio</strong> (<cite>float</cite>) – Portion of images for validation dataset. (default=0.1)</p></li>
+<li><p><strong>test_ratio</strong> (<cite>float</cite> or <cite>None</cite>) – Portion of images for test dataset. (default=`None`)</p></li>
+<li><p><strong>seed</strong> (<cite>int`or `None</cite>) – Split by images</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>train, val or train, val, test</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>tuple of <cite>pd.DataFrame</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-her2bdl.data.generator">
+<span id="her2bdl-data-generator-module"></span><h2>her2bdl.data.generator module<a class="headerlink" href="#module-her2bdl.data.generator" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="data-generator-to-feed-models">
+<h3>Data generator to feed models<a class="headerlink" href="#data-generator-to-feed-models" title="Permalink to this headline">¶</a></h3>
+<p>This modele define generator (keras.Sequential) to feed differents
+models, with their defined input format.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">her2bdl.data.generator.</span></span><span class="sig-name descname"><span class="pre">GridPatchGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_vertical_flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_horizontal_flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'categorical'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">tensorflow.python.keras.utils.data_utils.Sequence</span></code></p>
+<p>Grid patch generator</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator.cleanup">
+<span class="sig-name descname"><span class="pre">cleanup</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator.cleanup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close opened slides</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator.get_map">
+<span class="sig-name descname"><span class="pre">get_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">group_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator.get_map" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator.get_n_partitions">
+<span class="sig-name descname"><span class="pre">get_n_partitions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CaseNo_label'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator.get_n_partitions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator.get_partition">
+<span class="sig-name descname"><span class="pre">get_partition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictions_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uncertainty_results</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CaseNo_label'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator.get_partition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterate over dataseta partition corresponding to the same tissue. This is used to
+aggregate results from patch predictions to tissue predictions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>predictions_results</strong> (<cite>dict</cite>) – Predictions from an uncertainty model.</p></li>
+<li><p><strong>uncertanty_results</strong> (<cite>dict</cite>) – Uncertainty predicted from an uncertainty model.</p></li>
+<li><p><strong>by</strong> (<cite>str</cite>) – Column name from dataset to generate partitions.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Yields</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><em>group, group_dataframe, group_predictions_results, group_uncertainty_results</em></p></li>
+<li><p><em>A subset of the dataset and results for a group.</em></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator.load_patch">
+<span class="sig-name descname"><span class="pre">load_patch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">case_no</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator.load_patch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.GridPatchGenerator.on_epoch_end">
+<span class="sig-name descname"><span class="pre">on_epoch_end</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.GridPatchGenerator.on_epoch_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates indexes after each epoch</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="her2bdl.data.generator.MCPatchGenerator">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">her2bdl.data.generator.</span></span><span class="sig-name descname"><span class="pre">MCPatchGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samples_per_tissue</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_vertical_flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patch_horizontal_flip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'categorical'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shuffle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.MCPatchGenerator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#her2bdl.data.generator.GridPatchGenerator" title="her2bdl.data.generator.GridPatchGenerator"><code class="xref py py-class docutils literal notranslate"><span class="pre">her2bdl.data.generator.GridPatchGenerator</span></code></a></p>
+<p>Monte-Carlo Patch Generator</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="her2bdl.data.generator.MCPatchGenerator.on_epoch_end">
+<span class="sig-name descname"><span class="pre">on_epoch_end</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.MCPatchGenerator.on_epoch_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates samples after each epoch</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.generator.generator_to_tf_Dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.generator.</span></span><span class="sig-name descname"><span class="pre">generator_to_tf_Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">generator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_width</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.generator_to_tf_Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get tf.data.Dataset from generator.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.generator.get_generator_from_wsi">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.generator.</span></span><span class="sig-name descname"><span class="pre">get_generator_from_wsi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">generator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_generator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'categorical'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preprocessing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.get_generator_from_wsi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.generator.get_generators_from_directory">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.generator.</span></span><span class="sig-name descname"><span class="pre">get_generators_from_directory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'categorical'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preprocessing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.get_generators_from_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.generator.get_generators_from_tf_Dataset">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.generator.</span></span><span class="sig-name descname"><span class="pre">get_generators_from_tf_Dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_shape</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'categorical'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preprocessing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.generator.get_generators_from_tf_Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Sources:</dt><dd><ul class="simple">
+<li><p>simple: <a class="reference external" href="https://www.tensorflow.org/datasets/catalog/mnist">https://www.tensorflow.org/datasets/catalog/mnist</a></p></li>
+<li><p>binary: <a class="reference external" href="https://www.tensorflow.org/datasets/catalog/cats_vs_dogs">https://www.tensorflow.org/datasets/catalog/cats_vs_dogs</a></p></li>
+<li><p>multiclass: <a class="reference external" href="https://www.tensorflow.org/datasets/catalog/stanford_dogs">https://www.tensorflow.org/datasets/catalog/stanford_dogs</a></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-her2bdl.data.preprocessing">
+<span id="her2bdl-data-preprocessing-module"></span><h2>her2bdl.data.preprocessing module<a class="headerlink" href="#module-her2bdl.data.preprocessing" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-her2bdl.data.tissues">
+<span id="her2bdl-data-tissues-module"></span><h2>her2bdl.data.tissues module<a class="headerlink" href="#module-her2bdl.data.tissues" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="whole-slide-images">
+<h3>Whole Slide Images<a class="headerlink" href="#whole-slide-images" title="Permalink to this headline">¶</a></h3>
+<p>Collections of function to load and handler WSI.</p>
+<p>Resources:
+- <a class="reference external" href="https://openslide.org/api/python">https://openslide.org/api/python</a>
+- <a class="reference external" href="https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/">https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/</a>
+- <a class="reference external" href="https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_label.html#sphx-glr-auto-examples-segmentation-plot-label-py">https://scikit-image.org/docs/stable/auto_examples/segmentation/plot_label.html#sphx-glr-auto-examples-segmentation-plot-label-py</a>
+-</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.tissues.fit_sampling_map">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.tissues.</span></span><span class="sig-name descname"><span class="pre">fit_sampling_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slide</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'uniform'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.tissues.fit_sampling_map" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.tissues.load_objects">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.tissues.</span></span><span class="sig-name descname"><span class="pre">load_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objects_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_selected</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.tissues.load_objects" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.tissues.save_objects">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.tissues.</span></span><span class="sig-name descname"><span class="pre">save_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_ihc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.tissues.save_objects" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.tissues.save_sampling_map">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.tissues.</span></span><span class="sig-name descname"><span class="pre">save_sampling_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">case_no</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.tissues.save_sampling_map" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.tissues.save_segmentation">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.tissues.</span></span><span class="sig-name descname"><span class="pre">save_segmentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">case_no</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labeled_segmentation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.tissues.save_segmentation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="her2bdl.data.tissues.select_roi_manual">
+<span class="sig-prename descclassname"><span class="pre">her2bdl.data.tissues.</span></span><span class="sig-name descname"><span class="pre">select_roi_manual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">slide</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_guess</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#her2bdl.data.tissues.select_roi_manual" title="Permalink to this definition">¶</a></dt>
+<dd><p>Select ROIs from WSI using a GUI.
+:param slide: Opened WSI.
+:type slide: <cite>openslide.OpenSlide</cite>
+:param size: Thumbnail max size.
+:type size: tuple(<cite>int</cite>, <cite>int</cite>)
+:param level: Thumbnail level.
+:type level: <cite>int</cite>
+:param include_guess: Include ROIs guesses by thresholding
+:type include_guess: <cite>bool</cite>
+:param display: User interface api.
+:type display: <cite>GUI</cite> or <cite>None</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>ROIs selected and labeled segmentation at level or size given .</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><cite>list</cite>, <cite>np.ndarray(int)</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-her2bdl.data">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-her2bdl.data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="data">
+<h3>Data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h3>
+<p>Load, preprocess and filted data.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 202 ...0, Sebastián Bórquez G,.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

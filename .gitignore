@@ -134,3 +134,4 @@ dmypy.json
 .vscode/settings.json
 
 .wandb_secret
+train

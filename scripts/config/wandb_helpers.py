@@ -70,13 +70,13 @@ def add_legend_agg(run_id):
     if run.config["aggregation"]["method"] == "ThresholdAggregator":
         t = run.config["aggregation"]["parameters"]["threshold"]
         if  t == 2:
-            method = f"B_D{d}"
+            method = f"B-{d}"
         elif t in (0.1, 0.5):
-            method = f"Tl_{u}_D{d}"
+            method = f"Tl_{u}-{d}"
         else:
-            method = f"Th_{u}_D{d}"
+            method = f"Th_{u}-{d}"
     else:
-        method = f"M_{u}_D{d}"
+        method = f"M_{u}-{d}"
     run.config.update({"legend": method})
     run.save()
 
@@ -108,16 +108,25 @@ def add_contest_evaluation(run_id, confidence_measurement="mutual information"):
     evaluation_table["weighted confidence"] = eval_weighted_confidence(
         y_true=evaluation_table["y_true"], 
         y_pred=evaluation_table["y_pred"],
-        confidence =  evaluation_table[confidence_measurement]
+        uncertainty =  evaluation_table[confidence_measurement]
+    )
+    evaluation_table["weighted confidence 2"] = eval_weighted_confidence(
+        y_true=evaluation_table["y_true"], 
+        y_pred=evaluation_table["y_pred"],
+        uncertainty =  evaluation_table["predictive entropy"]
     )
     # Combined
     evaluation_table["combined"] = eval_combined(
         evaluation_table["agreement points"], 
         evaluation_table["weighted confidence"]
     )
+    evaluation_table["combined 2"] = eval_combined(
+        evaluation_table["agreement points"], 
+        evaluation_table["weighted confidence 2"]
+    )
     # Update summary
     model_evaluation = dict(evaluation_table[
-        ["agreement points","weighted confidence","combined"]
+        ["agreement points","weighted confidence","combined", "weighted confidence 2", "combined 2"]
     ].sum())
     for key, value in model_evaluation.items():
         run.summary[key] = value
@@ -137,8 +146,8 @@ agreement_points = np.array([
 def eval_agreement_points(y_true, y_pred):
     return pd.Series(agreement_points[y_true, y_pred])
 
-def eval_weighted_confidence(y_true, y_pred, confidence, normalizer=1/np.log(4)):
-    confidence_norm = confidence*normalizer
+def eval_weighted_confidence(y_true, y_pred, uncertainty, normalizer=1/np.log(4)):
+    confidence_norm = 1 - uncertainty*normalizer
     ps_is_correct = (y_pred == y_true)
     wc_correct = \
         ps_is_correct*((2*confidence_norm - np.power(confidence_norm, 2))/2.0 )\

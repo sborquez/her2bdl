@@ -1,4 +1,4 @@
-# Her2BDL
+# her2bdl
 
 Bayesian Deep Learning for HER2 tissue image classification.
 Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)

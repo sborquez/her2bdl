@@ -1,0 +1,62 @@
+FROM tensorflow/tensorflow:latest-gpu
+LABEL Author, Sebastian Borquez
+
+# Define a variable with an optional default value that can be override at 
+# build-time with docker build.
+ARG HER2BDL_BRANCH=dev
+# TODO: change it when merge to master
+#ARG HER2BDL_BRANCH=master 
+
+# The environment variables set using ENV will persist when a container is run 
+# from the resulting image. You can view the values using docker inspect, and 
+# change them using docker run --env <key>=<value>.
+ENV WAND_AND_KEY=dryrun
+
+#----------------Update-NVidia-repos----------------------
+# RUN rm /etc/apt/sources.list.d/cuda.list
+# RUN rm /etc/apt/sources.list.d/nvidia-ml.list
+# RUN apt-key del 7fa2af80
+# RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+# RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub
+
+#---------------- Prepare the envirennment ----------------
+RUN apt-get update && apt-get install gcc ffmpeg libsm6 libxext6 -y
+RUN git clone -b ${HER2BDL_BRANCH} --single-branch \
+    https://github.com/sborquez/her2bdl 
+ENV HER2BDL_HOME /her2bdl
+WORKDIR $HER2BDL_HOME
+
+# Dataset folder mounted from host
+ENV HER2BDL_DATASETS /datasets
+RUN mkdir ${HER2BDL_DATASETS}
+# Configurations files and runs
+ENV HER2BDL_EXPERIMENTS /experiments
+RUN mkdir ${HER2BDL_EXPERIMENTS}
+# Pretrained files and runs
+ENV HER2BDL_EXTRAS /extras
+RUN mkdir ${HER2BDL_EXTRAS}
+RUN git clone https://github.com/sborquez/her2bdl-files /extras
+# Host repository folder mounted from host to local development
+ENV HER2BDL_DEV /her2bdl_dev
+RUN mkdir ${HER2BDL_DEV}
+
+# Install Extra Dependencies
+RUN apt-get install -y task-spooler
+RUN apt-get install -y openslide-tools
+RUN pip install --upgrade setuptools wheel
+#RUN pip install opencv-python
+ENV DEBIAN_FRONTEND=noninteractive 
+RUN apt-get install -y python3-opencv
+RUN pip install numpy pandas h5py xlrd matplotlib scipy\
+                scikit-learn scikit-image plotly pyyaml seaborn IPython\
+                twine nose tqdm wandb pycm==3.0 openpyxl openslide-python==1.1.2
+
+# RUN conda update --name base conda &&\
+#     conda env create --file environment_cpu.yml
+# RUN echo "conda activate her2bdl" >> ~/.bashrc
+# SHELL ["conda", "run", "--name", "her2bdl", "/bin/bash", "-c"]
+
+#CMD 
+# TODO: container commands
+# ENTRYPOINT ["conda", "run", "--name", "her2dbl", "python", "main.py"]
+ENTRYPOINT /bin/bash

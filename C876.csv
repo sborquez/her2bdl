@@ -1,0 +1,15 @@
+Layer,Type,Shape,Param #
+input_2,InputLayer,"[(None, 10816)]",0
+head_dense_1,Dense,"(None, 256)",2769152
+head_batchnorm_1,BatchNormalization,"(None, 256)",1024
+head_activation_1,Activation,"(None, 256)",0
+head_mc_dropout_1,Dropout,"(None, 256)",0
+head_dense_2,Dense,"(None, 128)",32896
+head_batchnorm_2,BatchNormalization,"(None, 128)",512
+head_activation_2,Activation,"(None, 128)",0
+head_mc_dropout_2,Dropout,"(None, 128)",0
+head_dense_3,Dense,"(None, 64)",8256
+head_batchnorm_3,BatchNormalization,"(None, 64)",256
+head_activation_3,Activation,"(None, 64)",0
+head_mc_dropout_3,Dropout,"(None, 64)",0
+head_classifier,Dense,"(None, 4)",260

@@ -1,0 +1,3 @@
+Layer,Type,Shape,Param #
+encoder,Functional,"(None, 62720)",4049571
+classifier,Functional,"(None, 2)",16099650

@@ -1,0 +1,3 @@
+Layer,Type,Shape,Param #
+encoder,Functional,"(None, 10816)",303352
+aleatoric_classifier,Functional,"(None, 5)",2812421

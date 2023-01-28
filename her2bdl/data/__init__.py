@@ -12,3 +12,4 @@ from .wsi import *
 from .generator import *
 from .preprocessing import *
 from .tissues import *
+from .stainnorm import *

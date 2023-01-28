@@ -16,6 +16,8 @@ import cv2
 from .constants import *
 from .wsi import *
 from .dataset import *
+from .stainnorm import *
+
 
 __all__ = [
     'get_generator_from_wsi', 'GridPatchGenerator', 'MCPatchGenerator', 
@@ -226,6 +228,14 @@ class GridPatchGenerator(keras.utils.Sequence):
         self.patch_vertical_flip = patch_vertical_flip
         self.patch_horizontal_flip = patch_horizontal_flip
     
+        # Normalizer
+        self.normalizer = StainNormalizer()
+        target_img = cv2.imread(os.path.join(__file__, 'target_images', 'CaseNo_22-TissueId_17-Score_3-row_36704-col_149248'))
+        if target_img is None:
+            raise RuntimeError('Unable to load target image')
+        target_img = cv2.cvtColor(target_img, cv2.COLOR_BGR2RGB)
+        self.normalizer.fit(target_img)
+    
         # Prepare dataset
         self.__setup__(dataset)
         self.on_epoch_end()
@@ -246,9 +256,9 @@ class GridPatchGenerator(keras.utils.Sequence):
                 (int(map_rows*self.patch_size[0]), int(map_cols*self.patch_size[1])),
             )
             agg_map[:,:] = np.nan
-        for i, row_ in group_df.iterrows():
-            row = int(row_["row"])
-            col = int(row_["col"])
+        for i, row_ in enumerate(group_df.itertuples()):
+            row = int(row_.row)
+            col = int(row_.col)
             map_row = (row - group_df.row.min())//patch_size_level_0[0]
             map_col = (col - group_df.col.min())//patch_size_level_0[0]
             if ndim > 1:
@@ -317,13 +327,13 @@ class GridPatchGenerator(keras.utils.Sequence):
         for case_no, df in tqdm(dataset.groupby("CaseNo"), total=total):
             self.slides[case_no] = open_slide(df.iloc[0]["slide_path"])
             # For each object in slide
-            for _, row in df.iterrows():
+            for row in df.itertuples():
                 # Slide levels
-                segmentation_level = row["segmentation_level"] # level where tissue was detected
-                sampling_map_level = row["sampling_map_level"] # level with background mask
+                segmentation_level = row.segmentation_level # level where tissue was detected
+                sampling_map_level = row.sampling_map_level # level with background mask
                 patch_level        = self.patch_level          # level for patch extraction 
                 # TODO: Check rows without sampling_maps
-                sampling_map       = np.load(row["sampling_map"]).astype(bool) 
+                sampling_map       = np.load(row.sampling_map).astype(bool) 
                 # Downscale Patch size to sampling map level
                 sampling_map_patch_size = level_scaler(self.patch_size, patch_level, sampling_map_level)
                 # Find patches in sampling map scale with at least half of relevant pixels.
@@ -338,15 +348,15 @@ class GridPatchGenerator(keras.utils.Sequence):
                     sampling_map_patch_selector > (np.prod(sampling_map_patch_size)*self.patch_relevant_ratio)
                 )
                 # Scale indexes to sampling map level and translate them with according to source slide
-                sampling_map_translation = level_scaler((row["min_row"], row["min_col"]), segmentation_level, sampling_map_level)
+                sampling_map_translation = level_scaler((row.min_row, row.min_col), segmentation_level, sampling_map_level)
                 sampling_map_patch_indexes = sampling_map_patch_size*sampling_map_patch_selector + sampling_map_translation
                 # Upscale patches indexes from sampling map level to level 0 (for `read_region` method)
                 patch_indexes = level_scaler(sampling_map_patch_indexes, sampling_map_level, 0, "numpy")
                 # Build rows for generator`s dataset.
                 new_patches = [{
                     "CaseNo": int(case_no),
-                    "label": int(row["label"]),
-                    TARGET: row[TARGET],
+                    "label": int(row.label),
+                    TARGET: row._asdict()[TARGET],
                     "row": patch[0],
                     "col": patch[1]
                 } for patch in patch_indexes]
@@ -415,13 +425,13 @@ class GridPatchGenerator(keras.utils.Sequence):
         # TODO: fix index out of range
         #batch_v_flips = self.vertical_flips[list_indexes]
         #batch_h_flips = self.horizational_flips[list_indexes]
-        for i, (_, row) in enumerate(batch_rows.iterrows()):
-            case_no = int(row["CaseNo"])
-            score   = int(row[TARGET])
-            patch = self.load_patch(case_no, int(row["row"]), int(row["col"]))
+        for i, row in enumerate(batch_rows.itertuples()):
+            case_no = int(row.CaseNo)
+            score   = int(row._asdict()[TARGET])
+            patch = self.load_patch(case_no, int(row.row), int(row.col))
             #v_flip, h_flip = batch_v_flips[i], batch_h_flips[i]
             v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
-            batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]
+            batch_patches[i] = patch[::v_flip,::h_flip,:3]
             batch_scores[i]  = TARGET_TO_ONEHOT[score]
         return batch_patches, batch_scores
 
@@ -429,7 +439,9 @@ class GridPatchGenerator(keras.utils.Sequence):
         patch_level = patch_level or self.patch_level
         patch_size = patch_size or self.patch_size
         img = self.slides[case_no]
-        patch = img.read_region((col, row), patch_level, patch_size)    
+        patch = img.read_region((col, row), patch_level, patch_size)
+        patch = np.array(patch)
+        patch = self.normalizer.transform(patch)
         return patch
 
 class MCPatchGenerator(GridPatchGenerator):
@@ -466,12 +478,12 @@ class MCPatchGenerator(GridPatchGenerator):
             self.patches[case_no] = {}
             self.weights[case_no] = {}
             # For each object in slide
-            for _, row in df.iterrows():
+            for row in df.itertuples():
                 # Slide levels
-                segmentation_level = row["segmentation_level"] # level where tissue was detected
-                sampling_map_level = row["sampling_map_level"] # level where background is ignored
+                segmentation_level = row.segmentation_level  # level where tissue was detected
+                sampling_map_level = row.sampling_map_level # level where background is ignored
                 patch_level        = self.patch_level          # level where patch are obtained 
-                sampling_map       = np.load(row["sampling_map"])
+                sampling_map       = np.load(row.sampling_map)
                 # Sampler values and weights
                 indexes = np.argwhere(sampling_map > 0)
                 weights = cv2.filter2D(sampling_map, -1, kernel)[indexes[:,0], indexes[:,1]]
@@ -481,15 +493,15 @@ class MCPatchGenerator(GridPatchGenerator):
                 else:
                     weights[:] = 1.0/len(weights)
                 # Translate and scale to level 0
-                sampling_map_translation = level_scaler((row["min_row"], row["min_col"]), segmentation_level, sampling_map_level)
+                sampling_map_translation = level_scaler((row.min_row, row.min_col), segmentation_level, sampling_map_level)
                 patch_indexes = level_scaler(indexes + sampling_map_translation, sampling_map_level, 0, "numpy")
-                self.patches[case_no][row["label"]] = patch_indexes
-                self.weights[case_no][row["label"]] = weights
+                self.patches[case_no][row.label] = patch_indexes
+                self.weights[case_no][row.label] = weights
                 # Build rows for generator`s dataset.
                 self.dataset = self.dataset.append({
                         "CaseNo": int(case_no),
-                        "label" : int(row["label"]),
-                        TARGET  : row[TARGET]
+                        "label" : int(row.label),
+                        TARGET  : row._asdict()[TARGET]
                 }, ignore_index=True)
 
         self.size = len(self.dataset)*self.samples_per_tissue
@@ -507,15 +519,13 @@ class MCPatchGenerator(GridPatchGenerator):
         self.upsample_pixels_level_0     = level_scaler((1, 1), patch_level, 0)
         atexit.register(self.cleanup)
 
-
     def on_epoch_end(self):
         'Updates samples after each epoch'
         self.indexes = np.empty((self.size, 2), dtype=int)
         self.dataset_ref = np.empty((self.size), dtype=int)
-        for i, (_, row) in enumerate(self.dataset.iterrows()):
-            case_no = int(row["CaseNo"])
-            label   = int(row["label"])
-            score   = int(row[TARGET])
+        for i, row in enumerate(self.dataset.itertuples()):
+            case_no = int(row.CaseNo)
+            label   = int(row.label)
             # samples
             m       = self.samples_per_tissue
             indexes = self.patches[case_no][label] # index in wsi at level 0
@@ -552,16 +562,15 @@ class MCPatchGenerator(GridPatchGenerator):
         X, y = self.__data_generation__(indexes, dataset_ref)
         return X, y
 
-
     def __data_generation__(self, list_indexes, dataset_ref):
         'Generates data containing batch_size samples'
         # Initialization
         batch_rows = self.dataset.iloc[dataset_ref]
         batch_patches = np.empty((len(list_indexes), *self.patch_size, 3), dtype=np.float64)
         batch_scores  = np.empty((len(list_indexes), len(TARGET_LABELS)))
-        for i, (_, row) in enumerate(batch_rows.iterrows()):
-            case_no = int(row["CaseNo"])
-            score   = int(row[TARGET])
+        for i, row in enumerate(batch_rows.itertuples()):
+            case_no = int(row.CaseNo)
+            score   = int(row._asdict()[TARGET])
             patch = self.load_patch(case_no, list_indexes[i][0], list_indexes[i][1])
             v_flip, h_flip = self.vertical_flips[i], self.horizational_flips[i]
             batch_patches[i] = np.array(patch)[::v_flip,::h_flip,:3]

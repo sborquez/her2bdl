@@ -3,6 +3,7 @@
 project=$HER2BDL_HOME
 experiments_folder=$$HER2BDL_HOME/scripts/config
 env="her2bdl"
+source ./nvidia.sh
 # ----------------Comands--------------------------
 experiments=(
     # Classification

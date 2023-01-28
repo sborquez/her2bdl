@@ -2,6 +2,7 @@
 # ----------------Variables--------------------------
 project=$HER2BDL_HOME
 env="her2bdl"
+source ./nvidia.sh
 # ----------------Comands--------------------------
 
 conda activate "$env"

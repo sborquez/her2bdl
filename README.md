@@ -1,22 +1,18 @@
-# her2bdl
+# HER2BDL
 
 Bayesian Deep Learning for HER2 tissue image classification.
-Her2BDL [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
 
-## Features
-
-- [x] Anaconda Envirment.
-- [x] AI project structure.
-- [x] Tensorflow, Keras and Scikit-learn.
-- [x] HPC jobs manager.
-- [x] Nose unit tests.
-- [x] Weight and Bias easy setup.
-- [x] Docker container.
-- [x] Easy experiment reproducibility.
-- [x] Notebooks.
-- [x] Pip Package.
+* Experiments can be found in [Weights and Bias page](https://wandb.ai/sborquez/her2bdl)
+* Extra files can be found here [her2bdl-files](https://github.com/sborquez/her2bdl-files)
+* Reports are located in:
+     * [Binary Classification with MC-Dropout Models](https://wandb.ai/sborquez/her2bdl/reports/Binary-Classification-with-MC-Dropout-Models--VmlldzozMTg0OTE)
+     * [Predictions from Uncertainty Models](https://api.wandb.ai/links/sborquez/7z6zk2rf)
+     * [HER2 Scoring with Uncertainty Models](https://api.wandb.ai/links/sborquez/xfcpr977)
+     * [Evaluation of the Stain Separation Layer for Her2 Scoring](https://wandb.ai/sborquez/her2bdl/reports/Evaluation-of-the-Stain-Separation-Layer-for-Her2-Scoring--Vmlldzo2Njg2OTE)
+* The dataset used for this work comes from the [HER2 challenge contest](https://onlinelibrary.wiley.com/doi/10.1111/his.13333)
 
 ## Her2BDL Framework - Environment Setup
+
 ### A. With Dockers
 
 Using dockers is the preferred way; it is the easiest way to develop and run HER2BDL. Dockers containers enable us to encapsulate the environment. For instructions to install `dockers` check their [website](https://docs.docker.com/get-docker/).
@@ -98,14 +94,6 @@ export HER2BDL_EXPERIMENTS=<Runs Folder>
 export HER2BDL_EXTRAS=<Pretrained model Folder>
 ```
 
-## Her2BDL Framework - Quick Start
-
-### 1. Prepare Dataset
-
-### 2. Train Model with `Weight & Biases`
-
-### 3. Consume Models
-
 ## Repository structure
 
 ### train/
@@ -124,18 +112,8 @@ More details for `train/` folder in  `train/README.md`.
 
 Contains notebook version of the scripts in `\train` handy for `Google Colab`. More details in `notebooks/README.md`.
 
-### test/
-
-Collections of user defined unit tests with `nose`. More details in `tests/README.md`.
-
-
-## Documentation
-
-...
-
 
 ## References
-
 
 ### Bibliography
 
@@ -147,7 +125,6 @@ Collections of user defined unit tests with `nose`. More details in `tests/READM
 
 ### Web
 
-- YastAI Template: [https://github.com/yast-ia/YastAI](https://github.com/yast-ia/YastAI)
 - WSL Preprocessing: [https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/](https://developer.ibm.com/articles/an-automatic-method-to-identify-tissues-from-big-whole-slide-images-pt1/)
 - Weight and Bias: [https://www.wandb.com/](https://www.wandb.com/)
 - Tensorflow: [https://www.tensorflow.org/](https://www.tensorflow.org/)
